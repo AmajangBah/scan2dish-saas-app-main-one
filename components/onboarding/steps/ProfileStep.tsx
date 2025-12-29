@@ -8,6 +8,17 @@ import { ArrowLeft, ArrowRight, Building2 } from "lucide-react";
 import { updateBusinessProfile } from "@/app/actions/restaurant";
 import { getCurrencyOptions } from "@/lib/utils/currency";
 
+type Currency =
+  | "USD"
+  | "EUR"
+  | "GBP"
+  | "GMD"
+  | "XOF"
+  | "NGN"
+  | "GHS"
+  | "ZAR"
+  | "KES";
+
 interface ProfileStepProps {
   onNext: () => void;
   onBack: () => void;
@@ -19,7 +30,7 @@ export default function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
-    currency: "GMD",
+    currency: "GMD" as Currency,
     brandColor: "#C84501",
   });
 
@@ -33,7 +44,7 @@ export default function ProfileStep({ onNext, onBack }: ProfileStepProps) {
     const result = await updateBusinessProfile({
       name: formData.name,
       phone: formData.phone || null,
-      currency: formData.currency as any,
+      currency: formData.currency,
       brand_color: formData.brandColor,
     });
 
@@ -98,7 +109,9 @@ export default function ProfileStep({ onNext, onBack }: ProfileStepProps) {
             id="currency"
             className="w-full p-2 border rounded-lg"
             value={formData.currency}
-            onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, currency: e.target.value as Currency })
+            }
             required
           >
             {currencyOptions.map((option) => (

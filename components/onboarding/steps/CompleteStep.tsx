@@ -18,7 +18,7 @@ export default function CompleteStep({ onComplete }: CompleteStepProps) {
 
       <div className="space-y-4">
         <h1 className="text-4xl font-bold">
-          🎉 You're All Set!
+          🎉 You&apos;re All Set!
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
           Your restaurant is ready to start accepting orders through Scan2Dish
@@ -26,7 +26,7 @@ export default function CompleteStep({ onComplete }: CompleteStepProps) {
       </div>
 
       <div className="max-w-2xl mx-auto bg-gradient-to-br from-orange-50 to-yellow-50 p-8 rounded-2xl border-2 border-[#C84501]">
-        <h3 className="text-xl font-bold mb-6">What's Next?</h3>
+        <h3 className="text-xl font-bold mb-6">What&apos;s Next?</h3>
         
         <div className="space-y-4 text-left">
           <div className="flex items-start gap-3">
@@ -64,7 +64,7 @@ export default function CompleteStep({ onComplete }: CompleteStepProps) {
             <div>
               <p className="font-semibold">Commission Tracking</p>
               <p className="text-sm text-gray-600">
-                Remember: 5% commission on completed orders. We'll calculate it automatically!
+                Remember: 5% commission on completed orders. We&apos;ll calculate it automatically!
               </p>
             </div>
           </div>

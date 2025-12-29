@@ -60,6 +60,7 @@ export default function MenuModal({
     []
   );
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (itemToEdit) {
       setName(itemToEdit.name);
@@ -69,7 +70,7 @@ export default function MenuModal({
       setAvailable(itemToEdit.available);
       setImages(itemToEdit.images || []);
       setTags(
-        (itemToEdit.tags as any) || {
+        itemToEdit.tags || {
           spicy: false,
           vegetarian: false,
           glutenFree: false,
@@ -87,6 +88,7 @@ export default function MenuModal({
       setVariants([]);
     }
   }, [itemToEdit, open]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // --------------------------------------------
   // IMAGE UPLOAD + AUTO CROP

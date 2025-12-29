@@ -38,7 +38,7 @@ export default function MenuStep({ onNext, onBack }: MenuStepProps) {
               <div>
                 <h3 className="font-bold mb-1">Go to Menu Page</h3>
                 <p className="text-sm text-gray-600">
-                  Click "Add Menu Item" to create your first dish
+                  Click &quot;Add Menu Item&quot; to create your first dish
                 </p>
               </div>
             </div>

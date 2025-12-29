@@ -35,7 +35,15 @@ export default async function OrdersPage() {
   }
 
   // Map database orders to UI Order type
-  const mappedOrders: Order[] = (orders || []).map((o) => {
+  type OrderRow = (typeof orders extends (infer T)[] ? T : never) & {
+    restaurant_tables:
+      | { table_number?: string }[]
+      | { table_number?: string }
+      | null
+      | undefined;
+  };
+
+  const mappedOrders: Order[] = ((orders as unknown as OrderRow[]) || []).map((o) => {
     const items = Array.isArray(o.items) ? o.items : [];
     const orderItems = items.map((item: {name?: string; quantity?: number; price?: string | number}) => ({
       name: item.name || "Unknown Item",
@@ -43,11 +51,7 @@ export default async function OrdersPage() {
       price: parseFloat(String(item.price || 0)),
     }));
 
-    const rt = (o as any).restaurant_tables as
-      | { table_number?: string }[]
-      | { table_number?: string }
-      | null
-      | undefined;
+    const rt = o.restaurant_tables;
     const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
 
     return {

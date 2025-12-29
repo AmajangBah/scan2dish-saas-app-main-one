@@ -38,7 +38,7 @@ export default function TableStep({ onNext, onBack }: TableStepProps) {
               <div>
                 <h3 className="font-bold mb-1">Go to Tables Page</h3>
                 <p className="text-sm text-gray-600">
-                  Click "Add Table" to create your first table
+                  Click &quot;Add Table&quot; to create your first table
                 </p>
               </div>
             </div>
@@ -50,7 +50,7 @@ export default function TableStep({ onNext, onBack }: TableStepProps) {
               <div>
                 <h3 className="font-bold mb-1">Enter Table Details</h3>
                 <p className="text-sm text-gray-600">
-                  Give it a number (e.g., "Table 1"), capacity, and location
+                  Give it a number (e.g., &quot;Table 1&quot;), capacity, and location
                 </p>
               </div>
             </div>

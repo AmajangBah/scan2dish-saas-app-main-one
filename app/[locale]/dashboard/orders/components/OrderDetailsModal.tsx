@@ -27,9 +27,11 @@ export default function OrderDetailsModal({
   const printRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<OrderStatus | undefined>(order?.status);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setStatus(order?.status);
   }, [order]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handlePrint = () => {
     if (!printRef.current) return;

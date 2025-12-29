@@ -16,6 +16,17 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { getCurrencyOptions } from "@/lib/utils/currency";
 import { getRestaurantProfile, updateBusinessProfile } from "@/app/actions/restaurant";
 
+type Currency =
+  | "USD"
+  | "EUR"
+  | "GBP"
+  | "GMD"
+  | "XOF"
+  | "NGN"
+  | "GHS"
+  | "ZAR"
+  | "KES";
+
 export default function PreferencesSection() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -23,7 +34,7 @@ export default function PreferencesSection() {
   const [success, setSuccess] = useState(false);
 
   const [name, setName] = useState("");
-  const [currency, setCurrency] = useState("GMD");
+  const [currency, setCurrency] = useState<Currency>("GMD");
   const [brandColor, setBrandColor] = useState("#C84501");
 
   const currencyOptions = getCurrencyOptions();
@@ -34,10 +45,12 @@ export default function PreferencesSection() {
       setError(null);
       const result = await getRestaurantProfile();
       if (result.success && result.data) {
-        const data = result.data as any;
-        setName(data.name || "");
-        setCurrency(data.currency || "GMD");
-        setBrandColor(data.brand_color || "#C84501");
+        const data = result.data as
+          | { name?: string; currency?: Currency; brand_color?: string }
+          | null;
+        setName(data?.name || "");
+        setCurrency(data?.currency || "GMD");
+        setBrandColor(data?.brand_color || "#C84501");
       } else {
         setError(result.error || "Failed to load preferences");
       }
@@ -53,7 +66,7 @@ export default function PreferencesSection() {
 
     const result = await updateBusinessProfile({
       name,
-      currency: currency as any,
+      currency,
       brand_color: brandColor,
     });
 
@@ -89,7 +102,7 @@ export default function PreferencesSection() {
       {/* Currency */}
       <div className="space-y-2">
         <Label>Currency</Label>
-        <Select value={currency} onValueChange={setCurrency}>
+        <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
           <SelectTrigger>
             <SelectValue placeholder="Select currency" />
           </SelectTrigger>

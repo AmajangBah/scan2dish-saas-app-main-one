@@ -20,8 +20,8 @@ export default function BrandingPage() {
       setLoading(true);
       const result = await getRestaurantProfile();
       if (result.success && result.data) {
-        const data = result.data as any;
-        setPrimaryColor(data.brand_color || "#C84501");
+        const data = result.data as { brand_color?: string } | null;
+        setPrimaryColor(data?.brand_color || "#C84501");
       }
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export default function BrandingPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Branding</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Customize your restaurant's visual identity and how your customers see
+          Customize your restaurant&apos;s visual identity and how your customers see
           your brand.
         </p>
       </div>

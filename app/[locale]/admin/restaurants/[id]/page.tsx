@@ -13,10 +13,10 @@ import RestaurantControls from "../RestaurantControls";
 export default async function AdminRestaurantDetail({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ locale: string; id: string }>;
 }) {
   await requireAdmin();
-  const { id } = await params;
+  const { locale, id } = await params;
   const supabase = await createClient();
 
   // Get restaurant details
@@ -76,7 +76,7 @@ export default async function AdminRestaurantDetail({
       {/* Header */}
       <div>
         <Link
-          href="/admin/restaurants"
+          href={`/${locale}/admin/restaurants`}
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -190,7 +190,7 @@ export default async function AdminRestaurantDetail({
               Recent Payments
             </h2>
             <Link
-              href={`/admin/payments?restaurant=${id}`}
+              href={`/${locale}/admin/payments?restaurant=${id}`}
               className="text-sm text-orange-600 hover:text-orange-700"
             >
               View All
@@ -234,7 +234,7 @@ export default async function AdminRestaurantDetail({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
           <Link
-            href={`/admin/orders?restaurant=${id}`}
+            href={`/${locale}/admin/orders?restaurant=${id}`}
             className="text-sm text-orange-600 hover:text-orange-700"
           >
             View All

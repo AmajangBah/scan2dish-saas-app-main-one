@@ -9,22 +9,28 @@ export default function TableTabs({
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }) {
-  const tabs = ["all", "available", "occupied", "reserved", "no-qr"];
+  const tabs: { id: string; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "available", label: "Available" },
+    { id: "occupied", label: "Occupied" },
+    { id: "reserved", label: "Reserved" },
+    { id: "no-qr", label: "Missing QR" },
+  ];
 
   return (
-    <div className="flex space-x-1 border-b overflow-x-auto">
+    <div className="flex gap-2 overflow-x-auto pb-1">
       {tabs.map((tab) => (
         <button
-          key={tab}
-          onClick={() => setActiveTab(tab)}
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id)}
           className={cn(
-            "px-4 py-2",
-            activeTab === tab
-              ? "border-b-2 border-primary text-primary"
-              : "text-muted-foreground"
+            "shrink-0 rounded-full px-3 py-1.5 text-sm transition-colors border",
+            activeTab === tab.id
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/40 border-border"
           )}
         >
-          {tab}
+          {tab.label}
         </button>
       ))}
     </div>

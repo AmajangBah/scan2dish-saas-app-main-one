@@ -11,7 +11,7 @@ const ThirdSection = () => {
         </h3>
 
         <p className="max-w-full md:max-w-2xl w-full md:w-[30%] font-semibold py-6 md:py-10 leading-relaxed mx-auto text-white">
-          Scan2Dish takes the stress out of ordering. Here's what your guests
+          Scan2Dish takes the stress out of ordering. Here&apos;s what your guests
           and your staff experience every time.
         </p>
 

@@ -16,8 +16,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
   await requireAdmin();
+  const { locale } = await params;
   const supabase = await createClient();
 
   // Get dashboard metrics
@@ -69,9 +74,13 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600 mt-1">Platform overview and key metrics</p>
+      <div className="space-y-1">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+          Admin dashboard
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Platform overview and key metrics.
+        </p>
       </div>
 
       {/* Key Metrics */}
@@ -111,13 +120,13 @@ export default async function AdminDashboard() {
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Outstanding Commission */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-xl border shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
               Outstanding Commission
             </h2>
             <Link
-              href="/admin/payments"
+              href={`/${locale}/admin/payments`}
               className="text-sm text-orange-600 hover:text-orange-700"
             >
               View All
@@ -132,7 +141,7 @@ export default async function AdminDashboard() {
                 return (
                   <div
                     key={restaurant.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border"
                   >
                     <div className="flex items-center gap-3">
                       {restaurant.menu_enabled ? (
@@ -171,13 +180,13 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-xl border shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
               Recent Activity
             </h2>
             <Link
-              href="/admin/activity"
+              href={`/${locale}/admin/activity`}
               className="text-sm text-orange-600 hover:text-orange-700"
             >
               View All
@@ -188,7 +197,7 @@ export default async function AdminDashboard() {
               recentActivity.map((log) => (
                 <div
                   key={log.id}
-                  className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg text-sm"
+                  className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg text-sm border"
                 >
                   <ActivityIcon action={log.action_type} />
                   <div className="flex-1 min-w-0">
@@ -238,12 +247,16 @@ function MetricCard({
   }[color];
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-card rounded-xl border shadow-sm p-6">
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <p className="text-sm text-gray-600 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+          <p className="text-sm text-muted-foreground mb-1">{title}</p>
+          <p className="text-2xl font-semibold tracking-tight text-gray-900">
+            {value}
+          </p>
+          {subtitle && (
+            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+          )}
         </div>
         <div className={`p-3 rounded-lg ${colorClasses}`}>{icon}</div>
       </div>

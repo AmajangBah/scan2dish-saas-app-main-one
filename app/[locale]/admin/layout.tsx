@@ -19,70 +19,100 @@ import {
 
 export default async function AdminLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
   const adminUser = await getAdminUser();
 
   if (!adminUser) {
-    redirect("/auth/admin/sign-in");
+    redirect(`/${locale}/auth/admin/sign-in`);
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col">
+      <aside className="w-72 border-r bg-card text-card-foreground flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-800">
-          <div className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-orange-500" />
-            <div>
-              <h1 className="text-xl font-bold">Admin Panel</h1>
-              <p className="text-xs text-gray-400">Scan2Dish</p>
+        <div className="p-5 border-b">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-orange-50 text-orange-700 grid place-items-center border">
+              <Shield className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base font-semibold leading-tight truncate">
+                Admin
+              </h1>
+              <p className="text-xs text-muted-foreground truncate">
+                Scan2Dish control center
+              </p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
-          <NavLink href="/admin" icon={<LayoutDashboard />}>
-            Dashboard
-          </NavLink>
-          <NavLink href="/admin/restaurants" icon={<Store />}>
-            Restaurants
-          </NavLink>
-          <NavLink href="/admin/payments" icon={<DollarSign />}>
-            Payments
-          </NavLink>
-          <NavLink href="/admin/orders" icon={<ShoppingCart />}>
-            Orders
-          </NavLink>
-          <NavLink href="/admin/activity" icon={<Activity />}>
-            Activity Logs
-          </NavLink>
+        <nav className="flex-1 p-3 space-y-6 overflow-auto">
+          <div className="space-y-1">
+            <div className="px-3 text-xs font-medium text-muted-foreground">
+              Overview
+            </div>
+            <NavLink href={`/${locale}/admin`} icon={<LayoutDashboard />}>
+              Dashboard
+            </NavLink>
+          </div>
+
+          <div className="space-y-1">
+            <div className="px-3 text-xs font-medium text-muted-foreground">
+              Management
+            </div>
+            <NavLink href={`/${locale}/admin/restaurants`} icon={<Store />}>
+              Restaurants
+            </NavLink>
+            <NavLink href={`/${locale}/admin/payments`} icon={<DollarSign />}>
+              Payments
+            </NavLink>
+          </div>
+
+          <div className="space-y-1">
+            <div className="px-3 text-xs font-medium text-muted-foreground">
+              Monitoring
+            </div>
+            <NavLink href={`/${locale}/admin/orders`} icon={<ShoppingCart />}>
+              Orders
+            </NavLink>
+            <NavLink href={`/${locale}/admin/activity`} icon={<Activity />}>
+              Activity Logs
+            </NavLink>
+          </div>
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t">
           <div className="text-sm mb-3">
-            <div className="font-medium">{adminUser.full_name}</div>
-            <div className="text-xs text-gray-400">{adminUser.email}</div>
-            <div className="text-xs text-orange-500 uppercase mt-1">
+            <div className="font-medium truncate">{adminUser.full_name}</div>
+            <div className="text-xs text-muted-foreground truncate">
+              {adminUser.email}
+            </div>
+            <div className="text-[10px] text-orange-700 uppercase mt-1 tracking-wide">
               {adminUser.role.replace("_", " ")}
             </div>
           </div>
-          <form action={async () => {
-            "use server";
-            const supabase = await createClient();
-            await supabase.auth.signOut();
-            redirect("/auth/admin/sign-in");
-          }}>
+          <form
+            action={async () => {
+              "use server";
+              const supabase = await createClient();
+              await supabase.auth.signOut();
+              redirect(`/${locale}/auth/admin/sign-in`);
+            }}
+          >
             <button
               type="submit"
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border bg-background hover:bg-muted/50 transition-colors text-sm"
             >
               <LogOut className="h-4 w-4" />
-              Sign Out
+              Sign out
             </button>
           </form>
         </div>
@@ -108,9 +138,9 @@ function NavLink({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors text-sm"
+      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/60 transition-colors text-sm"
     >
-      <span className="h-5 w-5">{icon}</span>
+      <span className="h-5 w-5 text-muted-foreground">{icon}</span>
       {children}
     </Link>
   );

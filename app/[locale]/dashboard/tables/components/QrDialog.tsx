@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { QrCode, Download, Share2, Eye, Copy } from "lucide-react";
 import { Table } from "../types";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { QRCodeCanvas } from "qrcode.react";
@@ -26,30 +26,19 @@ export default function QrDialog({
   table: Table | null;
 }) {
   const pathname = usePathname();
-  const [origin, setOrigin] = useState<string>("");
   const qrWrapRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    // Ensure we generate absolute URLs for real-world scanning behavior.
-    setOrigin(window.location.origin);
-  }, []);
 
   const locale = useMemo(() => {
     const seg = pathname.split("/").filter(Boolean)[0];
     return seg || "en";
   }, [pathname]);
 
-  const menuPath = useMemo(() => {
-    if (!table?.id) return "";
-    // Customer-facing menu entry point (browse)
-    return `/${locale}/menu/${table.id}/browse`;
-  }, [locale, table?.id]);
-
-  const menuUrl = useMemo(() => {
-    if (!menuPath) return "";
-    if (!origin) return menuPath; // fallback while mounting
-    return new URL(menuPath, origin).toString();
-  }, [menuPath, origin]);
+  const tableId = table?.id ?? "";
+  const menuPath = tableId ? `/${locale}/menu/${tableId}/browse` : "";
+  const menuUrl =
+    typeof window !== "undefined" && menuPath
+      ? new URL(menuPath, window.location.origin).toString()
+      : menuPath;
 
   const handlePreview = () => {
     if (!menuUrl) return;

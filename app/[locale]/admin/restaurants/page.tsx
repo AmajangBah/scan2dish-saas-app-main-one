@@ -11,12 +11,16 @@ import RestaurantControls from "./RestaurantControls";
 
 export default async function AdminRestaurants({
   searchParams,
+  params,
 }: {
   searchParams: Promise<{ status?: string; search?: string }>;
+  params: Promise<{ locale: string }>;
 }) {
   await requireAdmin();
-  const params = await searchParams;
+  const { locale } = await params;
+  const search = await searchParams;
   const supabase = await createClient();
+  const basePath = `/${locale}/admin/restaurants`;
 
   // Build query
   let query = supabase
@@ -24,14 +28,14 @@ export default async function AdminRestaurants({
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (params.status === "active") {
+  if (search.status === "active") {
     query = query.eq("menu_enabled", true);
-  } else if (params.status === "disabled") {
+  } else if (search.status === "disabled") {
     query = query.eq("menu_enabled", false);
   }
 
-  if (params.search) {
-    query = query.ilike("name", `%${params.search}%`);
+  if (search.search) {
+    query = query.ilike("name", `%${search.search}%`);
   }
 
   const { data: restaurants } = await query;
@@ -82,31 +86,31 @@ export default async function AdminRestaurants({
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <form action="/admin/restaurants" method="get">
+            <form action={basePath} method="get">
               <input
                 type="text"
                 name="search"
                 placeholder="Search restaurants..."
-                defaultValue={params.search}
+                defaultValue={search.search}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </form>
           </div>
           <div className="flex gap-2">
             <FilterButton
-              href="/admin/restaurants"
+              href={basePath}
               label="All"
-              active={!params.status}
+              active={!search.status}
             />
             <FilterButton
-              href="/admin/restaurants?status=active"
+              href={`${basePath}?status=active`}
               label="Active"
-              active={params.status === "active"}
+              active={search.status === "active"}
             />
             <FilterButton
-              href="/admin/restaurants?status=disabled"
+              href={`${basePath}?status=disabled`}
               label="Disabled"
-              active={params.status === "disabled"}
+              active={search.status === "disabled"}
             />
           </div>
         </div>
@@ -197,7 +201,7 @@ export default async function AdminRestaurants({
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <Link
-                      href={`/admin/restaurants/${restaurant.id}`}
+                      href={`/${locale}/admin/restaurants/${restaurant.id}`}
                       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
                     >
                       <Eye className="h-4 w-4" />

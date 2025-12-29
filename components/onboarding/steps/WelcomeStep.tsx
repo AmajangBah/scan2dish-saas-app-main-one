@@ -57,7 +57,7 @@ export default function WelcomeStep({ onNext }: WelcomeStepProps) {
           size="lg"
           className="bg-[#C84501] hover:bg-orange-700 px-12"
         >
-          Let's Get Started
+          Let&apos;s Get Started
         </Button>
       </div>
     </div>
