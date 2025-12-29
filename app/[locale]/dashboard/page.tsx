@@ -6,6 +6,7 @@ import ActivityFeed from "../components/ActivityFeed";
 import { ActivityItem } from "@/types/activity";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
+import LiveOrdersWidget, { type LiveOrderSummary } from "./LiveOrdersWidget";
 
 export default async function Dashboard() {
   const ctx = await requireRestaurantPage();
@@ -48,6 +49,49 @@ export default async function Dashboard() {
     .select("id", { count: "exact", head: true })
     .eq("restaurant_id", restaurant_id)
     .in("status", ["pending", "preparing"]);
+
+  // Live orders widget (latest pending/preparing)
+  const { data: liveRows } = await supabase
+    .from("orders")
+    .select(
+      `
+      id,
+      status,
+      total,
+      created_at,
+      restaurant_tables!inner(table_number)
+    `
+    )
+    .eq("restaurant_id", restaurant_id)
+    .in("status", ["pending", "preparing"])
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  type LiveOrderRow = {
+    id: string;
+    status: "pending" | "preparing" | "completed";
+    total: number | string | null;
+    created_at: string;
+    restaurant_tables:
+      | { table_number?: string }
+      | { table_number?: string }[]
+      | null
+      | undefined;
+  };
+
+  const initialLiveOrders: LiveOrderSummary[] = (
+    (liveRows as unknown as LiveOrderRow[] | null | undefined) ?? []
+  ).map((o) => {
+    const rt = o.restaurant_tables;
+    const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
+    return {
+      id: String(o.id),
+      table: tableNumber || "Unknown",
+      status: o.status as "pending" | "preparing" | "completed",
+      total: Number(o.total || 0).toFixed(2),
+      createdAt: String(o.created_at),
+    };
+  });
 
   // Fetch recent activity (last 5 orders)
   const { data: recentOrders } = await supabase
@@ -143,6 +187,10 @@ export default async function Dashboard() {
         </div>
 
         <div className="lg:col-span-4 grid gap-4">
+          <LiveOrdersWidget
+            restaurantId={restaurant_id}
+            initialOrders={initialLiveOrders}
+          />
           <Link href={Route.TABLES} className="block">
             <DashboardCard heading="Add a table" isAddCard />
           </Link>
