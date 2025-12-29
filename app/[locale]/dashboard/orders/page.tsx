@@ -1,0 +1,67 @@
+import { createServerSupabase } from "@/lib/supabase/server";
+import { requireRestaurantPage } from "@/lib/auth/restaurant";
+import OrdersClient from "./OrdersClient";
+import { Order } from "./types";
+
+export default async function OrdersPage() {
+  const ctx = await requireRestaurantPage();
+  const restaurant_id = ctx.restaurant.id;
+
+  const supabase = await createServerSupabase();
+
+  // Fetch orders with table information
+  const { data: orders, error } = await supabase
+    .from("orders")
+    .select(`
+      id,
+      status,
+      total,
+      items,
+      created_at,
+      restaurant_tables!inner(table_number)
+    `)
+    .eq("restaurant_id", restaurant_id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch orders:", error);
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="text-center text-red-600">
+          Failed to load orders. Please try again later.
+        </div>
+      </div>
+    );
+  }
+
+  // Map database orders to UI Order type
+  const mappedOrders: Order[] = (orders || []).map((o) => {
+    const items = Array.isArray(o.items) ? o.items : [];
+    const orderItems = items.map((item: {name?: string; quantity?: number; price?: string | number}) => ({
+      name: item.name || "Unknown Item",
+      qty: item.quantity || 1,
+      price: parseFloat(String(item.price || 0)),
+    }));
+
+    const rt = (o as any).restaurant_tables as
+      | { table_number?: string }[]
+      | { table_number?: string }
+      | null
+      | undefined;
+    const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
+
+    return {
+      id: o.id,
+      table: tableNumber || "Unknown",
+      status: o.status as "pending" | "preparing" | "completed",
+      total: parseFloat(o.total || 0).toFixed(2),
+      time: new Date(o.created_at).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      items: orderItems,
+    };
+  });
+
+  return <OrdersClient initialOrders={mappedOrders} />;
+}
