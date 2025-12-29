@@ -9,6 +9,17 @@ import { useState, useEffect } from "react";
 import { updateBusinessProfile, getRestaurantProfile } from "@/app/actions/restaurant";
 import { getCurrencyOptions } from "@/lib/utils/currency";
 
+type Currency =
+  | "USD"
+  | "EUR"
+  | "GBP"
+  | "GMD"
+  | "XOF"
+  | "NGN"
+  | "GHS"
+  | "ZAR"
+  | "KES";
+
 export default function BusinessProfile() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -19,7 +30,7 @@ export default function BusinessProfile() {
     name: "",
     phone: "",
     email: "",
-    currency: "GMD",
+    currency: "GMD" as Currency,
   });
 
   const currencyOptions = getCurrencyOptions();
@@ -30,13 +41,15 @@ export default function BusinessProfile() {
       setLoading(true);
       const result = await getRestaurantProfile();
       if (result.success && result.data) {
-        const data = result.data as any;
+        const data = result.data as
+          | { name?: string; phone?: string; email?: string; currency?: Currency }
+          | null;
         setFormData((prev) => ({
           ...prev,
-          name: data.name || "",
-          phone: data.phone || "",
-          email: data.email || "",
-          currency: data.currency || "GMD",
+          name: data?.name || "",
+          phone: data?.phone || "",
+          email: data?.email || "",
+          currency: data?.currency || "GMD",
         }));
       }
       setLoading(false);
@@ -64,7 +77,7 @@ export default function BusinessProfile() {
     const result = await updateBusinessProfile({
       name: formData.name,
       phone: formData.phone || null,
-      currency: formData.currency as any,
+      currency: formData.currency,
     });
 
     setSaving(false);
@@ -172,7 +185,10 @@ export default function BusinessProfile() {
                   className="w-full p-2 border rounded-lg"
                   value={formData.currency}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, currency: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      currency: e.target.value as Currency,
+                    }))
                   }
                   required
                 >

@@ -5,16 +5,21 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useRef, useState, useEffect } from "react";
 import { Order, OrderStatus } from "../types";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { CheckCircle2, CookingPot, Hourglass, Printer } from "lucide-react";
 
 interface OrderDetailsModalProps {
   open: boolean;
   onClose: () => void;
   order: Order | null;
+  saving?: boolean;
   onStatusChange: (id: string, newStatus: OrderStatus) => void;
 }
 
@@ -22,14 +27,38 @@ export default function OrderDetailsModal({
   open,
   onClose,
   order,
+  saving = false,
   onStatusChange,
 }: OrderDetailsModalProps) {
   const printRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<OrderStatus | undefined>(order?.status);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setStatus(order?.status);
   }, [order]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const statusMeta: Record<
+    OrderStatus,
+    { label: string; badgeClass: string; icon: React.ReactNode }
+  > = {
+    pending: {
+      label: "Pending",
+      badgeClass: "bg-red-100 text-red-700 border-red-200",
+      icon: <Hourglass className="h-3.5 w-3.5" />,
+    },
+    preparing: {
+      label: "Preparing",
+      badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
+      icon: <CookingPot className="h-3.5 w-3.5" />,
+    },
+    completed: {
+      label: "Completed",
+      badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+    },
+  };
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -38,7 +67,19 @@ export default function OrderDetailsModal({
     if (!win) return;
     win.document.write(`
       <html>
-        <head><title>Print Order</title></head>
+        <head>
+          <title>Print Order</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <style>
+            body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding: 16px; color: #111827; }
+            h1,h2,h3 { margin: 0; }
+            .muted { color: #6b7280; }
+            .row { display:flex; justify-content:space-between; gap:12px; }
+            .box { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin-top: 12px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { text-align: left; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 12px; }
+          </style>
+        </head>
         <body>${printContents}</body>
       </html>
     `);
@@ -50,86 +91,118 @@ export default function OrderDetailsModal({
 
   const handleStatusUpdate = (newStatus: OrderStatus) => {
     if (!order) return;
+    if (saving) return;
     setStatus(newStatus);
     onStatusChange(order.id, newStatus);
   };
 
   if (!order) return null;
 
-  const statusColor: Record<OrderStatus, string> = {
-    pending: "bg-red-100 text-red-700",
-    preparing: "bg-yellow-100 text-yellow-700",
-    completed: "bg-green-100 text-green-700",
-  };
+  const meta = statusMeta[status ?? order.status];
+  const itemsTotal = order.items.reduce((sum, i) => sum + i.qty * i.price, 0);
+  const itemsCount = order.items.reduce((sum, i) => sum + i.qty, 0);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg rounded-xl bg-white shadow-xl p-6">
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-xl rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
-            Order Details
+          <DialogTitle className="text-xl font-semibold tracking-tight">
+            Order details
           </DialogTitle>
+          <DialogDescription>
+            Table {order.table} • {order.time}
+          </DialogDescription>
         </DialogHeader>
 
-        <div ref={printRef} className="space-y-4 text-gray-700">
-          <p>
-            <strong>Order ID:</strong> {order.id}
-          </p>
-          <p>
-            <strong>Table:</strong> {order.table}
-          </p>
-          <p>
-            <strong>Status:</strong>{" "}
-            <span
-              className={`ml-2 px-2 py-1 rounded-full text-sm font-semibold ${
-                statusColor[status!]
-              }`}
+        <div ref={printRef} className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-xs text-muted-foreground">Order ID</div>
+              <div className="font-mono text-xs truncate">{order.id}</div>
+            </div>
+            <Badge
+              variant="outline"
+              className={cn("gap-1.5", meta.badgeClass)}
             >
-              {status}
-            </span>
-          </p>
-          <p>
-            <strong>Total:</strong> ${order.total}
-          </p>
-          <p>
-            <strong>Time:</strong> {order.time}
-          </p>
+              {meta.icon}
+              {meta.label}
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <div className="text-xs text-muted-foreground">Total</div>
+              <div className="font-semibold">${order.total}</div>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <div className="text-xs text-muted-foreground">Items</div>
+              <div className="font-semibold">{itemsCount}</div>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <div className="text-xs text-muted-foreground">Items total</div>
+              <div className="font-semibold">
+                ${Number.isFinite(itemsTotal) ? itemsTotal.toFixed(2) : "—"}
+              </div>
+            </div>
+          </div>
 
           <Separator />
 
-          <div>
-            <p className="font-semibold text-gray-800 mb-2">Items:</p>
-            <ul className="list-disc pl-6 space-y-1">
-              {order.items.map((item, i) => (
-                <li key={i} className="text-gray-600">
-                  {item.name} — {item.qty} × ${item.price}
-                </li>
-              ))}
-            </ul>
+          <div className="space-y-2">
+            <div className="text-sm font-semibold">Items</div>
+            <div className="rounded-lg border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40">
+                  <tr className="text-xs text-muted-foreground">
+                    <th className="px-3 py-2 font-medium">Item</th>
+                    <th className="px-3 py-2 font-medium text-right">Qty</th>
+                    <th className="px-3 py-2 font-medium text-right">Price</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {order.items.map((item, i) => (
+                    <tr key={`${item.name}-${i}`}>
+                      <td className="px-3 py-2">{item.name}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {item.qty}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        ${item.price}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-between items-center pt-6 flex-wrap gap-2">
-          <div className="flex gap-2">
-            {(["pending", "preparing", "completed"] as OrderStatus[]).map(
-              (s) => (
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+          <div className="flex flex-wrap gap-2">
+            {(["pending", "preparing", "completed"] as OrderStatus[]).map((s) => {
+              const active = status === s;
+              return (
                 <Button
                   key={s}
-                  disabled={status === s}
+                  size="sm"
+                  variant={active ? "default" : "outline"}
+                  disabled={saving || active}
                   onClick={() => handleStatusUpdate(s)}
-                  className={`capitalize ${statusColor[s]} hover:opacity-80`}
                 >
-                  {s}
+                  {statusMeta[s].label}
                 </Button>
-              )
-            )}
+              );
+            })}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
-            <Button onClick={handlePrint}>Print</Button>
+            <Button onClick={handlePrint} className="gap-2">
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
           </div>
         </div>
       </DialogContent>

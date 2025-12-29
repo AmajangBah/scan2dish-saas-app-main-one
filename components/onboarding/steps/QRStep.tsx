@@ -33,7 +33,7 @@ export default function QRStep({ onNext, onBack }: QRStepProps) {
               <div>
                 <h3 className="font-bold mb-1">View QR Codes</h3>
                 <p className="text-sm text-gray-600">
-                  Go to Tables page → Click "View QR" on any table
+                  Go to Tables page → Click &quot;View QR&quot; on any table
                 </p>
               </div>
             </div>
@@ -45,7 +45,7 @@ export default function QRStep({ onNext, onBack }: QRStepProps) {
               <div>
                 <h3 className="font-bold mb-1">Download QR Codes</h3>
                 <p className="text-sm text-gray-600">
-                  Click "Download QR" to save as PNG image (high resolution)
+                  Click &quot;Download QR&quot; to save as PNG image (high resolution)
                 </p>
               </div>
             </div>

@@ -16,8 +16,8 @@ export function useCurrency() {
       try {
         const result = await getRestaurantProfile();
         if (result.success && result.data) {
-          const data = result.data as any;
-          setCurrency(data.currency || "GMD");
+          const data = result.data as { currency?: string } | null;
+          setCurrency(data?.currency || "GMD");
         }
       } catch (error) {
         console.error("Failed to load currency:", error);

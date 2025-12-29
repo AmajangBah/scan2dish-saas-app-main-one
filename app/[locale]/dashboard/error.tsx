@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 /**
  * Error boundary for dashboard routes
@@ -15,6 +16,9 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const pathname = usePathname();
+  const locale = pathname.split("/").filter(Boolean)[0] || "en";
+
   useEffect(() => {
     // Log error to console (in production, send to error tracking service)
     console.error("Dashboard error:", error);
@@ -56,7 +60,7 @@ export default function DashboardError({
           >
             Try Again
           </Button>
-          <Link href="/dashboard">
+          <Link href={`/${locale}/dashboard`}>
             <Button variant="outline" className="w-full">
               Back to Dashboard
             </Button>

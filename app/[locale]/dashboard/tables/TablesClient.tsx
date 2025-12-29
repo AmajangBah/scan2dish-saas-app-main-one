@@ -7,6 +7,9 @@ import TableCard from "./components/TableCard";
 import TableTabs from "./components/TableTabs";
 import AddTableDialog from "./components/AddTableDialog";
 import QrDialog from "./components/QrDialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { QrCode, Table2 } from "lucide-react";
+import Link from "next/link";
 
 // ACTIONS
 import { updateTableStatus } from "@/app/actions/tables";
@@ -74,6 +77,10 @@ export default function TablesClient({
     return t.status === activeTab;
   });
 
+  const totalTables = tables.length;
+  const activeTables = tables.filter((t) => t.status !== "cleaning").length;
+  const missingQr = tables.filter((t) => !t.qrAssigned).length;
+
   const handleTableAdded = () => {
     // Refresh will happen via revalidatePath in the action
     // Just close the dialog
@@ -98,6 +105,40 @@ export default function TablesClient({
         />
       </div>
 
+      {/* Quick stats */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total tables
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold tracking-tight">
+            {totalTables}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Active (today)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold tracking-tight">
+            {activeTables}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Missing QR
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold tracking-tight">
+            {missingQr}
+          </CardContent>
+        </Card>
+      </div>
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
@@ -120,16 +161,61 @@ export default function TablesClient({
       <TableTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Table Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {filteredTables.map((table) => (
-          <TableCard
-            key={table.id}
-            table={table}
-            onStatusChange={handleStatusChange}
-            onQrView={handleQrView}
-          />
-        ))}
-      </div>
+      {filteredTables.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {filteredTables.map((table) => (
+            <TableCard
+              key={table.id}
+              table={table}
+              onStatusChange={handleStatusChange}
+              onQrView={handleQrView}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="py-10">
+            <div className="mx-auto max-w-md text-center space-y-3">
+              <div className="mx-auto h-11 w-11 rounded-xl border bg-muted/30 grid place-items-center">
+                {activeTab === "no-qr" ? (
+                  <QrCode className="h-5 w-5 text-muted-foreground" />
+                ) : (
+                  <Table2 className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <div className="text-lg font-semibold">
+                {activeTab === "no-qr"
+                  ? "No tables missing a QR code"
+                  : "No tables to show"}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {totalTables === 0
+                  ? "Add your first table to generate a QR code customers can scan."
+                  : "Try another filter, or add a new table."}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddDialogOpen(true)}
+                  className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-95"
+                >
+                  Add a table
+                </button>
+                <Link
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveTab("all");
+                  }}
+                  className="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted/40"
+                >
+                  Clear filter
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* QR Dialog */}
       <QrDialog

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Table2, Plus } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface TableStepProps {
   onNext: () => void;
@@ -10,6 +11,9 @@ interface TableStepProps {
 }
 
 export default function TableStep({ onNext, onBack }: TableStepProps) {
+  const pathname = usePathname();
+  const locale = pathname.split("/").filter(Boolean)[0] || "en";
+
   return (
     <div className="space-y-8 py-4">
       <div className="text-center space-y-2">
@@ -34,7 +38,7 @@ export default function TableStep({ onNext, onBack }: TableStepProps) {
               <div>
                 <h3 className="font-bold mb-1">Go to Tables Page</h3>
                 <p className="text-sm text-gray-600">
-                  Click "Add Table" to create your first table
+                  Click &quot;Add Table&quot; to create your first table
                 </p>
               </div>
             </div>
@@ -46,7 +50,7 @@ export default function TableStep({ onNext, onBack }: TableStepProps) {
               <div>
                 <h3 className="font-bold mb-1">Enter Table Details</h3>
                 <p className="text-sm text-gray-600">
-                  Give it a number (e.g., "Table 1"), capacity, and location
+                  Give it a number (e.g., &quot;Table 1&quot;), capacity, and location
                 </p>
               </div>
             </div>
@@ -65,7 +69,7 @@ export default function TableStep({ onNext, onBack }: TableStepProps) {
           </div>
 
           <div className="mt-6 pt-6 border-t border-purple-200">
-            <Link href="/dashboard/tables" target="_blank">
+            <Link href={`/${locale}/dashboard/tables`} target="_blank">
               <Button className="w-full bg-purple-600 hover:bg-purple-700 gap-2">
                 <Plus size={16} />
                 Open Tables Page

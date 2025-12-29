@@ -164,7 +164,8 @@ export default function DiscountsClient({
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      discount_type: e.target.value as any,
+                      discount_type:
+                        e.target.value as CreateDiscountInput["discount_type"],
                     })
                   }
                 >
@@ -206,7 +207,10 @@ export default function DiscountsClient({
                   className="w-full p-2 border rounded-lg"
                   value={formData.apply_to}
                   onChange={(e) =>
-                    setFormData({ ...formData, apply_to: e.target.value as any })
+                    setFormData({
+                      ...formData,
+                      apply_to: e.target.value as CreateDiscountInput["apply_to"],
+                    })
                   }
                 >
                   <option value="all">All Items</option>

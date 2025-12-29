@@ -9,12 +9,16 @@ import Link from "next/link";
 
 export default async function AdminOrders({
   searchParams,
+  params,
 }: {
   searchParams: Promise<{ restaurant?: string; status?: string }>;
+  params: Promise<{ locale: string }>;
 }) {
   await requireAdmin();
-  const params = await searchParams;
+  const { locale } = await params;
+  const search = await searchParams;
   const supabase = await createClient();
+  const basePath = `/${locale}/admin/orders`;
 
   // Build query
   let query = supabase
@@ -29,12 +33,12 @@ export default async function AdminOrders({
     .order("created_at", { ascending: false })
     .limit(100);
 
-  if (params.restaurant) {
-    query = query.eq("restaurant_id", params.restaurant);
+  if (search.restaurant) {
+    query = query.eq("restaurant_id", search.restaurant);
   }
 
-  if (params.status) {
-    query = query.eq("status", params.status);
+  if (search.status) {
+    query = query.eq("status", search.status);
   }
 
   const { data: orders } = await query;
@@ -62,10 +66,10 @@ export default async function AdminOrders({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Restaurant
             </label>
-            <form action="/admin/orders" method="get">
+            <form action={basePath} method="get">
               <select
                 name="restaurant"
-                defaultValue={params.restaurant || ""}
+                defaultValue={search.restaurant || ""}
                 onChange={(e) => e.target.form?.submit()}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
@@ -82,17 +86,17 @@ export default async function AdminOrders({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
             </label>
-            <form action="/admin/orders" method="get">
-              {params.restaurant && (
+            <form action={basePath} method="get">
+              {search.restaurant && (
                 <input
                   type="hidden"
                   name="restaurant"
-                  value={params.restaurant}
+                  value={search.restaurant}
                 />
               )}
               <select
                 name="status"
-                defaultValue={params.status || ""}
+                defaultValue={search.status || ""}
                 onChange={(e) => e.target.form?.submit()}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
@@ -179,7 +183,7 @@ export default async function AdminOrders({
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <Link
-                      href={`/admin/restaurants/${order.restaurant?.id}`}
+                      href={`/${locale}/admin/restaurants/${order.restaurant?.id}`}
                       className="font-medium text-orange-600 hover:text-orange-700"
                     >
                       {order.restaurant?.name}

@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <SidebarProvider>
       <RestaurantSidebar restaurantName={ctx.restaurant.name} />
-      <SidebarInset className="min-w-0 bg-[#F5F5F5]">
+      <SidebarInset className="min-w-0 bg-muted/30">
         <RestaurantNavBar restaurantName={ctx.restaurant.name} />
         <main className="p-6">{children}</main>
       </SidebarInset>

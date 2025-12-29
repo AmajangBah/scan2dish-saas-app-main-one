@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { X, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { X } from "lucide-react";
 import {
   getOnboardingProgress,
   updateOnboardingProgress,
@@ -28,12 +27,24 @@ interface OnboardingWizardProps {
 
 export default function OnboardingWizard({ forceOpen = false }: OnboardingWizardProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<OnboardingProgress | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
   const totalSteps = 7;
+  const locale = pathname.split("/").filter(Boolean)[0] || "en";
+  const stepTitles = [
+    "Welcome",
+    "Pricing",
+    "Restaurant profile",
+    "Tables",
+    "Menu",
+    "QR codes",
+    "Finish",
+  ];
+  const currentTitle = stepTitles[currentStep - 1] ?? "Setup";
 
   // Load onboarding progress on mount
   useEffect(() => {
@@ -85,7 +96,7 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
   const handleComplete = async () => {
     await completeOnboarding();
     setOpen(false);
-    router.push("/dashboard");
+    router.push(`/${locale}/dashboard`);
   };
 
   const renderStep = () => {
@@ -115,28 +126,53 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+      >
         {/* Header with progress */}
         <div className="relative pb-4 border-b">
           <button
             onClick={handleSkip}
-            className="absolute right-0 top-0 text-gray-400 hover:text-gray-600"
+            className="absolute right-0 top-0 rounded-md p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+            aria-label="Skip setup"
           >
             <X size={20} />
           </button>
           
           <div className="pr-8">
-            <h2 className="text-2xl font-bold">Setup Your Restaurant</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Step {currentStep} of {totalSteps}
-            </p>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-2xl font-bold">Setup your restaurant</h2>
+              <p className="text-sm text-gray-600">
+                <span className="font-medium">Step {currentStep}</span> of{" "}
+                {totalSteps} • {currentTitle}
+              </p>
+              <p className="text-xs text-gray-500">
+                You can skip for now and finish later from your dashboard.
+              </p>
+            </div>
             
-            {/* Progress bar */}
-            <div className="mt-4 w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-[#C84501] h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-              />
+            {/* Stepper */}
+            <div className="mt-4 flex items-center gap-2">
+              {Array.from({ length: totalSteps }).map((_, i) => {
+                const step = i + 1;
+                const isActive = step === currentStep;
+                const isDone = (progress?.steps_completed || []).includes(step);
+                return (
+                  <div
+                    key={step}
+                    className={[
+                      "h-2 w-8 rounded-full transition-colors",
+                      isActive
+                        ? "bg-[#C84501]"
+                        : isDone
+                        ? "bg-[#C84501]/40"
+                        : "bg-gray-200",
+                    ].join(" ")}
+                    aria-hidden="true"
+                  />
+                );
+              })}
             </div>
           </div>
         </div>

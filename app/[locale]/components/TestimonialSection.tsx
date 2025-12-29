@@ -87,7 +87,7 @@ const TestimonialSection = () => {
 
       <div className="mt-10">
         <Button className="text-white border border-white py-2 px-2 bg-transparent cursor-pointer hover:bg-white hover:text-[#D35A0F]">
-          Get Started — it's free to set up 🍽️
+          Get Started — it&apos;s free to set up 🍽️
         </Button>
       </div>
 

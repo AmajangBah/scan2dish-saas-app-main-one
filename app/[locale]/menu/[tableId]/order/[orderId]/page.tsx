@@ -52,6 +52,7 @@ export default async function OrderTracker({
   ];
 
   // Calculate estimated time based on order age and status
+  // eslint-disable-next-line react-hooks/purity
   const orderAge = Date.now() - new Date(order.created_at).getTime();
   const minutesElapsed = Math.floor(orderAge / 60000);
   
@@ -66,11 +67,13 @@ export default async function OrderTracker({
   // Get items summary
   const items = Array.isArray(order.items) ? order.items : [];
   const itemCount = items.reduce((sum: number, item: {quantity?: number}) => sum + (item.quantity || 1), 0);
-  const rt = (order as any).restaurant_tables as
-    | { table_number?: string }[]
-    | { table_number?: string }
-    | null
-    | undefined;
+  const rt = (order as unknown as {
+    restaurant_tables:
+      | { table_number?: string }[]
+      | { table_number?: string }
+      | null
+      | undefined;
+  }).restaurant_tables;
   const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
 
   return (

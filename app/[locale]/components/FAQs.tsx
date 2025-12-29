@@ -47,7 +47,7 @@ const FAQs = () => {
       <div className="text-center mb-10">
         <p className="text-white text-sm opacity-70 mb-2 tracking-wide">FAQs</p>
         <h2 className="text-white text-3xl md:text-4xl font-semibold">
-          Got Questions? We've Got Answers.
+          Got Questions? We&apos;ve Got Answers.
         </h2>
       </div>
 

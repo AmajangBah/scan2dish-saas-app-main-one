@@ -35,7 +35,20 @@ export default async function OrdersPage() {
   }
 
   // Map database orders to UI Order type
-  const mappedOrders: Order[] = (orders || []).map((o) => {
+  type OrderRow = {
+    id: string;
+    status: "pending" | "preparing" | "completed";
+    total: number | string | null;
+    items: unknown;
+    created_at: string;
+    restaurant_tables:
+      | { table_number?: string }[]
+      | { table_number?: string }
+      | null
+      | undefined;
+  };
+
+  const mappedOrders: Order[] = ((orders as unknown as OrderRow[]) || []).map((o) => {
     const items = Array.isArray(o.items) ? o.items : [];
     const orderItems = items.map((item: {name?: string; quantity?: number; price?: string | number}) => ({
       name: item.name || "Unknown Item",
@@ -43,25 +56,22 @@ export default async function OrdersPage() {
       price: parseFloat(String(item.price || 0)),
     }));
 
-    const rt = (o as any).restaurant_tables as
-      | { table_number?: string }[]
-      | { table_number?: string }
-      | null
-      | undefined;
+    const rt = o.restaurant_tables;
     const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
 
     return {
       id: o.id,
       table: tableNumber || "Unknown",
       status: o.status as "pending" | "preparing" | "completed",
-      total: parseFloat(o.total || 0).toFixed(2),
+      total: Number(o.total || 0).toFixed(2),
       time: new Date(o.created_at).toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
       }),
+      createdAt: String(o.created_at),
       items: orderItems,
     };
   });
 
-  return <OrdersClient initialOrders={mappedOrders} />;
+  return <OrdersClient restaurantId={restaurant_id} initialOrders={mappedOrders} />;
 }

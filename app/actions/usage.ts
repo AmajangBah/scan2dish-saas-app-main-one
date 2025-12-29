@@ -65,25 +65,32 @@ export async function getUsageMetrics(): Promise<UsageMetrics> {
   const commissionOwedTotal = Number(restaurant?.total_commission_owed || 0);
   const commissionPaidTotal = Number(restaurant?.total_commission_paid || 0);
 
-  const recentOrders =
-    (recent || []).map((o: any) => {
-      const rt = o.restaurant_tables as
-        | { table_number?: string }[]
-        | { table_number?: string }
-        | null
-        | undefined;
-      const table_number = Array.isArray(rt)
-        ? rt[0]?.table_number ?? null
-        : rt?.table_number ?? null;
+  type RecentOrderRow = {
+    id: string;
+    created_at: string;
+    total: unknown;
+    status: unknown;
+    restaurant_tables:
+      | { table_number?: string }[]
+      | { table_number?: string }
+      | null
+      | undefined;
+  };
 
-      return {
-        id: o.id,
-        created_at: o.created_at,
-        total: Number(o.total || 0),
-        status: String(o.status || ""),
-        table_number,
-      };
-    }) || [];
+  const recentOrders = ((recent as unknown as RecentOrderRow[]) || []).map((o) => {
+    const rt = o.restaurant_tables;
+    const table_number = Array.isArray(rt)
+      ? rt[0]?.table_number ?? null
+      : rt?.table_number ?? null;
+
+    return {
+      id: o.id,
+      created_at: o.created_at,
+      total: Number(o.total || 0),
+      status: String(o.status || ""),
+      table_number,
+    };
+  });
 
   return {
     currency,

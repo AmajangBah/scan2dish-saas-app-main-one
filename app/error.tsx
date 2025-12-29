@@ -30,7 +30,7 @@ export default function GlobalError({
                 Something went wrong
               </h2>
               <p className="text-gray-600">
-                We're sorry for the inconvenience. An unexpected error occurred.
+                We&apos;re sorry for the inconvenience. An unexpected error occurred.
               </p>
             </div>
 

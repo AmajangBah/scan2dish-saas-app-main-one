@@ -77,7 +77,7 @@ export default async function MenuLayout({
             Menus Currently Unavailable
           </h1>
           <p className="text-gray-600 mb-4">
-            We're unable to show the menu at this time. Please contact staff to
+            We&apos;re unable to show the menu at this time. Please contact staff to
             place your order.
           </p>
           {restaurant?.enforcement_reason && (

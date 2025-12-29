@@ -6,6 +6,7 @@ import ActivityFeed from "../components/ActivityFeed";
 import { ActivityItem } from "@/types/activity";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
+import LiveOrdersWidget, { type LiveOrderSummary } from "./LiveOrdersWidget";
 
 export default async function Dashboard() {
   const ctx = await requireRestaurantPage();
@@ -49,6 +50,49 @@ export default async function Dashboard() {
     .eq("restaurant_id", restaurant_id)
     .in("status", ["pending", "preparing"]);
 
+  // Live orders widget (latest pending/preparing)
+  const { data: liveRows } = await supabase
+    .from("orders")
+    .select(
+      `
+      id,
+      status,
+      total,
+      created_at,
+      restaurant_tables!inner(table_number)
+    `
+    )
+    .eq("restaurant_id", restaurant_id)
+    .in("status", ["pending", "preparing"])
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  type LiveOrderRow = {
+    id: string;
+    status: "pending" | "preparing" | "completed";
+    total: number | string | null;
+    created_at: string;
+    restaurant_tables:
+      | { table_number?: string }
+      | { table_number?: string }[]
+      | null
+      | undefined;
+  };
+
+  const initialLiveOrders: LiveOrderSummary[] = (
+    (liveRows as unknown as LiveOrderRow[] | null | undefined) ?? []
+  ).map((o) => {
+    const rt = o.restaurant_tables;
+    const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
+    return {
+      id: String(o.id),
+      table: tableNumber || "Unknown",
+      status: o.status as "pending" | "preparing" | "completed",
+      total: Number(o.total || 0).toFixed(2),
+      createdAt: String(o.created_at),
+    };
+  });
+
   // Fetch recent activity (last 5 orders)
   const { data: recentOrders } = await supabase
     .from("orders")
@@ -64,17 +108,22 @@ export default async function Dashboard() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  type RecentOrder = {
+    id: string;
+    items: unknown;
+    created_at: string;
+    restaurant_tables:
+      | { table_number?: string }
+      | { table_number?: string }[]
+      | null
+      | undefined;
+  };
+
   const activityData: ActivityItem[] =
-    recentOrders?.map((order) => {
+    (recentOrders as unknown as RecentOrder[] | null | undefined)?.map((order) => {
       const items = Array.isArray(order.items) ? order.items : [];
-      const rt = (order as any).restaurant_tables as
-        | { table_number?: string }[]
-        | { table_number?: string }
-        | null
-        | undefined;
-      const tableNumber = Array.isArray(rt)
-        ? rt[0]?.table_number
-        : rt?.table_number;
+      const rt = order.restaurant_tables;
+      const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
       return {
         id: order.id,
         table: parseInt(tableNumber || "0"),
@@ -97,57 +146,73 @@ export default async function Dashboard() {
     }) || [];
 
   return (
-    <section className="p-6 w-full space-y-6">
+    <section className="w-full space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold my-4">
-          Welcome back 👋 {restaurantName}
+      <div className="space-y-1">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+          Welcome back, {restaurantName}
         </h1>
-        <p className="text-gray-600 text-sm">
-          Here's the latest overview of your restaurant performance
+        <p className="text-sm text-muted-foreground">
+          A quick snapshot of what’s happening today.
         </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <DashboardCard
-          heading="Total Orders"
-          figure={totalOrders || 0}
-          accent="orange"
-          icon={<ShoppingBag />}
-        />
-        <DashboardCard
-          heading="Revenue"
-          figure={Math.round(revenue)}
-          accent="green"
-          icon={<DollarSign />}
-        />
-        <DashboardCard
-          heading="Active Tables"
-          figure={activeTables || 0}
-          accent="blue"
-          icon={<Utensils />}
-        />
-        <DashboardCard
-          heading="Pending Orders"
-          figure={pendingOrders || 0}
-          accent="red"
-          icon={<Timer />}
-        />
+      {/* Bento layout */}
+      <div className="grid gap-4 lg:grid-cols-12">
+        <div className="lg:col-span-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <DashboardCard
+            heading="Total Orders"
+            figure={totalOrders || 0}
+            accent="orange"
+            icon={<ShoppingBag />}
+          />
+          <DashboardCard
+            heading="Revenue"
+            figure={Math.round(revenue)}
+            accent="green"
+            icon={<DollarSign />}
+          />
+          <DashboardCard
+            heading="Active Tables"
+            figure={activeTables || 0}
+            accent="blue"
+            icon={<Utensils />}
+          />
+          <DashboardCard
+            heading="Pending Orders"
+            figure={pendingOrders || 0}
+            accent="red"
+            icon={<Timer />}
+          />
+        </div>
+
+        <div className="lg:col-span-4 grid gap-4">
+          <LiveOrdersWidget
+            restaurantId={restaurant_id}
+            initialOrders={initialLiveOrders}
+          />
+          <Link href={Route.TABLES} className="block">
+            <DashboardCard heading="Add a table" isAddCard />
+          </Link>
+          <Link href={Route.MENU} className="block">
+            <DashboardCard heading="Add a menu item" isAddCard />
+          </Link>
+        </div>
+
+        <div className="lg:col-span-12">
+          {activityData.length > 0 ? (
+            <ActivityFeed activities={activityData} />
+          ) : (
+            <div className="rounded-xl border bg-card p-6 text-center">
+              <div className="text-base font-semibold">No orders yet</div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Once customers start scanning table QR codes, you’ll see activity
+                here.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link href={Route.TABLES}>
-          <DashboardCard heading="Add More Tables" isAddCard />
-        </Link>
-
-        <Link href={Route.MENU}>
-          <DashboardCard heading="Add More Menu Items" isAddCard />
-        </Link>
-      </div>
-
-      {activityData.length > 0 && <ActivityFeed activities={activityData} />}
     </section>
   );
 }

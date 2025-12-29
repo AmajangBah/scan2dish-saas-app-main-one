@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { formatPrice } from "@/lib/utils/currency";
 import type {
   AnalyticsKPIs,
@@ -24,9 +23,6 @@ export default function AnalyticsClient({
   weeklySales,
   currency,
 }: AnalyticsClientProps) {
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  const [selectedRange, setSelectedRange] = useState<any>(null);
-
   // Show empty state if no data
   if (!kpis || kpis.totalOrders === 0) {
     return (
@@ -34,7 +30,7 @@ export default function AnalyticsClient({
         <div>
           <h1 className="text-3xl font-bold">Analytics</h1>
           <p className="text-gray-600 text-sm mt-1">
-            Track your restaurant's performance
+            Track your restaurant&apos;s performance
           </p>
         </div>
 
@@ -64,7 +60,7 @@ export default function AnalyticsClient({
       <div>
         <h1 className="text-3xl font-bold">Analytics</h1>
         <p className="text-gray-600 text-sm mt-1">
-          Track your restaurant's performance
+          Track your restaurant&apos;s performance
         </p>
       </div>
 
