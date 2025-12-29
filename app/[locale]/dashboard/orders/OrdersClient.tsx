@@ -7,6 +7,9 @@ import OrderCard from "./components/OrderCard";
 import OrderDetailsModal from "./components/OrderDetailsModal";
 import { Order, OrderStatus } from "./types";
 import { updateOrderStatus } from "@/app/actions/orderStatus";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default function OrdersClient({
   initialOrders,
@@ -14,6 +17,7 @@ export default function OrdersClient({
   initialOrders: Order[];
 }) {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -25,9 +29,15 @@ export default function OrdersClient({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter((o) => o.table.toLowerCase().includes(q));
-  }, [orders, search]);
+    return orders.filter((o) => {
+      if (statusFilter !== "all" && o.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        o.table.toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q)
+      );
+    });
+  }, [orders, search, statusFilter]);
 
   const start = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);
@@ -64,37 +74,130 @@ export default function OrdersClient({
     setSavingOrderId(null);
   };
 
+  const statusTabs: Array<{
+    id: OrderStatus | "all";
+    label: string;
+    toneClass: string;
+  }> = [
+    { id: "all", label: "All", toneClass: "" },
+    { id: "pending", label: "Pending", toneClass: "text-red-600" },
+    { id: "preparing", label: "Preparing", toneClass: "text-amber-600" },
+    { id: "completed", label: "Completed", toneClass: "text-emerald-600" },
+  ];
+
   return (
-    <div className="p-6 bg-gray-50 min-h-screen space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800 text-center">Orders</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            Orders
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Update statuses quickly and keep your kitchen in sync.
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {filtered.length} {filtered.length === 1 ? "order" : "orders"}
+        </div>
+      </div>
 
-      <div className="max-w-md mx-auto space-y-2">
-        <SearchBar 
-          value={search} 
-          onChange={setSearch} 
-          placeholder="Search by table..."
-        />
-        {error && <div className="text-sm text-red-600 text-center">{error}</div>}
-        {savingOrderId && (
-          <div className="text-xs text-gray-500 text-center">
-            Saving status…
+      {/* Controls */}
+      <Card className="shadow-sm">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="w-full md:max-w-sm">
+              <SearchBar
+                value={search}
+                onChange={(v) => {
+                  setSearch(v);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search by table or order ID…"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {statusTabs.map((tab) => (
+                <Button
+                  key={tab.id}
+                  type="button"
+                  variant={statusFilter === tab.id ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "rounded-full",
+                    statusFilter !== tab.id && tab.toneClass
+                  )}
+                  onClick={() => {
+                    setStatusFilter(tab.id);
+                    setCurrentPage(1);
+                  }}
+                >
+                  {tab.label}
+                </Button>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-        {paginated.map((order) => (
-          <OrderCard
-            key={order.id}
-            order={order}
-            onView={handleView}
-            onStatusChange={handleStatusChange}
-          />
-        ))}
-      </div>
+          {(error || savingOrderId) && (
+            <div className="flex flex-col gap-1">
+              {error && (
+                <div className="text-sm text-red-600">{error}</div>
+              )}
+              {savingOrderId && (
+                <div className="text-xs text-muted-foreground">
+                  Saving status…
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {paginated.length === 0 && (
-        <p className="text-center text-gray-400 mt-12">No orders found.</p>
+      {/* Content */}
+      {paginated.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {paginated.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              saving={savingOrderId === order.id}
+              onView={handleView}
+              onStatusChange={handleStatusChange}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="py-12">
+            <div className="mx-auto max-w-md text-center space-y-2">
+              <div className="text-base font-semibold">
+                {search.trim() || statusFilter !== "all"
+                  ? "No matching orders"
+                  : "No orders yet"}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {search.trim() || statusFilter !== "all"
+                  ? "Try clearing filters or searching a different table."
+                  : "When customers start scanning table QR codes, new orders will appear here."}
+              </p>
+              {(search.trim() || statusFilter !== "all") && (
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setSearch("");
+                      setStatusFilter("all");
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Pagination
