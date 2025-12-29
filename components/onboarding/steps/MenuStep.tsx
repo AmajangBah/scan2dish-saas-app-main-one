@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, UtensilsCrossed, Plus } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface MenuStepProps {
   onNext: () => void;
@@ -10,6 +11,9 @@ interface MenuStepProps {
 }
 
 export default function MenuStep({ onNext, onBack }: MenuStepProps) {
+  const pathname = usePathname();
+  const locale = pathname.split("/").filter(Boolean)[0] || "en";
+
   return (
     <div className="space-y-8 py-4">
       <div className="text-center space-y-2">
@@ -77,7 +81,7 @@ export default function MenuStep({ onNext, onBack }: MenuStepProps) {
           </div>
 
           <div className="mt-6 pt-6 border-t border-green-200">
-            <Link href="/dashboard/menu" target="_blank">
+            <Link href={`/${locale}/dashboard/menu`} target="_blank">
               <Button className="w-full bg-green-600 hover:bg-green-700 gap-2">
                 <Plus size={16} />
                 Open Menu Page

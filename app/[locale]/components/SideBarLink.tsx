@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import clsx from "clsx";
+import {
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 
 interface SideBarLinkProps {
   href: string;
@@ -12,21 +15,26 @@ interface SideBarLinkProps {
 
 const SideBarLink = ({ href, label, icon }: SideBarLinkProps) => {
   const pathname = usePathname();
-  const active = pathname === href;
+
+  const locale = pathname.split("/").filter(Boolean)[0] || "en";
+  const hrefWithLocale = `/${locale}${href}`;
+
+  const active =
+    pathname === hrefWithLocale ||
+    (hrefWithLocale !== `/${locale}/dashboard` &&
+      pathname.startsWith(`${hrefWithLocale}/`)) ||
+    (hrefWithLocale === `/${locale}/dashboard` &&
+      pathname.startsWith(`/${locale}/dashboard`));
 
   return (
-    <Link
-      href={href}
-      className={clsx(
-        "flex items-center gap-3 px-6 py-3 rounded-md text-[15px] font-medium transition",
-        active
-          ? "bg-orange-600 text-white shadow-sm"
-          : "text-gray-700 hover:bg-gray-100"
-      )}
-    >
-      {icon}
-      <span>{label}</span>
-    </Link>
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={active} tooltip={label}>
+        <Link href={hrefWithLocale} aria-current={active ? "page" : undefined}>
+          {icon}
+          <span>{label}</span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
 };
 export default SideBarLink;

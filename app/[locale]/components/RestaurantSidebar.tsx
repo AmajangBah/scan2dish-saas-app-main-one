@@ -9,6 +9,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
   SidebarMenu,
+  SidebarSeparator,
 } from "@/components/ui/sidebar";
 
 import {
@@ -27,16 +28,23 @@ import SideBarLink from "./SideBarLink";
 
 const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" variant="inset">
       {/* HEADER */}
-      <SidebarHeader className="border-b px-4 py-6">
-        <h2 className="text-xl font-bold">{restaurantName}</h2>
+      <SidebarHeader className="border-b px-3 py-4">
+        <div className="flex flex-col gap-1">
+          <div className="text-xs font-medium text-muted-foreground">
+            Scan2Dish
+          </div>
+          <h2 className="text-base font-semibold leading-tight truncate">
+            {restaurantName}
+          </h2>
+        </div>
       </SidebarHeader>
 
       {/* MAIN NAV */}
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SideBarLink
@@ -44,7 +52,16 @@ const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
                 label="Overview"
                 icon={<LayoutDashboard className="h-5 w-5" />}
               />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Operations</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
               <SideBarLink
                 href={Route.ORDERS}
                 label="Orders"
@@ -62,7 +79,14 @@ const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
                 label="Tables"
                 icon={<Table2 className="h-5 w-5" />}
               />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
+        <SidebarGroup>
+          <SidebarGroupLabel>Insights</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
               <SideBarLink
                 href={Route.ANALYTICS}
                 label="Analytics"
