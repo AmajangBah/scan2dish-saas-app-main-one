@@ -211,6 +211,7 @@ export default function OrdersClient({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         order={selectedOrder}
+        saving={selectedOrder ? savingOrderId === selectedOrder.id : false}
         onStatusChange={handleStatusChange}
       />
     </div>

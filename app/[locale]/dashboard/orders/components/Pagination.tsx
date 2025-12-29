@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+
 interface PaginationProps {
   currentPage: number;
   totalItems: number;
@@ -15,25 +17,30 @@ export default function Pagination({
 }: PaginationProps) {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
+  if (totalPages <= 1) return null;
+
   return (
-    <div className="flex justify-center gap-2 mt-6">
-      <button
+    <div className="flex items-center justify-center gap-3 pt-2">
+      <Button
+        variant="outline"
+        size="sm"
         disabled={currentPage === 1}
         onClick={() => onPageChange(currentPage - 1)}
-        className="px-4 py-2 bg-gray-200 rounded-lg font-semibold disabled:opacity-50"
       >
-        Prev
-      </button>
-      <span className="px-4 py-2 font-semibold text-gray-700">
-        {currentPage} / {totalPages}
-      </span>
-      <button
+        Previous
+      </Button>
+      <div className="text-sm text-muted-foreground tabular-nums">
+        Page <span className="font-medium text-foreground">{currentPage}</span>{" "}
+        of <span className="font-medium text-foreground">{totalPages}</span>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
         disabled={currentPage === totalPages}
         onClick={() => onPageChange(currentPage + 1)}
-        className="px-4 py-2 bg-gray-200 rounded-lg font-semibold disabled:opacity-50"
       >
         Next
-      </button>
+      </Button>
     </div>
   );
 }
