@@ -10,6 +10,7 @@ import { ArrowRight, CheckCircle2, CookingPot, Hourglass } from "lucide-react";
 interface OrderCardProps {
   order: Order;
   saving?: boolean;
+  isNew?: boolean;
   onView: (order: Order) => void;
   onStatusChange: (id: string, newStatus: OrderStatus) => void;
 }
@@ -17,6 +18,7 @@ interface OrderCardProps {
 export default function OrderCard({
   order,
   saving = false,
+  isNew = false,
   onView,
   onStatusChange,
 }: OrderCardProps) {
@@ -54,7 +56,8 @@ export default function OrderCard({
     <Card
       className={cn(
         "cursor-pointer rounded-xl border shadow-sm hover:shadow-md transition-all",
-        saving && "opacity-80"
+        saving && "opacity-80",
+        isNew && "ring-2 ring-orange-500/30 shadow-md"
       )}
       onClick={() => onView(order)}
     >
@@ -66,6 +69,12 @@ export default function OrderCard({
             <div className="text-xl font-semibold tracking-tight truncate">
               {order.table}
             </div>
+            {isNew && (
+              <div className="mt-1 flex items-center gap-2 text-xs text-orange-700">
+                <span className="inline-flex h-2 w-2 rounded-full bg-orange-500 animate-pulse" />
+                New order
+              </div>
+            )}
           </div>
           <Badge
             variant="outline"

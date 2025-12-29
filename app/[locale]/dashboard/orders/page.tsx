@@ -35,7 +35,12 @@ export default async function OrdersPage() {
   }
 
   // Map database orders to UI Order type
-  type OrderRow = (typeof orders extends (infer T)[] ? T : never) & {
+  type OrderRow = {
+    id: string;
+    status: "pending" | "preparing" | "completed";
+    total: number | string | null;
+    items: unknown;
+    created_at: string;
     restaurant_tables:
       | { table_number?: string }[]
       | { table_number?: string }
@@ -58,14 +63,15 @@ export default async function OrdersPage() {
       id: o.id,
       table: tableNumber || "Unknown",
       status: o.status as "pending" | "preparing" | "completed",
-      total: parseFloat(o.total || 0).toFixed(2),
+      total: Number(o.total || 0).toFixed(2),
       time: new Date(o.created_at).toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
       }),
+      createdAt: String(o.created_at),
       items: orderItems,
     };
   });
 
-  return <OrdersClient initialOrders={mappedOrders} />;
+  return <OrdersClient restaurantId={restaurant_id} initialOrders={mappedOrders} />;
 }

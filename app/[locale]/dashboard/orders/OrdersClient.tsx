@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SearchBar from "@/components/ui/search-bar";
 import Pagination from "./components/Pagination";
 import OrderCard from "./components/OrderCard";
@@ -10,10 +10,31 @@ import { updateOrderStatus } from "@/app/actions/orderStatus";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { createBrowserSupabase } from "@/lib/supabase/client";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+
+type OrderItemRow = { name?: string; quantity?: number; price?: string | number };
+type RestaurantTableJoin =
+  | { table_number?: string }
+  | { table_number?: string }[]
+  | null
+  | undefined;
+type OrderRow = {
+  id: string;
+  status: OrderStatus;
+  total: number | string | null;
+  items: unknown;
+  created_at: string;
+  restaurant_tables: RestaurantTableJoin;
+};
 
 export default function OrdersClient({
+  restaurantId,
   initialOrders,
 }: {
+  restaurantId: string;
   initialOrders: Order[];
 }) {
   const [search, setSearch] = useState("");
@@ -24,6 +45,23 @@ export default function OrdersClient({
   const [modalOpen, setModalOpen] = useState(false);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [liveStatus, setLiveStatus] = useState<
+    "connecting" | "live" | "reconnecting" | "offline"
+  >("connecting");
+
+  // "New order" highlighting (visual even if sound is muted)
+  const [newOrderSince, setNewOrderSince] = useState<Record<string, number>>({});
+
+  // Sound settings (autoplay-safe: user must enable)
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [volume, setVolume] = useState(0.6);
+  const audioRef = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null);
+  const notifiedIdsRef = useRef<Set<string>>(new Set());
+  const supabaseRef = useRef<ReturnType<typeof createBrowserSupabase> | null>(
+    null
+  );
+  const ordersRef = useRef<Order[]>(initialOrders);
+  const liveStatusRef = useRef(liveStatus);
 
   const ITEMS_PER_PAGE = 6;
 
@@ -42,9 +80,24 @@ export default function OrdersClient({
   const start = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);
 
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
+
+  useEffect(() => {
+    liveStatusRef.current = liveStatus;
+  }, [liveStatus]);
+
   const handleView = (order: Order) => {
     setSelectedOrder(order);
     setModalOpen(true);
+    // Mark as "seen" (stop highlight) when opened
+    setNewOrderSince((prev) => {
+      if (!prev[order.id]) return prev;
+      const next = { ...prev };
+      delete next[order.id];
+      return next;
+    });
   };
 
   const handleStatusChange = async (id: string, newStatus: OrderStatus) => {
@@ -73,6 +126,324 @@ export default function OrdersClient({
 
     setSavingOrderId(null);
   };
+
+  function getStorageKey(key: string) {
+    return `s2d_${key}_${restaurantId}`;
+  }
+
+  async function ensureAudioReady() {
+    try {
+      if (!audioRef.current) {
+        const w = window as Window & { webkitAudioContext?: typeof AudioContext };
+        const AudioCtx = window.AudioContext ?? w.webkitAudioContext;
+        if (!AudioCtx) return false;
+        const ctx = new AudioCtx();
+        const gain = ctx.createGain();
+        gain.gain.value = volume;
+        gain.connect(ctx.destination);
+        audioRef.current = { ctx, gain };
+      }
+      if (audioRef.current.ctx.state !== "running") {
+        await audioRef.current.ctx.resume();
+      }
+      audioRef.current.gain.gain.value = volume;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function playNewOrderSound() {
+    if (!soundEnabled) return;
+    const audio = audioRef.current;
+    if (!audio || audio.ctx.state !== "running") return;
+
+    // A short, clear two-tone chime (non-annoying)
+    const now = audio.ctx.currentTime;
+    const g = audio.gain;
+
+    const o1 = audio.ctx.createOscillator();
+    o1.type = "sine";
+    o1.frequency.value = 880;
+    o1.connect(g);
+    o1.start(now);
+    o1.stop(now + 0.08);
+
+    const o2 = audio.ctx.createOscillator();
+    o2.type = "sine";
+    o2.frequency.value = 660;
+    o2.connect(g);
+    o2.start(now + 0.1);
+    o2.stop(now + 0.22);
+  }
+
+  function markOrderAsNew(orderId: string) {
+    setNewOrderSince((prev) => {
+      if (prev[orderId]) return prev;
+      return { ...prev, [orderId]: Date.now() };
+    });
+  }
+
+  function maybeNotifyNewOrder(orderId: string) {
+    if (notifiedIdsRef.current.has(orderId)) return;
+    notifiedIdsRef.current.add(orderId);
+    // Persist a small rolling window so refreshes don't re-trigger
+    try {
+      const key = getStorageKey("notified_order_ids");
+      const existing = JSON.parse(window.localStorage.getItem(key) || "[]") as string[];
+      const next = [orderId, ...existing.filter((x) => x !== orderId)].slice(0, 150);
+      window.localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+
+    markOrderAsNew(orderId);
+    playNewOrderSound();
+  }
+
+  function upsertOrder(nextOrder: Order) {
+    setOrders((prev) => {
+      const existingIdx = prev.findIndex((o) => o.id === nextOrder.id);
+      if (existingIdx === -1) {
+        return [nextOrder, ...prev];
+      }
+      const copy = [...prev];
+      copy[existingIdx] = { ...copy[existingIdx], ...nextOrder };
+      return copy;
+    });
+    if (selectedOrder?.id === nextOrder.id) {
+      setSelectedOrder({ ...selectedOrder, ...nextOrder });
+    }
+  }
+
+  function mapItems(items: unknown) {
+    const arr = Array.isArray(items) ? (items as OrderItemRow[]) : [];
+    return arr.map((item) => ({
+      name: item.name || "Unknown Item",
+      qty: item.quantity || 1,
+      price: parseFloat(String(item.price || 0)),
+    }));
+  }
+
+  function formatOrderRow(row: OrderRow): Order {
+    const rt = row.restaurant_tables;
+    const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
+    const createdAt = String(row.created_at);
+    const time = new Date(createdAt).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return {
+      id: String(row.id),
+      table: tableNumber || "Unknown",
+      status: row.status,
+      total: parseFloat(String(row.total || 0)).toFixed(2),
+      time,
+      createdAt,
+      items: mapItems(row.items),
+    };
+  }
+
+  async function fetchOrderWithTable(orderId: string) {
+    const supabase = supabaseRef.current ?? createBrowserSupabase();
+    supabaseRef.current = supabase;
+
+    const { data, error: fetchError } = await supabase
+      .from("orders")
+      .select(
+        `
+        id,
+        status,
+        total,
+        items,
+        created_at,
+        restaurant_tables(table_number)
+      `
+      )
+      .eq("id", orderId)
+      .single();
+
+    if (fetchError || !data) return null;
+
+    return formatOrderRow(data as unknown as OrderRow);
+  }
+
+  async function refreshOrdersOnce() {
+    const supabase = supabaseRef.current ?? createBrowserSupabase();
+    supabaseRef.current = supabase;
+    const { data } = await supabase
+      .from("orders")
+      .select(
+        `
+        id,
+        status,
+        total,
+        items,
+        created_at,
+        restaurant_tables(table_number)
+      `
+      )
+      .eq("restaurant_id", restaurantId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    const rows = (data ?? []) as unknown as OrderRow[];
+    const mapped: Order[] = rows.map(formatOrderRow);
+
+    setOrders((prev) => {
+      const existingIds = new Set(prev.map((o) => o.id));
+      for (const o of mapped) {
+        if (!existingIds.has(o.id)) {
+          maybeNotifyNewOrder(o.id);
+        }
+      }
+      return mapped;
+    });
+  }
+
+  // Load persisted settings on mount
+  useEffect(() => {
+    try {
+      const enabled = window.localStorage.getItem(getStorageKey("sound_enabled"));
+      const storedVol = window.localStorage.getItem(getStorageKey("sound_volume"));
+      setSoundEnabled(enabled === "true");
+      if (storedVol) {
+        const n = Number(storedVol);
+        if (!Number.isNaN(n)) setVolume(Math.min(1, Math.max(0, n)));
+      }
+      const storedNotified = JSON.parse(
+        window.localStorage.getItem(getStorageKey("notified_order_ids")) || "[]"
+      ) as string[];
+      notifiedIdsRef.current = new Set(storedNotified);
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId]);
+
+  // Keep audio gain in sync
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.gain.gain.value = volume;
+    }
+    try {
+      window.localStorage.setItem(getStorageKey("sound_volume"), String(volume));
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [volume, restaurantId]);
+
+  // Live subscription + polling fallback
+  useEffect(() => {
+    const supabase = createBrowserSupabase();
+    supabaseRef.current = supabase;
+
+    setLiveStatus("connecting");
+
+    type ChangePayload = { new: Partial<OrderRow> & { id?: string } };
+
+    const channel = supabase
+      .channel(`restaurant-orders-${restaurantId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "orders",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        async (payload) => {
+          const p = payload as unknown as ChangePayload;
+          const id = String(p.new?.id ?? "");
+          if (!id) return;
+
+          const full = await fetchOrderWithTable(id);
+          if (!full) return;
+
+          upsertOrder(full);
+          maybeNotifyNewOrder(full.id);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+          filter: `restaurant_id=eq.${restaurantId}`,
+        },
+        async (payload) => {
+          const p = payload as unknown as ChangePayload;
+          const id = String(p.new?.id ?? "");
+          if (!id) return;
+
+          // Try to update using payload; fall back to fetch if we don't have it yet.
+          const existing = ordersRef.current.find((o) => o.id === id);
+          if (!existing) {
+            const full = await fetchOrderWithTable(id);
+            if (full) upsertOrder(full);
+            return;
+          }
+
+          const newStatus = p.new.status as OrderStatus | undefined;
+          const newTotalRaw = p.new.total;
+          const newTotal =
+            newTotalRaw != null ? Number(newTotalRaw).toFixed(2) : undefined;
+          const createdAt = p.new.created_at ? String(p.new.created_at) : existing.createdAt;
+          const time = new Date(createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+          upsertOrder({
+            ...existing,
+            status: newStatus ?? existing.status,
+            total: newTotal ?? existing.total,
+            createdAt,
+            time,
+          });
+        }
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") setLiveStatus("live");
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setLiveStatus("reconnecting");
+        else if (status === "CLOSED") setLiveStatus("offline");
+      });
+
+    // Polling fallback (every 10s) when not live
+    const interval = window.setInterval(() => {
+      if (liveStatusRef.current === "live") return;
+      refreshOrdersOnce().catch(() => {
+        // ignore
+      });
+    }, 10_000);
+
+    // Initial refresh (covers missed events during reconnect / tab sleep)
+    refreshOrdersOnce().catch(() => {
+      // ignore
+    });
+
+    return () => {
+      window.clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId]);
+
+  // Expire "new" highlights after 2 minutes
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const cutoff = Date.now() - 2 * 60_000;
+      setNewOrderSince((prev) => {
+        const ids = Object.entries(prev);
+        const next: Record<string, number> = {};
+        for (const [id, ts] of ids) {
+          if (ts >= cutoff) next[id] = ts;
+        }
+        return next;
+      });
+    }, 15_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   const statusTabs: Array<{
     id: OrderStatus | "all";
@@ -105,6 +476,83 @@ export default function OrdersClient({
       {/* Controls */}
       <Card className="shadow-sm">
         <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "h-2.5 w-2.5 rounded-full",
+                  liveStatus === "live"
+                    ? "bg-emerald-500"
+                    : liveStatus === "connecting"
+                    ? "bg-amber-500 animate-pulse"
+                    : liveStatus === "reconnecting"
+                    ? "bg-amber-500 animate-pulse"
+                    : "bg-gray-400"
+                )}
+              />
+              <Badge variant="outline" className="text-xs">
+                {liveStatus === "live"
+                  ? "Live"
+                  : liveStatus === "connecting"
+                  ? "Connecting…"
+                  : liveStatus === "reconnecting"
+                  ? "Reconnecting…"
+                  : "Offline"}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {liveStatus === "live"
+                  ? "Updates are instant."
+                  : "Fallback polling is active."}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Sound</span>
+                <Switch
+                  checked={soundEnabled}
+                  onCheckedChange={async (checked) => {
+                    if (checked) {
+                      const ok = await ensureAudioReady();
+                      if (!ok) {
+                        toast.error("Sound blocked by browser. Tap again after interacting.");
+                        setSoundEnabled(false);
+                        return;
+                      }
+                    }
+                    setSoundEnabled(checked);
+                    try {
+                      window.localStorage.setItem(
+                        getStorageKey("sound_enabled"),
+                        String(checked)
+                      );
+                    } catch {
+                      // ignore
+                    }
+                  }}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {soundEnabled ? "On" : "Off"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Volume</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="w-32"
+                  disabled={!soundEnabled}
+                  aria-label="Sound volume"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="w-full md:max-w-sm">
               <SearchBar
@@ -161,6 +609,7 @@ export default function OrdersClient({
               key={order.id}
               order={order}
               saving={savingOrderId === order.id}
+              isNew={Boolean(newOrderSince[order.id]) && order.status === "pending"}
               onView={handleView}
               onStatusChange={handleStatusChange}
             />
