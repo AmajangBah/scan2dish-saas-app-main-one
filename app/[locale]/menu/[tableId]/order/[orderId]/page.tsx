@@ -34,7 +34,7 @@ export default async function OrderTracker({
   }
 
   // Map status to progress steps
-  const status = order.status as "pending" | "preparing" | "completed";
+  const status = order.status as "pending" | "preparing" | "completed" | "cancelled";
   
   const steps = [
     { 
@@ -65,6 +65,8 @@ export default async function OrderTracker({
     estimatedTime = remaining > 0 ? `${remaining} minutes` : "Ready soon!";
   } else if (status === "completed") {
     estimatedTime = "Ready now!";
+  } else if (status === "cancelled") {
+    estimatedTime = "Cancelled";
   }
 
   // Get items summary
@@ -142,6 +144,12 @@ export default async function OrderTracker({
               <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl border border-green-100">
                 <p className="font-semibold">Order ready!</p>
                 <p className="text-sm">Your order is ready to be served.</p>
+              </div>
+            )}
+            {status === "cancelled" && (
+              <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl border border-destructive/15">
+                <p className="font-semibold">Order cancelled</p>
+                <p className="text-sm">Please contact staff if you still need help.</p>
               </div>
             )}
           </div>

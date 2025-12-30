@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Order, OrderStatus } from "../types";
 import { cn } from "@/lib/utils";
-import { ArrowRight, CheckCircle2, CookingPot, Hourglass } from "lucide-react";
+import { ArrowRight, Ban, CheckCircle2, CookingPot, Hourglass } from "lucide-react";
 import { formatPrice } from "@/lib/utils/currency";
 
 interface OrderCardProps {
@@ -43,6 +43,11 @@ export default function OrderCard({
       label: "Completed",
       badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
       icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+    },
+    cancelled: {
+      label: "Cancelled",
+      badgeClass: "bg-muted text-muted-foreground border-border",
+      icon: <Ban className="h-3.5 w-3.5" />,
     },
   };
 

@@ -6,7 +6,7 @@ import { requireRestaurant } from "@/lib/auth/restaurant";
 
 const UpdateOrderStatusSchema = z.object({
   order_id: z.string().uuid(),
-  status: z.enum(["pending", "preparing", "completed"]),
+  status: z.enum(["pending", "preparing", "completed", "cancelled"]),
 });
 
 export type UpdateOrderStatusInput = z.infer<typeof UpdateOrderStatusSchema>;

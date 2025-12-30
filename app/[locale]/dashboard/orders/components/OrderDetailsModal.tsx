@@ -13,8 +13,9 @@ import { useRef, useState, useEffect } from "react";
 import { Order, OrderStatus } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, CookingPot, Hourglass, Printer } from "lucide-react";
+import { Ban, CheckCircle2, CookingPot, Hourglass, Printer } from "lucide-react";
 import { formatPrice } from "@/lib/utils/currency";
+import { cancelOrder } from "@/app/actions/orderCancel";
 
 interface OrderDetailsModalProps {
   open: boolean;
@@ -60,6 +61,11 @@ export default function OrderDetailsModal({
       label: "Completed",
       badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
       icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+    },
+    cancelled: {
+      label: "Cancelled",
+      badgeClass: "bg-muted text-muted-foreground border-border",
+      icon: <Ban className="h-3.5 w-3.5" />,
     },
   };
 
@@ -216,6 +222,22 @@ export default function OrderDetailsModal({
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={onClose}>
               Close
+            </Button>
+            <Button
+              variant="outline"
+              className="text-destructive"
+              disabled={saving || order.status === "completed" || order.status === "cancelled"}
+              onClick={async () => {
+                if (!confirm("Cancel this order? Inventory will be restored.")) return;
+                setStatus("cancelled");
+                const res = await cancelOrder({ order_id: order.id });
+                if (!res.success) {
+                  setStatus(order.status);
+                }
+                // Let parent refresh via subscription/polling; show local error if needed
+              }}
+            >
+              Cancel order
             </Button>
             <Button onClick={handlePrint} className="gap-2">
               <Printer className="h-4 w-4" />
