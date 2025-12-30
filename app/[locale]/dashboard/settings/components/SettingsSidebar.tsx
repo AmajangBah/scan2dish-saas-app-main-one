@@ -8,6 +8,7 @@ const tabs = [
   { id: "billing", label: "Billing" },
   { id: "profile", label: "Business Profile" },
   { id: "branding", label: "Branding" },
+  { id: "kitchen", label: "Kitchen" },
   { id: "hours", label: "Opening Hours" },
   { id: "preferences", label: "Preferences" },
 ];
