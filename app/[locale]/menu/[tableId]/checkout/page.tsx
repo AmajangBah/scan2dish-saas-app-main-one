@@ -10,17 +10,31 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function CheckoutPage() {
   const { tableId } = useParams();
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
-  const { currency } = useMenuRestaurant();
+  const { currency, restaurantName, tableNumber } = useMenuRestaurant();
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [notes, setNotes] = useState("");
+
+  const appendNote = (text: string) => {
+    setNotes((prev) => {
+      const trimmed = prev.trim();
+      const next = trimmed ? `${trimmed}\n${text}` : text;
+      return next.slice(0, 500);
+    });
+  };
 
   const place = async () => {
     if (!tableId || typeof tableId !== "string") {
@@ -73,7 +87,7 @@ export default function CheckoutPage() {
           <div className="min-w-0">
             <h2 className="text-2xl font-semibold tracking-tight">Checkout</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Optional details help the staff serve you faster.
+              {restaurantName} • Table {tableNumber}
             </p>
           </div>
           {tableId && typeof tableId === "string" && (
@@ -83,8 +97,52 @@ export default function CheckoutPage() {
           )}
         </div>
 
+        {items.length === 0 && tableId && typeof tableId === "string" && (
+          <Card className="p-6 rounded-2xl">
+            <div className="text-base font-semibold">Your cart is empty</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add items before sending an order.
+            </p>
+            <Button
+              asChild
+              className="mt-4 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
+            >
+              <Link href={`/menu/${tableId}/browse`}>Browse menu</Link>
+            </Button>
+          </Card>
+        )}
+
         <Card className="p-4 rounded-2xl">
           <div className="space-y-4">
+            <Accordion type="single" collapsible defaultValue="summary">
+              <AccordionItem value="summary">
+                <AccordionTrigger className="text-sm">
+                  Order summary ({items.reduce((s, it) => s + it.qty, 0)} items)
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-2">
+                    {items.map((it) => (
+                      <div key={it.id} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {it.qty}× {it.name}
+                        </span>
+                        <span className="font-medium">
+                          {formatPrice(it.price * it.qty, currency)}
+                        </span>
+                      </div>
+                    ))}
+                    {tableId && typeof tableId === "string" && (
+                      <div className="pt-2">
+                        <Button asChild variant="outline" size="sm" className="rounded-full">
+                          <Link href={`/menu/${tableId}/cart`}>Edit cart</Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
             <div>
               <label className="block text-sm font-medium mb-1">
                 Your name (optional)
@@ -105,6 +163,27 @@ export default function CheckoutPage() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
+              <div className="mt-2 flex flex-wrap gap-2">
+                {[
+                  "No peanuts",
+                  "Gluten-free",
+                  "No spice",
+                  "Extra spicy",
+                  "No onions",
+                  "No dairy",
+                ].map((chip) => (
+                  <Button
+                    key={chip}
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => appendNote(chip)}
+                  >
+                    {chip}
+                  </Button>
+                ))}
+              </div>
             </div>
 
             <div className="flex justify-between items-center pt-2 border-t">
@@ -112,6 +191,9 @@ export default function CheckoutPage() {
                 <div className="text-sm text-muted-foreground">Total</div>
                 <div className="text-xl font-semibold">
                   {formatPrice(subtotal, currency)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  You can edit your cart before sending.
                 </div>
               </div>
 
@@ -124,7 +206,7 @@ export default function CheckoutPage() {
                   disabled={isPlacingOrder || items.length === 0}
                   className="bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
                 >
-                  {isPlacingOrder ? "Placing Order..." : "Place Order"}
+                  {isPlacingOrder ? "Sending…" : "Send order to kitchen"}
                 </Button>
               </div>
             </div>

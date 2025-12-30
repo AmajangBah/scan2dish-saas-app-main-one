@@ -18,7 +18,7 @@ export interface CreateOrderResult {
  * This function:
  * 1. Validates table_id exists and is active
  * 2. Validates menu items exist and fetches current prices from database
- * 3. Calculates total + VAT + tip server-side (prevents price manipulation)
+ * 3. Calculates totals server-side (prevents price manipulation)
  * 4. Calculates commission (5% of total)
  * 5. Inserts order with correct restaurant_id
  * 6. Returns order ID

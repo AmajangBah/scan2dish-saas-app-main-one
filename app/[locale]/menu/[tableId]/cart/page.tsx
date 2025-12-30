@@ -17,10 +17,7 @@ export default function CartPage() {
   const [payNow, setPayNow] = useState(false);
   const { currency } = useMenuRestaurant();
 
-  // Note: These are for display only. Actual prices are calculated server-side
-  const VAT = Math.round(subtotal * 0.1);
-  const tip = Math.round(subtotal * 0.03);
-  const total = subtotal + VAT + tip;
+  const total = subtotal;
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,16 +108,6 @@ export default function CartPage() {
           <div className="flex justify-between py-2">
             <div className="text-lg font-medium">Subtotal</div>
             <div className="font-semibold">{formatPrice(subtotal, currency)}</div>
-          </div>
-
-          <div className="flex justify-between py-2">
-            <div className="text-sm text-muted-foreground">VAT</div>
-            <div className="font-medium">{formatPrice(VAT, currency)}</div>
-          </div>
-
-          <div className="flex justify-between py-2">
-            <div className="text-sm text-muted-foreground">Tip fee</div>
-            <div className="font-medium">{formatPrice(tip, currency)}</div>
           </div>
 
           <hr className="my-3" />
