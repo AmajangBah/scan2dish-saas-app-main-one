@@ -8,12 +8,15 @@ import { useCart } from "../context/CartContext";
 import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 
 export default function CartBar() {
-  const { tableId } = useParams();
+  const params = useParams();
+  const tableId = typeof params.tableId === "string" ? params.tableId : null;
+  const locale = typeof params.locale === "string" ? params.locale : null;
   const { items, subtotal } = useCart();
   const { currency } = useMenuRestaurant();
 
   const itemCount = items.reduce((s, it) => s + it.qty, 0);
-  if (!tableId || typeof tableId !== "string" || itemCount <= 0) return null;
+  if (!tableId || itemCount <= 0) return null;
+  const base = locale ? `/${locale}` : "";
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 pb-safe">
@@ -32,7 +35,7 @@ export default function CartBar() {
               asChild
               className="shrink-0 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
             >
-              <Link href={`/menu/${tableId}/cart`}>View cart</Link>
+              <Link href={`${base}/menu/${tableId}/cart`}>View cart</Link>
             </Button>
           </div>
         </div>

@@ -12,11 +12,14 @@ import { Card } from "@/components/ui/card";
 import { previewOrderPricing } from "@/app/actions/orderPricing";
 
 export default function CartPage() {
-  const { tableId } = useParams();
+  const params = useParams();
+  const tableId = typeof params.tableId === "string" ? params.tableId : null;
+  const locale = typeof params.locale === "string" ? params.locale : null;
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
   const [payNow, setPayNow] = useState(false);
   const { currency } = useMenuRestaurant();
+  const base = locale ? `/${locale}` : "";
 
   const [pricing, setPricing] = useState<{
     subtotal: number;
@@ -25,7 +28,7 @@ export default function CartPage() {
   } | null>(null);
 
   const pricingInput = useMemo(() => {
-    if (!tableId || typeof tableId !== "string") return null;
+    if (!tableId) return null;
     if (items.length === 0) return null;
     return {
       table_id: tableId,
@@ -55,7 +58,7 @@ export default function CartPage() {
   const [error, setError] = useState<string | null>(null);
 
   const placeOrder = async () => {
-    if (!tableId || typeof tableId !== "string") {
+    if (!tableId) {
       setError("Invalid table ID");
       return;
     }
@@ -84,7 +87,7 @@ export default function CartPage() {
 
       if (result.success && result.orderId) {
         clear();
-        router.push(`/menu/${tableId}/order/${result.orderId}`);
+        router.push(`${base}/menu/${tableId}/order/${result.orderId}`);
       } else {
         setError(result.error || "Failed to place order");
       }
@@ -106,9 +109,9 @@ export default function CartPage() {
               Review items, then place your order.
             </p>
           </div>
-          {tableId && typeof tableId === "string" && (
+          {tableId && (
             <Button asChild variant="outline" className="shrink-0">
-              <Link href={`/menu/${tableId}/browse`}>Add items</Link>
+              <Link href={`${base}/menu/${tableId}/browse`}>Add items</Link>
             </Button>
           )}
         </div>
@@ -120,12 +123,12 @@ export default function CartPage() {
               <p className="text-sm text-muted-foreground mt-1">
                 Add a few items to place an order.
               </p>
-              {tableId && typeof tableId === "string" && (
+              {tableId && (
                 <Button
                   asChild
                   className="mt-4 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
                 >
-                  <Link href={`/menu/${tableId}/browse`}>Browse menu</Link>
+                  <Link href={`${base}/menu/${tableId}/browse`}>Browse menu</Link>
                 </Button>
               )}
             </Card>
