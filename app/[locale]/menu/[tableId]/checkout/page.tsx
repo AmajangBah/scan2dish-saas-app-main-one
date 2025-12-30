@@ -20,10 +20,13 @@ import {
 import { previewOrderPricing } from "@/app/actions/orderPricing";
 
 export default function CheckoutPage() {
-  const { tableId } = useParams();
+  const params = useParams();
+  const tableId = typeof params.tableId === "string" ? params.tableId : null;
+  const locale = typeof params.locale === "string" ? params.locale : null;
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
   const { currency, restaurantName, tableNumber } = useMenuRestaurant();
+  const base = locale ? `/${locale}` : "";
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +39,7 @@ export default function CheckoutPage() {
   } | null>(null);
 
   const pricingInput = useMemo(() => {
-    if (!tableId || typeof tableId !== "string") return null;
+    if (!tableId) return null;
     if (items.length === 0) return null;
     return {
       table_id: tableId,
@@ -71,7 +74,7 @@ export default function CheckoutPage() {
   };
 
   const place = async () => {
-    if (!tableId || typeof tableId !== "string") {
+    if (!tableId) {
       setError("Invalid table ID");
       return;
     }
@@ -102,7 +105,7 @@ export default function CheckoutPage() {
 
       if (result.success && result.orderId) {
         clear();
-        router.push(`/menu/${tableId}/order/${result.orderId}`);
+        router.push(`${base}/menu/${tableId}/order/${result.orderId}`);
       } else {
         setError(result.error || "Failed to place order");
       }
@@ -124,14 +127,14 @@ export default function CheckoutPage() {
               {restaurantName} • Table {tableNumber}
             </p>
           </div>
-          {tableId && typeof tableId === "string" && (
+          {tableId && (
             <Button asChild variant="outline" className="shrink-0">
-              <Link href={`/menu/${tableId}/cart`}>Back</Link>
+              <Link href={`${base}/menu/${tableId}/cart`}>Back</Link>
             </Button>
           )}
         </div>
 
-        {items.length === 0 && tableId && typeof tableId === "string" && (
+        {items.length === 0 && tableId && (
           <Card className="p-6 rounded-2xl">
             <div className="text-base font-semibold">Your cart is empty</div>
             <p className="text-sm text-muted-foreground mt-1">
@@ -141,7 +144,7 @@ export default function CheckoutPage() {
               asChild
               className="mt-4 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
             >
-              <Link href={`/menu/${tableId}/browse`}>Browse menu</Link>
+              <Link href={`${base}/menu/${tableId}/browse`}>Browse menu</Link>
             </Button>
           </Card>
         )}
@@ -165,10 +168,10 @@ export default function CheckoutPage() {
                         </span>
                       </div>
                     ))}
-                    {tableId && typeof tableId === "string" && (
+                    {tableId && (
                       <div className="pt-2">
                         <Button asChild variant="outline" size="sm" className="rounded-full">
-                          <Link href={`/menu/${tableId}/cart`}>Edit cart</Link>
+                          <Link href={`${base}/menu/${tableId}/cart`}>Edit cart</Link>
                         </Button>
                       </div>
                     )}

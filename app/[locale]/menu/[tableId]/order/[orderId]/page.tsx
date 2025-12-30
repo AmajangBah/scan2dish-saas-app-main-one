@@ -6,9 +6,9 @@ import { formatPrice } from "@/lib/utils/currency";
 export default async function OrderTracker({
   params,
 }: {
-  params: { tableId: string; orderId: string };
+  params: { locale: string; tableId: string; orderId: string };
 }) {
-  const { tableId, orderId } = params;
+  const { locale, tableId, orderId } = params;
   const supabase = await createServerSupabase();
 
   // Fetch the order
@@ -216,7 +216,7 @@ export default async function OrderTracker({
           </div>
 
           <Link
-            href={`/menu/${tableId}/browse`}
+            href={`/${locale}/menu/${tableId}/browse`}
             className="mt-4 block bg-[var(--menu-brand)] hover:bg-[var(--menu-brand)]/90 text-white text-center py-3 rounded-xl font-medium"
           >
             Back to menu

@@ -185,13 +185,16 @@ export async function kitchenFetchOrders(restaurantId: string): Promise<KitchenO
     const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
     const createdAt = String(r.created_at);
     const minutesAgo = Math.max(0, Math.floor((now - new Date(createdAt).getTime()) / 60000));
-    const rawItems = Array.isArray(r.items) ? (r.items as any[]) : [];
+    const rawItems = Array.isArray(r.items) ? (r.items as unknown[]) : [];
     const items = rawItems
       .filter(Boolean)
-      .map((it) => ({
-        name: String(it.name ?? "Item"),
-        qty: Number(it.quantity ?? it.qty ?? 1),
-      }))
+      .map((it) => {
+        const obj = it as Record<string, unknown>;
+        return {
+          name: String(obj.name ?? "Item"),
+          qty: Number(obj.quantity ?? obj.qty ?? 1),
+        };
+      })
       .filter((it) => it.qty > 0);
 
     return {

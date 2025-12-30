@@ -13,9 +13,12 @@ export default function TopHeader({
 }: {
   title: string;
 }) {
-  const { tableId } = useParams();
+  const params = useParams();
+  const tableId = typeof params.tableId === "string" ? params.tableId : null;
+  const locale = typeof params.locale === "string" ? params.locale : null;
   const { items } = useCart();
   const { tableNumber } = useMenuRestaurant();
+  const base = locale ? `/${locale}` : "";
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -33,7 +36,10 @@ export default function TopHeader({
           <LanguageSwitcher triggerClassName="w-[44px] px-2 sm:w-[140px]" />
 
           <Button asChild variant="ghost" size="icon" className="relative">
-            <Link href={`/menu/${tableId}/cart`} aria-label="Open cart">
+            <Link
+              href={tableId ? `${base}/menu/${tableId}/cart` : `${base}/menu`}
+              aria-label="Open cart"
+            >
               <ShoppingCart className="h-5 w-5" />
               {items.length > 0 && (
                 <span

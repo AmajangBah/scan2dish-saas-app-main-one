@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n";
 import {
   Select,
@@ -23,17 +23,18 @@ export default function LanguageSwitcher({
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const handleChange = (newLocale: string) => {
-    // Remove current locale from pathname if it exists
-    const pathnameWithoutLocale = pathname.replace(`/${locale}`, "");
-    
-    // Add new locale to pathname (unless it's the default)
-    const newPathname = newLocale === "en" 
-      ? pathnameWithoutLocale || "/"
-      : `/${newLocale}${pathnameWithoutLocale || ""}`;
-    
-    router.push(newPathname);
+    // App Router uses a required /[locale]/... segment, so always keep a locale prefix.
+    // This also avoids “falling out” of the localized tree and losing next-intl context.
+    const pathnameWithoutLocale = pathname.startsWith(`/${locale}`)
+      ? pathname.slice(`/${locale}`.length) || "/"
+      : pathname || "/";
+
+    const qs = searchParams?.toString();
+    const next = `/${newLocale}${pathnameWithoutLocale}${qs ? `?${qs}` : ""}`;
+    router.push(next);
   };
 
   return (

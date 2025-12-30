@@ -553,7 +553,12 @@ export default function InventoryClient({
 
             <div className="grid gap-2">
               <Label>Reason</Label>
-              <Select value={adjustReason} onValueChange={(v) => setAdjustReason(v as any)}>
+              <Select
+                value={adjustReason}
+                onValueChange={(v) => {
+                  if (v === "restock" || v === "adjustment") setAdjustReason(v);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

@@ -64,12 +64,17 @@ export async function getKitchenSettings() {
     .single();
 
   if (error || !data) return { success: false, error: "Failed to load" };
+  const row = data as unknown as {
+    id: unknown;
+    kitchen_enabled?: unknown;
+    kitchen_pin_hash?: unknown;
+  };
   return {
     success: true,
     data: {
-      restaurantId: String(data.id),
-      kitchenEnabled: Boolean((data as any).kitchen_enabled),
-      pinEnabled: Boolean((data as any).kitchen_pin_hash),
+      restaurantId: String(row.id),
+      kitchenEnabled: Boolean(row.kitchen_enabled),
+      pinEnabled: Boolean(row.kitchen_pin_hash),
     },
   };
 }
