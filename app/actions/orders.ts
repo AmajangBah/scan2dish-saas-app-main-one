@@ -5,6 +5,9 @@ import { validateTable, getRestaurantIdFromTable } from "@/lib/utils/tables";
 import { calculateOrderPricing } from "@/lib/utils/pricing";
 import { CreateOrderSchema, type CreateOrderInput } from "@/lib/validations/orders";
 import { revalidatePath } from "next/cache";
+import { maybeCreateServiceSupabase } from "@/lib/supabase/service";
+import type { Discount } from "@/types/discounts";
+import { computeBestDiscount } from "@/lib/utils/discounts";
 
 export interface CreateOrderResult {
   success: boolean;
@@ -35,6 +38,7 @@ export async function createOrder(
     // 1. Validate input schema
     const validatedInput = CreateOrderSchema.parse(input);
     const supabase = await createServerSupabase();
+    const service = maybeCreateServiceSupabase();
 
     // 2. Validate table exists and is active
     const table = await validateTable(validatedInput.table_id);
@@ -53,7 +57,7 @@ export async function createOrder(
     
     const { data: menuItems, error: menuError } = await supabase
       .from("menu_items")
-      .select("id, name, price, available")
+      .select("id, name, price, available, category")
       .eq("restaurant_id", restaurant_id)
       .in("id", menuItemIds);
 
@@ -90,6 +94,7 @@ export async function createOrder(
         name: dbItem.name,
         price: dbItem.price,
         quantity: clientItem.qty,
+        category: dbItem.category ?? null,
       };
     });
 
@@ -99,17 +104,46 @@ export async function createOrder(
       0
     );
 
-    // 6. Calculate pricing (VAT, tip, total, commission) server-side
-    const pricing = calculateOrderPricing(subtotal);
+    // 6. Load discounts (service role; discounts are owner-only under RLS)
+    const discountsClient = service ?? supabase;
 
-    // 7. Insert order into database
+    const { data: discountsRaw, error: discountsError } = await discountsClient
+      .from("discounts")
+      .select(
+        "id, restaurant_id, discount_type, discount_value, apply_to, category_id, item_id, start_time, end_time, is_active"
+      )
+      .eq("restaurant_id", restaurant_id)
+      .eq("is_active", true);
+
+    if (discountsError) {
+      console.error("Failed to load discounts:", discountsError);
+    }
+
+    const discounts = (discountsRaw ?? []) as unknown as Discount[];
+
+    const { discountAmount } = computeBestDiscount({
+      subtotal,
+      items: validatedItems.map((it) => ({
+        menu_item_id: String(it.menu_item_id),
+        category: it.category ? String(it.category) : null,
+        lineSubtotal: Number(it.price) * Number(it.quantity),
+      })),
+      discounts,
+    });
+
+    const discountedSubtotal = Math.max(0, subtotal - discountAmount);
+
+    // 7. Calculate pricing (VAT/tip disabled; commission computed on discounted total)
+    const pricing = calculateOrderPricing(discountedSubtotal);
+
+    // 8. Insert order into database
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
         restaurant_id,
         table_id: validatedInput.table_id,
-        items: validatedItems, // Store as JSONB array
-        subtotal: pricing.subtotal,
+        items: validatedItems, // Store as JSONB array (unit prices from DB)
+        subtotal, // original subtotal (pre-discount) for transparency
         vat_amount: pricing.vat_amount,
         tip_amount: pricing.tip_amount,
         total: pricing.total,

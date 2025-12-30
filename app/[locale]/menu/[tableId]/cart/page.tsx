@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CartItem from "../../components/CartItem";
 import { useCart } from "../../context/CartContext";
@@ -9,6 +9,7 @@ import { useMenuRestaurant } from "../../context/MenuRestaurantContext";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { previewOrderPricing } from "@/app/actions/orderPricing";
 
 export default function CartPage() {
   const { tableId } = useParams();
@@ -17,7 +18,38 @@ export default function CartPage() {
   const [payNow, setPayNow] = useState(false);
   const { currency } = useMenuRestaurant();
 
-  const total = subtotal;
+  const [pricing, setPricing] = useState<{
+    subtotal: number;
+    discount: number;
+    total: number;
+  } | null>(null);
+
+  const pricingInput = useMemo(() => {
+    if (!tableId || typeof tableId !== "string") return null;
+    if (items.length === 0) return null;
+    return {
+      table_id: tableId,
+      items: items.map((i) => ({ id: i.id, qty: i.qty })),
+    };
+  }, [items, tableId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!pricingInput) {
+        setPricing(null);
+        return;
+      }
+      const res = await previewOrderPricing(pricingInput);
+      if (cancelled) return;
+      if (res.success) setPricing(res);
+      else setPricing(null);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [pricingInput]);
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,15 +139,28 @@ export default function CartPage() {
         <Card className="mt-6 p-4 rounded-2xl">
           <div className="flex justify-between py-2">
             <div className="text-lg font-medium">Subtotal</div>
-            <div className="font-semibold">{formatPrice(subtotal, currency)}</div>
+            <div className="font-semibold">
+              {formatPrice(pricing?.subtotal ?? subtotal, currency)}
+            </div>
           </div>
+
+          {(pricing?.discount ?? 0) > 0 && (
+            <div className="flex justify-between py-2">
+              <div className="text-sm text-muted-foreground">Discount</div>
+              <div className="font-medium text-emerald-700">
+                −{formatPrice(pricing?.discount ?? 0, currency)}
+              </div>
+            </div>
+          )}
 
           <hr className="my-3" />
 
           <div className="flex justify-between items-center">
             <div>
               <div className="text-lg font-semibold">Total</div>
-              <div className="text-sm text-gray-500">{formatPrice(total, currency)}</div>
+              <div className="text-sm text-gray-500">
+                {formatPrice(pricing?.total ?? subtotal, currency)}
+              </div>
             </div>
 
             <div className="flex flex-col items-end">

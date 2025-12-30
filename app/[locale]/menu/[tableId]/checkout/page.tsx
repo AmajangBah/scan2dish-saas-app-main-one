@@ -10,12 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
+import { useEffect, useMemo } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { previewOrderPricing } from "@/app/actions/orderPricing";
 
 export default function CheckoutPage() {
   const { tableId } = useParams();
@@ -27,6 +29,38 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [notes, setNotes] = useState("");
+  const [pricing, setPricing] = useState<{
+    subtotal: number;
+    discount: number;
+    total: number;
+  } | null>(null);
+
+  const pricingInput = useMemo(() => {
+    if (!tableId || typeof tableId !== "string") return null;
+    if (items.length === 0) return null;
+    return {
+      table_id: tableId,
+      items: items.map((i) => ({ id: i.id, qty: i.qty })),
+    };
+  }, [items, tableId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!pricingInput) {
+        setPricing(null);
+        return;
+      }
+      const res = await previewOrderPricing(pricingInput);
+      if (cancelled) return;
+      if (res.success) setPricing(res);
+      else setPricing(null);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [pricingInput]);
 
   const appendNote = (text: string) => {
     setNotes((prev) => {
@@ -190,8 +224,13 @@ export default function CheckoutPage() {
               <div>
                 <div className="text-sm text-muted-foreground">Total</div>
                 <div className="text-xl font-semibold">
-                  {formatPrice(subtotal, currency)}
+                  {formatPrice(pricing?.total ?? subtotal, currency)}
                 </div>
+                {(pricing?.discount ?? 0) > 0 && (
+                  <div className="text-xs text-emerald-700 mt-1">
+                    Discount applied: −{formatPrice(pricing?.discount ?? 0, currency)}
+                  </div>
+                )}
                 <div className="text-xs text-muted-foreground mt-1">
                   You can edit your cart before sending.
                 </div>

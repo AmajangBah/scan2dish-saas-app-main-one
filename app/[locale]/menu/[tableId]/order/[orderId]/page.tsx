@@ -69,7 +69,14 @@ export default async function OrderTracker({
 
   // Get items summary
   const items = Array.isArray(order.items) ? order.items : [];
-  const itemCount = items.reduce((sum: number, item: {quantity?: number}) => sum + (item.quantity || 1), 0);
+  const itemCount = items.reduce(
+    (sum: number, item: { name?: string; quantity?: number; price?: number }) => {
+      // Don't count discount line-items (if ever added later)
+      if (String(item.name || "").toLowerCase() === "discount") return sum;
+      return sum + (item.quantity || 1);
+    },
+    0
+  );
   const rt = (order as unknown as {
     restaurant_tables:
       | { table_number?: string; restaurants?: { currency?: string } }[]
@@ -149,6 +156,9 @@ export default async function OrderTracker({
           <div className="border-t pt-4 mb-4">
             <p className="text-sm font-semibold mb-2">Your order</p>
             <div className="space-y-1">
+              {items.length === 0 && (
+                <div className="text-sm text-muted-foreground">No items.</div>
+              )}
               {items.map((item: {name?: string; quantity?: number; price?: number}, index: number) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
@@ -163,10 +173,38 @@ export default async function OrderTracker({
                 </div>
               ))}
             </div>
-            <div className="flex justify-between text-sm font-bold mt-2 pt-2 border-t">
-              <span>Total</span>
-              <span>{formatPrice(parseFloat(order.total), currencyCode)}</span>
-            </div>
+            {(() => {
+              const itemsSubtotal = items.reduce(
+                (sum: number, it: { price?: number; quantity?: number; name?: string }) => {
+                  const name = String(it.name || "").toLowerCase();
+                  if (name === "discount") return sum;
+                  return sum + parseFloat(String(it.price || 0)) * (it.quantity || 1);
+                },
+                0
+              );
+              const orderTotal = parseFloat(String(order.total || 0));
+              const discount = Math.max(0, itemsSubtotal - orderTotal);
+              return (
+                <div className="mt-2 pt-2 border-t space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>{formatPrice(itemsSubtotal, currencyCode)}</span>
+                  </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Discount</span>
+                      <span className="text-emerald-700">
+                        −{formatPrice(discount, currencyCode)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold">
+                    <span>Total</span>
+                    <span>{formatPrice(orderTotal, currencyCode)}</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <Link

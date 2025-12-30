@@ -104,6 +104,8 @@ export default function OrderDetailsModal({
   const meta = statusMeta[status ?? order.status];
   const itemsTotal = order.items.reduce((sum, i) => sum + i.qty * i.price, 0);
   const itemsCount = order.items.reduce((sum, i) => sum + i.qty, 0);
+  const orderTotal = Number(order.total || 0);
+  const discount = Math.max(0, itemsTotal - orderTotal);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -144,12 +146,23 @@ export default function OrderDetailsModal({
               <div className="font-semibold">{itemsCount}</div>
             </div>
             <div className="rounded-lg border bg-muted/20 p-3">
-              <div className="text-xs text-muted-foreground">Items total</div>
+              <div className="text-xs text-muted-foreground">
+                {discount > 0 ? "Subtotal" : "Items total"}
+              </div>
               <div className="font-semibold">
                 {formatPrice(itemsTotal, currency)}
               </div>
             </div>
           </div>
+
+          {discount > 0 && (
+            <div className="flex items-center justify-between rounded-lg border bg-emerald-50 px-3 py-2 text-sm">
+              <span className="text-emerald-900 font-medium">Discount applied</span>
+              <span className="text-emerald-900 font-semibold">
+                −{formatPrice(discount, currency)}
+              </span>
+            </div>
+          )}
 
           <Separator />
 
