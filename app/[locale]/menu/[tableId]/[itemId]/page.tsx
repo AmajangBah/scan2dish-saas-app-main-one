@@ -2,51 +2,142 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { createBrowserSupabase } from "@/lib/supabase/client";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import QuantitySelector from "../../components/QuantitySelector";
+import { useCart } from "../../context/CartContext";
+import { useMenuRestaurant } from "../../context/MenuRestaurantContext";
+import { formatPrice } from "@/lib/utils/currency";
 
-export default function OrderTrackerPage() {
-  const { tableId, orderId } = useParams();
+type MenuItem = {
+  id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  images?: string[] | null;
+  available?: boolean | null;
+};
+
+export default function MenuItemPage() {
+  const { tableId, itemId } = useParams();
+  const { add } = useCart();
+  const { currency, restaurantId } = useMenuRestaurant();
+
+  const [qty, setQty] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [item, setItem] = useState<MenuItem | null>(null);
+
+  const firstImage = useMemo(() => item?.images?.[0], [item?.images]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (!itemId || typeof itemId !== "string") {
+          throw new Error("Invalid item");
+        }
+        if (!restaurantId) {
+          throw new Error("Missing restaurant context");
+        }
+
+        const supabase = createBrowserSupabase();
+        const { data, error: e } = await supabase
+          .from("menu_items")
+          .select("id, name, description, price, images, available")
+          .eq("restaurant_id", restaurantId)
+          .eq("id", itemId)
+          .single();
+
+        if (e || !data) throw new Error("Item not found");
+        if (!cancelled) setItem(data as unknown as MenuItem);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load item");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [itemId, restaurantId]);
 
   return (
-    <div className="min-h-screen bg-white flex flex-col p-6 items-center">
-      <h2 className="text-2xl font-bold mt-6">Order #{orderId}</h2>
+    <div className="px-4 pt-6 pb-10 bg-background min-h-dvh">
+      <div className="max-w-xl mx-auto space-y-4">
+        <Button asChild variant="outline" className="rounded-xl">
+          <Link href={`/menu/${tableId}/browse`}>Back to menu</Link>
+        </Button>
 
-      {/* Progress bar */}
-      <div className="bg-white shadow-lg p-6 rounded-2xl w-full mt-10 space-y-6">
-        {/* Steps */}
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col items-center">
-            <div className="w-5 h-5 bg-orange-700 rounded-full" />
-            <span className="text-xs mt-1">Received</span>
-          </div>
+        {loading && (
+          <Card className="p-6 rounded-2xl">
+            <div className="text-sm text-muted-foreground">Loading…</div>
+          </Card>
+        )}
 
-          <div className="flex flex-col items-center">
-            <div className="w-5 h-5 bg-orange-700 rounded-full" />
-            <span className="text-xs mt-1">Been prepared</span>
-          </div>
+        {!loading && error && (
+          <Card className="p-6 rounded-2xl">
+            <div className="text-sm text-destructive">{error}</div>
+          </Card>
+        )}
 
-          <div className="flex flex-col items-center">
-            <div className="w-5 h-5 bg-orange-700 rounded-full" />
-            <span className="text-xs mt-1">Ready for delivery</span>
-          </div>
+        {!loading && !error && item && (
+          <Card className="overflow-hidden rounded-2xl">
+            <div className="aspect-[16/9] bg-muted">
+              {firstImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={firstImage}
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[var(--menu-brand)]/15 to-muted" />
+              )}
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <h1 className="text-xl font-semibold tracking-tight">{item.name}</h1>
+                {item.description && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {item.description}
+                  </p>
+                )}
+              </div>
 
-          <div className="flex flex-col items-center">
-            <div className="w-5 h-5 bg-gray-300 rounded-full" />
-            <span className="text-xs mt-1">Completed</span>
-          </div>
-        </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Price</div>
+                <div className="font-semibold">{formatPrice(item.price, currency)}</div>
+              </div>
 
-        {/* ETA */}
-        <div className="text-center">
-          <p className="text-gray-700">Estimated preparation time</p>
-          <p className="text-2xl font-bold mt-1">7–15 minutes</p>
-        </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Quantity</div>
+                <QuantitySelector value={qty} onChange={setQty} />
+              </div>
 
-        <Link
-          href={`/menu/${tableId}/browse`}
-          className="bg-orange-700 text-white w-full text-center block py-3 rounded-xl font-medium"
-        >
-          Back to menu
-        </Link>
+              <div className="pt-2 border-t flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Total</div>
+                <div className="font-semibold">
+                  {formatPrice(item.price * qty, currency)}
+                </div>
+              </div>
+
+              <Button
+                className="w-full bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
+                onClick={() => add({ id: item.id, name: item.name, price: item.price }, qty)}
+              >
+                Add to cart
+              </Button>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );

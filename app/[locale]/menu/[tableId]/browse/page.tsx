@@ -5,6 +5,9 @@ import { useParams } from "next/navigation";
 import CategoryPills from "../../components/CategoryPills";
 import ProductCard from "../../components/ProductCard";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import CartBar from "../../components/CartBar";
 
 export default function BrowsePage() {
   const { tableId } = useParams();
@@ -134,46 +137,55 @@ export default function BrowsePage() {
   }, [items, activeCategory, search]);
 
   return (
-    <div className="pb-28 px-4 pt-4">
-      <div className="max-w-xl mx-auto">
-        {/* Search */}
-        <div className="mb-4">
-          <input
-            placeholder="search"
-            className="w-full p-3 rounded-xl bg-gray-100"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
+    <>
+      <div className="px-4 pt-4 pb-24">
+        <div className="max-w-2xl mx-auto space-y-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search menu…"
+              className="pl-9 h-11 rounded-2xl"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-        {categories.length > 0 && (
-          <CategoryPills
-            categories={categories}
-            active={activeCategory}
-            onChange={(id) => setActiveCategory(id)}
-          />
-        )}
-
-        <div className="mt-4 space-y-4">
-          {loading && (
-            <div className="text-center text-gray-500 py-10">Loading menu...</div>
+          {/* Categories */}
+          {categories.length > 0 && (
+            <CategoryPills
+              categories={categories}
+              active={activeCategory}
+              onChange={(id) => setActiveCategory(id)}
+            />
           )}
 
-          {!loading && error && (
-            <div className="text-center text-red-600 py-10">{error}</div>
-          )}
+          {/* Items */}
+          <div className="space-y-3">
+            {loading && (
+              <div className="text-center text-muted-foreground py-10">
+                Loading menu…
+              </div>
+            )}
 
-          {!loading && !error && filteredItems.length === 0 && (
-            <div className="text-center text-gray-500 py-10">
-              No menu items found.
-            </div>
-          )}
+            {!loading && error && (
+              <div className="text-center text-destructive py-10">{error}</div>
+            )}
 
-          {!loading &&
-            !error &&
-            filteredItems.map((p) => <ProductCard key={p.id} product={p} />)}
+            {!loading && !error && filteredItems.length === 0 && (
+              <div className="text-center text-muted-foreground py-10">
+                No items match your search.
+              </div>
+            )}
+
+            {!loading &&
+              !error &&
+              filteredItems.map((p) => <ProductCard key={p.id} product={p} />)}
+          </div>
         </div>
       </div>
-    </div>
+
+      <CartBar />
+    </>
   );
 }

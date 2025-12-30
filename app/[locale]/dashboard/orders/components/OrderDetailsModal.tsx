@@ -14,11 +14,13 @@ import { Order, OrderStatus } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, CookingPot, Hourglass, Printer } from "lucide-react";
+import { formatPrice } from "@/lib/utils/currency";
 
 interface OrderDetailsModalProps {
   open: boolean;
   onClose: () => void;
   order: Order | null;
+  currency: string;
   saving?: boolean;
   onStatusChange: (id: string, newStatus: OrderStatus) => void;
 }
@@ -27,6 +29,7 @@ export default function OrderDetailsModal({
   open,
   onClose,
   order,
+  currency,
   saving = false,
   onStatusChange,
 }: OrderDetailsModalProps) {
@@ -132,7 +135,9 @@ export default function OrderDetailsModal({
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-lg border bg-muted/20 p-3">
               <div className="text-xs text-muted-foreground">Total</div>
-              <div className="font-semibold">${order.total}</div>
+              <div className="font-semibold">
+                {formatPrice(Number(order.total || 0), currency)}
+              </div>
             </div>
             <div className="rounded-lg border bg-muted/20 p-3">
               <div className="text-xs text-muted-foreground">Items</div>
@@ -141,7 +146,7 @@ export default function OrderDetailsModal({
             <div className="rounded-lg border bg-muted/20 p-3">
               <div className="text-xs text-muted-foreground">Items total</div>
               <div className="font-semibold">
-                ${Number.isFinite(itemsTotal) ? itemsTotal.toFixed(2) : "—"}
+                {formatPrice(itemsTotal, currency)}
               </div>
             </div>
           </div>
@@ -167,7 +172,7 @@ export default function OrderDetailsModal({
                         {item.qty}
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">
-                        ${item.price}
+                        {formatPrice(Number(item.price || 0), currency)}
                       </td>
                     </tr>
                   ))}

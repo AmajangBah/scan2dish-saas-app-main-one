@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import TopHeader from "../components/TopHeader";
+import { MenuRestaurantProvider } from "../context/MenuRestaurantContext";
 
 export default async function MenuLayout({
   children,
@@ -29,6 +30,8 @@ export default async function MenuLayout({
       restaurant:restaurants!restaurant_id(
         id,
         name,
+        currency,
+        brand_color,
         menu_enabled,
         enforcement_reason
       )
@@ -45,15 +48,15 @@ export default async function MenuLayout({
   // Table exists but is inactive
   if (!table.is_active) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="h-8 w-8 text-red-600" />
+      <div className="min-h-dvh flex items-center justify-center bg-background px-4">
+        <div className="max-w-md w-full bg-card rounded-2xl border shadow-sm p-8 text-center">
+          <div className="h-16 w-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-8 w-8 text-destructive" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Table Unavailable
+          <h1 className="text-2xl font-semibold tracking-tight mb-2">
+            Table unavailable
           </h1>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             This table is currently inactive. Please contact staff for assistance.
           </p>
         </div>
@@ -68,24 +71,24 @@ export default async function MenuLayout({
   // Critical: Check if restaurant menu is enabled (Commission Enforcement)
   if (!restaurant?.menu_enabled) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="h-16 w-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="h-8 w-8 text-orange-600" />
+      <div className="min-h-dvh flex items-center justify-center bg-background px-4">
+        <div className="max-w-md w-full bg-card rounded-2xl border shadow-sm p-8 text-center">
+          <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Menus Currently Unavailable
+          <h1 className="text-2xl font-semibold tracking-tight mb-2">
+            Menu currently unavailable
           </h1>
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             We&apos;re unable to show the menu at this time. Please contact staff to
             place your order.
           </p>
           {restaurant?.enforcement_reason && (
-            <div className="text-sm text-gray-500 italic mt-4 p-3 bg-gray-50 rounded">
+            <div className="text-sm text-muted-foreground italic mt-4 p-3 bg-muted/30 rounded-xl border">
               {restaurant.enforcement_reason}
             </div>
           )}
-          <div className="mt-6 text-sm text-gray-500">
+          <div className="mt-6 text-sm text-muted-foreground">
             <p className="font-medium">{restaurant?.name}</p>
             <p>Table {table.table_number}</p>
           </div>
@@ -95,10 +98,22 @@ export default async function MenuLayout({
   }
 
   // Restaurant is active - allow access
+  const currency = restaurant?.currency ?? "GMD";
+  const brandColor = restaurant?.brand_color ?? "#C84501";
+
   return (
-    <>
+    <MenuRestaurantProvider
+      value={{
+        restaurantId: String(restaurant?.id ?? ""),
+        restaurantName: restaurant?.name ?? "",
+        tableId: String(tableId),
+        tableNumber: String(table.table_number ?? ""),
+        currency: String(currency),
+        brandColor: String(brandColor),
+      }}
+    >
       <TopHeader title={restaurant?.name ?? ""} />
       {children}
-    </>
+    </MenuRestaurantProvider>
   );
 }

@@ -1,0 +1,43 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { formatPrice } from "@/lib/utils/currency";
+import { useCart } from "../context/CartContext";
+import { useMenuRestaurant } from "../context/MenuRestaurantContext";
+
+export default function CartBar() {
+  const { tableId } = useParams();
+  const { items, subtotal } = useCart();
+  const { currency } = useMenuRestaurant();
+
+  const itemCount = items.reduce((s, it) => s + it.qty, 0);
+  if (!tableId || typeof tableId !== "string" || itemCount <= 0) return null;
+
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 pb-safe">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-4">
+        <div className="rounded-2xl border bg-card/95 backdrop-blur shadow-lg">
+          <div className="p-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs text-muted-foreground">In your cart</div>
+              <div className="font-semibold truncate">
+                {itemCount} {itemCount === 1 ? "item" : "items"} •{" "}
+                {formatPrice(subtotal, currency)}
+              </div>
+            </div>
+
+            <Button
+              asChild
+              className="shrink-0 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
+            >
+              <Link href={`/menu/${tableId}/cart`}>View cart</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

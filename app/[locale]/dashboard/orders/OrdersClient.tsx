@@ -32,9 +32,11 @@ type OrderRow = {
 
 export default function OrdersClient({
   restaurantId,
+  currency,
   initialOrders,
 }: {
   restaurantId: string;
+  currency: string;
   initialOrders: Order[];
 }) {
   const [search, setSearch] = useState("");
@@ -608,6 +610,7 @@ export default function OrdersClient({
             <OrderCard
               key={order.id}
               order={order}
+              currency={currency}
               saving={savingOrderId === order.id}
               isNew={Boolean(newOrderSince[order.id]) && order.status === "pending"}
               onView={handleView}
@@ -660,6 +663,7 @@ export default function OrdersClient({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         order={selectedOrder}
+        currency={currency}
         saving={selectedOrder ? savingOrderId === selectedOrder.id : false}
         onStatusChange={handleStatusChange}
       />

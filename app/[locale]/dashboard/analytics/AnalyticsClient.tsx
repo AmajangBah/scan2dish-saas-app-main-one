@@ -26,21 +26,21 @@ export default function AnalyticsClient({
   // Show empty state if no data
   if (!kpis || kpis.totalOrders === 0) {
     return (
-      <div className="space-y-10 p-6">
+      <div className="space-y-10">
         <div>
-          <h1 className="text-3xl font-bold">Analytics</h1>
-          <p className="text-gray-600 text-sm mt-1">
+          <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             Track your restaurant&apos;s performance
           </p>
         </div>
 
-        <div className="bg-white rounded-xl p-12 text-center">
+        <div className="rounded-xl border bg-card p-12 text-center">
           <div className="text-6xl mb-4">📊</div>
           <h2 className="text-2xl font-bold mb-2">No Data Yet</h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-muted-foreground mb-6">
             Start receiving orders to see your analytics dashboard come to life!
           </p>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             <p>Analytics will show:</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>Revenue trends and KPIs</li>
@@ -58,43 +58,43 @@ export default function AnalyticsClient({
     <div className="space-y-10">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Analytics</h1>
-        <p className="text-gray-600 text-sm mt-1">
+        <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
+        <p className="text-muted-foreground text-sm mt-1">
           Track your restaurant&apos;s performance
         </p>
       </div>
 
       {/* KPIs Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="text-sm text-gray-600 mb-1">Total Orders</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground mb-1">Total Orders</div>
           <div className="text-3xl font-bold">{kpis.totalOrders}</div>
-          <div className="text-xs text-gray-500 mt-2">All time</div>
+          <div className="text-xs text-muted-foreground mt-2">All time</div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground mb-1">Total Revenue</div>
           <div className="text-3xl font-bold">{formatPrice(kpis.totalRevenue, currency)}</div>
-          <div className="text-xs text-green-600 mt-2">
+          <div className="text-xs text-emerald-600 mt-2">
             {kpis.completedOrders} completed orders
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="text-sm text-gray-600 mb-1">Avg Order Value</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground mb-1">Avg Order Value</div>
           <div className="text-3xl font-bold">{formatPrice(kpis.avgOrderValue, currency)}</div>
-          <div className="text-xs text-gray-500 mt-2">Per completed order</div>
+          <div className="text-xs text-muted-foreground mt-2">Per completed order</div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="text-sm text-gray-600 mb-1">Completion Rate</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground mb-1">Completion Rate</div>
           <div className="text-3xl font-bold">
             {kpis.totalOrders > 0
               ? Math.round((kpis.completedOrders / kpis.totalOrders) * 100)
               : 0}
             %
           </div>
-          <div className="text-xs text-gray-500 mt-2">
+          <div className="text-xs text-muted-foreground mt-2">
             {kpis.completedOrders} of {kpis.totalOrders} orders
           </div>
         </div>
@@ -102,7 +102,7 @@ export default function AnalyticsClient({
 
       {/* Weekly Sales Chart */}
       {weeklySales.length > 0 && (
-        <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-xl font-bold mb-4">Weekly Sales (Last 7 Days)</h2>
           <div className="h-64 flex items-end justify-between gap-2">
             {weeklySales.map((day, i) => {
@@ -113,10 +113,10 @@ export default function AnalyticsClient({
                 <div key={i} className="flex-1 flex flex-col items-center gap-2">
                   <div className="text-xs font-medium">{formatPrice(day.sales, currency)}</div>
                   <div
-                    className="w-full bg-[#C84501] rounded-t-lg transition-all hover:opacity-80"
+                    className="w-full bg-primary rounded-t-lg transition-all hover:opacity-80"
                     style={{ height: `${heightPercent}%`, minHeight: "4px" }}
                   ></div>
-                  <div className="text-xs text-gray-600 font-medium">
+                  <div className="text-xs text-muted-foreground font-medium">
                     {day.day}
                   </div>
                 </div>
@@ -128,7 +128,7 @@ export default function AnalyticsClient({
 
       {/* Category Sales */}
       {categorySales.length > 0 && (
-        <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-xl font-bold mb-4">Sales by Category</h2>
           <div className="space-y-4">
             {categorySales.map((cat, i) => {
@@ -139,13 +139,13 @@ export default function AnalyticsClient({
                 <div key={i}>
                   <div className="flex justify-between mb-2">
                     <span className="font-medium">{cat.category}</span>
-                    <span className="text-gray-600">
+                    <span className="text-muted-foreground">
                       {formatPrice(cat.value, currency)} ({Math.round(percent)}%)
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div
-                      className="bg-[#C84501] h-2 rounded-full"
+                      className="bg-primary h-2 rounded-full"
                       style={{ width: `${percent}%` }}
                     ></div>
                   </div>
@@ -158,12 +158,12 @@ export default function AnalyticsClient({
 
       {/* Top Selling Items */}
       {topItems.length > 0 && (
-        <div className="bg-white rounded-xl p-6 shadow-sm">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-xl font-bold mb-4">Top Selling Items</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="border-b">
-                <tr className="text-left text-sm text-gray-600">
+                <tr className="text-left text-sm text-muted-foreground">
                   <th className="pb-3 font-medium">Item</th>
                   <th className="pb-3 font-medium text-right">Qty Sold</th>
                   <th className="pb-3 font-medium text-right">Revenue</th>
@@ -174,7 +174,7 @@ export default function AnalyticsClient({
                   <tr key={i} className="text-sm">
                     <td className="py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
                           {i + 1}
                         </div>
                         <span className="font-medium">{item.name}</span>

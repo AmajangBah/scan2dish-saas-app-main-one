@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const tabs = [
   { id: "usage", label: "Usage" },
@@ -19,18 +20,16 @@ export default function SettingsSidebar({
   onSelect: (value: string) => void;
 }) {
   return (
-    <div className="w-56 border-r h-full py-6 space-y-1">
+    <div className="rounded-xl border bg-card p-2 space-y-1">
       {tabs.map((tab) => (
-        <button
+        <Button
           key={tab.id}
-          className={cn(
-            "w-full text-left px-4 py-2 rounded-lg ",
-            active === tab.id && "bg-orange-500 font-medium text-white"
-          )}
+          variant={active === tab.id ? "default" : "ghost"}
+          className={cn("w-full justify-start", active === tab.id && "font-medium")}
           onClick={() => onSelect(tab.id)}
         >
           {tab.label}
-        </button>
+        </Button>
       ))}
     </div>
   );

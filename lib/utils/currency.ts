@@ -37,18 +37,30 @@ export function getCurrency(code: string): Currency {
 }
 
 /**
- * Format price with currency
+ * Format a money amount using Intl.
+ *
+ * - Uses the currency's preferred locale when none is provided.
+ * - Always returns a display-safe, localized currency string.
  */
-export function formatPrice(amount: number, currencyCode: string = DEFAULT_CURRENCY): string {
-  const currency = getCurrency(currencyCode);
-  
-  // For currencies with symbol prefix (USD, EUR, GBP, etc.)
-  if (["USD", "EUR", "GBP", "ZAR"].includes(currencyCode)) {
-    return `${currency.symbol}${amount.toFixed(2)}`;
+export function formatPrice(
+  amount: number,
+  currencyCode: string = DEFAULT_CURRENCY,
+  locale?: string
+): string {
+  const resolvedCurrency = getCurrency(currencyCode).code;
+  const resolvedLocale = locale || getCurrency(currencyCode).locale || "en";
+
+  try {
+    return new Intl.NumberFormat(resolvedLocale, {
+      style: "currency",
+      currency: resolvedCurrency,
+    }).format(Number.isFinite(amount) ? amount : 0);
+  } catch {
+    // Fallback: keep UI usable even if Intl rejects a currency/locale combo
+    const c = getCurrency(currencyCode);
+    const safe = Number.isFinite(amount) ? amount : 0;
+    return `${c.symbol} ${safe.toFixed(2)}`;
   }
-  
-  // For currencies with symbol suffix (GMD, NGN, etc.)
-  return `${currency.symbol}${amount}`;
 }
 
 /**
@@ -59,4 +71,17 @@ export function getCurrencyOptions(): Array<{ value: string; label: string }> {
     value: currency.code,
     label: `${currency.symbol} ${currency.name} (${currency.code})`,
   }));
+}
+
+export type FormatMoneyInput = {
+  amount: number;
+  currency?: string;
+  locale?: string;
+};
+
+/**
+ * Convenience wrapper when your code already uses an object.
+ */
+export function formatMoney({ amount, currency, locale }: FormatMoneyInput): string {
+  return formatPrice(amount, currency || DEFAULT_CURRENCY, locale);
 }

@@ -5,12 +5,17 @@ import { useParams, useRouter } from "next/navigation";
 import CartItem from "../../components/CartItem";
 import { useCart } from "../../context/CartContext";
 import { formatPrice } from "@/lib/utils/currency";
+import { useMenuRestaurant } from "../../context/MenuRestaurantContext";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Card } from "@/components/ui/card";
 
 export default function CartPage() {
   const { tableId } = useParams();
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
   const [payNow, setPayNow] = useState(false);
+  const { currency } = useMenuRestaurant();
 
   // Note: These are for display only. Actual prices are calculated server-side
   const VAT = Math.round(subtotal * 0.1);
@@ -63,15 +68,38 @@ export default function CartPage() {
   };
 
   return (
-    <div className="pb-28 px-4 pt-6">
+    <div className="px-4 pt-6 pb-10">
       <div className="max-w-xl mx-auto">
-        <h2 className="text-2xl font-bold mb-4">Cart</h2>
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="min-w-0">
+            <h2 className="text-2xl font-semibold tracking-tight">Your cart</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Review items, then place your order.
+            </p>
+          </div>
+          {tableId && typeof tableId === "string" && (
+            <Button asChild variant="outline" className="shrink-0">
+              <Link href={`/menu/${tableId}/browse`}>Add items</Link>
+            </Button>
+          )}
+        </div>
 
         <div className="space-y-4">
           {items.length === 0 && (
-            <div className="text-center text-gray-500 py-10">
-              Your cart is empty
-            </div>
+            <Card className="p-6 text-center">
+              <div className="text-base font-semibold">Your cart is empty</div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add a few items to place an order.
+              </p>
+              {tableId && typeof tableId === "string" && (
+                <Button
+                  asChild
+                  className="mt-4 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
+                >
+                  <Link href={`/menu/${tableId}/browse`}>Browse menu</Link>
+                </Button>
+              )}
+            </Card>
           )}
 
           {items.map((it) => (
@@ -79,20 +107,20 @@ export default function CartPage() {
           ))}
         </div>
 
-        <div className="mt-6 bg-white p-4 rounded-2xl shadow-sm">
+        <Card className="mt-6 p-4 rounded-2xl">
           <div className="flex justify-between py-2">
             <div className="text-lg font-medium">Subtotal</div>
-            <div className="font-semibold">{formatPrice(subtotal, "GMD")}</div>
+            <div className="font-semibold">{formatPrice(subtotal, currency)}</div>
           </div>
 
           <div className="flex justify-between py-2">
-            <div className="text-sm text-gray-600">VAT</div>
-            <div className="font-medium">{formatPrice(VAT, "GMD")}</div>
+            <div className="text-sm text-muted-foreground">VAT</div>
+            <div className="font-medium">{formatPrice(VAT, currency)}</div>
           </div>
 
           <div className="flex justify-between py-2">
-            <div className="text-sm text-gray-600">Tip fee</div>
-            <div className="font-medium">{formatPrice(tip, "GMD")}</div>
+            <div className="text-sm text-muted-foreground">Tip fee</div>
+            <div className="font-medium">{formatPrice(tip, currency)}</div>
           </div>
 
           <hr className="my-3" />
@@ -100,7 +128,7 @@ export default function CartPage() {
           <div className="flex justify-between items-center">
             <div>
               <div className="text-lg font-semibold">Total</div>
-              <div className="text-sm text-gray-500">{formatPrice(total, "GMD")}</div>
+              <div className="text-sm text-gray-500">{formatPrice(total, currency)}</div>
             </div>
 
             <div className="flex flex-col items-end">
@@ -109,7 +137,7 @@ export default function CartPage() {
                   type="checkbox"
                   checked={payNow}
                   onChange={() => setPayNow(!payNow)}
-                  className="w-10 h-6"
+                  className="w-4 h-4"
                 />{" "}
                 Pay now
               </label>
@@ -117,16 +145,16 @@ export default function CartPage() {
               {error && (
                 <div className="text-red-600 text-sm mb-2">{error}</div>
               )}
-              <button
+              <Button
                 onClick={placeOrder}
                 disabled={isPlacingOrder || items.length === 0}
-                className="mt-3 w-48 bg-orange-600 text-white py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-3 w-48 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
               >
                 {isPlacingOrder ? "Placing Order..." : "Place Order"}
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

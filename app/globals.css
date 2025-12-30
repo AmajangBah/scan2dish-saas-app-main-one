@@ -3,13 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@themes { 
-  --color-primary:#D35A0F,
-  --color-secondary:#ffffff,
-  --card-gradient: linear-gradient(90deg, #C84501, #722801)
-
-}
-
 @theme inline { 
   --radius-sm:calc(var(--radius) - 4px); 
   --radius-md:calc(var(--radius) - 2px); 

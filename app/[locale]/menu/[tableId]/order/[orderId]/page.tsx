@@ -20,7 +20,10 @@ export default async function OrderTracker({
       items,
       total,
       created_at,
-      restaurant_tables!inner(table_number)
+      restaurant_tables!inner(
+        table_number,
+        restaurants!restaurant_id(currency)
+      )
     `)
     .eq("id", orderId)
     .eq("table_id", tableId)
@@ -69,24 +72,26 @@ export default async function OrderTracker({
   const itemCount = items.reduce((sum: number, item: {quantity?: number}) => sum + (item.quantity || 1), 0);
   const rt = (order as unknown as {
     restaurant_tables:
-      | { table_number?: string }[]
-      | { table_number?: string }
+      | { table_number?: string; restaurants?: { currency?: string } }[]
+      | { table_number?: string; restaurants?: { currency?: string } }
       | null
       | undefined;
   }).restaurant_tables;
   const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
+  const currency = Array.isArray(rt) ? rt[0]?.restaurants?.currency : rt?.restaurants?.currency;
+  const currencyCode = currency ? String(currency) : "GMD";
 
   return (
-    <div className="min-h-screen pb-28 px-4 pt-6">
+    <div className="min-h-dvh pb-10 px-4 pt-6 bg-background">
       <div className="max-w-xl mx-auto">
-        <h2 className="text-2xl font-bold text-center mb-2">
+        <h2 className="text-2xl font-semibold tracking-tight text-center mb-2">
           Order Tracking
         </h2>
-        <p className="text-center text-gray-600 text-sm mb-6">
+        <p className="text-center text-muted-foreground text-sm mb-6">
           Table {tableNumber} • {itemCount} {itemCount === 1 ? "item" : "items"}
         </p>
 
-        <div className="bg-white p-6 rounded-2xl shadow">
+        <div className="bg-card p-6 rounded-2xl border shadow-sm">
           {/* Progress Steps */}
           <div className="flex items-center justify-between mb-8">
             {steps.map((s, i) => (
@@ -94,13 +99,15 @@ export default async function OrderTracker({
                 {i > 0 && (
                   <div
                     className={`absolute top-4 right-1/2 w-full h-1 -z-10 ${
-                      steps[i - 1].done ? "bg-orange-600" : "bg-gray-200"
+                      steps[i - 1].done ? "bg-[var(--menu-brand)]" : "bg-muted"
                     }`}
                   />
                 )}
                 <div
                   className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center ${
-                    s.done ? "bg-orange-600 text-white" : "bg-gray-200 text-gray-500"
+                    s.done
+                      ? "bg-[var(--menu-brand)] text-white"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {s.done && "✓"}
@@ -113,19 +120,19 @@ export default async function OrderTracker({
           {/* Status Message */}
           <div className="text-center mb-6">
             {status === "pending" && (
-              <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-lg">
+              <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-xl border border-blue-100">
                 <p className="font-semibold">Order received!</p>
                 <p className="text-sm">Your order is in the queue.</p>
               </div>
             )}
             {status === "preparing" && (
-              <div className="bg-orange-50 text-orange-700 px-4 py-3 rounded-lg">
+              <div className="bg-primary/10 text-primary px-4 py-3 rounded-xl border border-primary/15">
                 <p className="font-semibold">Being prepared!</p>
                 <p className="text-sm">Your food is being cooked.</p>
               </div>
             )}
             {status === "completed" && (
-              <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg">
+              <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl border border-green-100">
                 <p className="font-semibold">Order ready!</p>
                 <p className="text-sm">Your order is ready to be served.</p>
               </div>
@@ -134,34 +141,37 @@ export default async function OrderTracker({
 
           {/* Estimated Time */}
           <div className="text-center mb-6">
-            <p className="text-gray-600 text-sm">Estimated time</p>
-            <p className="text-2xl font-bold mt-1">{estimatedTime}</p>
+            <p className="text-muted-foreground text-sm">Estimated time</p>
+            <p className="text-2xl font-semibold mt-1">{estimatedTime}</p>
           </div>
 
           {/* Order Items */}
           <div className="border-t pt-4 mb-4">
-            <p className="text-sm font-semibold text-gray-700 mb-2">Your Order:</p>
+            <p className="text-sm font-semibold mb-2">Your order</p>
             <div className="space-y-1">
               {items.map((item: {name?: string; quantity?: number; price?: number}, index: number) => (
                 <div key={index} className="flex justify-between text-sm">
-                  <span className="text-gray-600">
+                  <span className="text-muted-foreground">
                     {item.quantity}x {item.name}
                   </span>
-                  <span className="text-gray-800">
-                    {formatPrice((parseFloat(String(item.price || 0)) * (item.quantity || 1)), "GMD")}
+                  <span className="text-foreground">
+                    {formatPrice(
+                      parseFloat(String(item.price || 0)) * (item.quantity || 1),
+                      currencyCode
+                    )}
                   </span>
                 </div>
               ))}
             </div>
             <div className="flex justify-between text-sm font-bold mt-2 pt-2 border-t">
               <span>Total</span>
-              <span>{formatPrice(parseFloat(order.total), "GMD")}</span>
+              <span>{formatPrice(parseFloat(order.total), currencyCode)}</span>
             </div>
           </div>
 
           <Link
             href={`/menu/${tableId}/browse`}
-            className="mt-4 block bg-orange-600 hover:bg-orange-700 text-white text-center py-3 rounded-xl font-medium"
+            className="mt-4 block bg-[var(--menu-brand)] hover:bg-[var(--menu-brand)]/90 text-white text-center py-3 rounded-xl font-medium"
           >
             Back to menu
           </Link>

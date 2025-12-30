@@ -14,12 +14,23 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const ctx = await requireRestaurantPage();
 
   return (
-    <SidebarProvider>
-      <RestaurantSidebar restaurantName={ctx.restaurant.name} />
-      <SidebarInset className="min-w-0 bg-muted/30">
-        <RestaurantNavBar restaurantName={ctx.restaurant.name} />
-        <main className="p-6">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+    <div
+      style={
+        {
+          "--primary": ctx.restaurant.brand_color ?? "#C84501",
+          "--sidebar-primary": ctx.restaurant.brand_color ?? "#C84501",
+        } as React.CSSProperties
+      }
+    >
+      <SidebarProvider>
+        <RestaurantSidebar restaurantName={ctx.restaurant.name} />
+        <SidebarInset className="min-w-0 bg-muted/30">
+          <RestaurantNavBar restaurantName={ctx.restaurant.name} />
+          <main className="p-4 md:p-6">
+            <div className="mx-auto w-full max-w-6xl">{children}</div>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   );
 }
