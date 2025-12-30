@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { kitchenFetchOrders, kitchenLogout, kitchenUpdateOrderStatus, type KitchenOrder, type KitchenOrderStatus } from "@/app/actions/kitchen";
+import {
+  kitchenFetchLowStock,
+  kitchenFetchOrders,
+  kitchenLogout,
+  kitchenUpdateOrderStatus,
+  type KitchenLowStockIngredient,
+  type KitchenOrder,
+  type KitchenOrderStatus,
+} from "@/app/actions/kitchen";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -107,6 +115,8 @@ export default function KitchenClient({
   const [liveStatus, setLiveStatus] = useState<"live" | "reconnecting">("live");
   const [highlightSince, setHighlightSince] = useState<Record<string, number>>({});
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
+  const [lowStock, setLowStock] = useState<KitchenLowStockIngredient[]>([]);
+  const [lowStockOpen, setLowStockOpen] = useState(false);
 
   const chime = useKitchenChime(restaurantId);
   const notifiedIdsRef = useRef<Set<string>>(new Set());
@@ -176,6 +186,24 @@ export default function KitchenClient({
 
     return () => window.clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await kitchenFetchLowStock(restaurantId);
+        if (!cancelled) setLowStock(data);
+      } catch {
+        // ignore (kitchen must keep running even if inventory fails)
+      }
+    }
+    load();
+    const t = window.setInterval(load, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(t);
+    };
   }, [restaurantId]);
 
   // Expire highlights after 2 minutes
@@ -254,6 +282,18 @@ export default function KitchenClient({
             <Button
               type="button"
               variant="outline"
+              className={cn(
+                "border-neutral-700 text-white hover:bg-neutral-900",
+                lowStock.length > 0 && "border-amber-500/60"
+              )}
+              onClick={() => setLowStockOpen(true)}
+            >
+              Low stock: {lowStock.length}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
               className="border-neutral-700 text-white hover:bg-neutral-900"
               onClick={async () => {
                 await kitchenLogout(restaurantId);
@@ -268,6 +308,16 @@ export default function KitchenClient({
 
       {/* Content */}
       <div className="mx-auto w-full max-w-[1400px] px-4 py-4">
+        {lowStock.length > 0 && (
+          <div className="mb-4 rounded-xl border border-amber-700/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
+            <div className="font-semibold">Low stock warning</div>
+            <div className="text-amber-200/80">
+              {lowStock.slice(0, 3).map((i) => i.name).join(", ")}
+              {lowStock.length > 3 ? ` +${lowStock.length - 3} more` : ""}
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 rounded-xl border border-red-900/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">
             {error}
@@ -319,6 +369,54 @@ export default function KitchenClient({
           </div>
         )}
       </div>
+
+      {/* Low stock overlay (minimal) */}
+      {lowStockOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4"
+          onClick={() => setLowStockOpen(false)}
+        >
+          <div
+            className="w-full max-w-xl rounded-2xl border border-neutral-800 bg-neutral-950 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-lg font-extrabold">Low stock</div>
+                <div className="text-sm text-neutral-400">
+                  Ingredients at or below their minimum threshold.
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="border-neutral-700 text-white hover:bg-neutral-900"
+                onClick={() => setLowStockOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-2 max-h-[60dvh] overflow-auto">
+              {lowStock.length === 0 ? (
+                <div className="text-sm text-neutral-400">No low stock.</div>
+              ) : (
+                lowStock.map((i) => (
+                  <div
+                    key={i.id}
+                    className="rounded-xl border border-neutral-800 bg-black px-4 py-3 flex items-center justify-between"
+                  >
+                    <div className="font-semibold">{i.name}</div>
+                    <div className="text-sm text-amber-200 tabular-nums">
+                      {i.current_quantity} / {i.min_threshold} {i.unit}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

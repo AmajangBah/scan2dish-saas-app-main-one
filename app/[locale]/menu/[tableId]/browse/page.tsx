@@ -26,6 +26,7 @@ export default function BrowsePage() {
       image?: string;
       categoryId?: string;
       categoryLabel?: string;
+      outOfStock?: boolean;
     }[]
   >([]);
 
@@ -69,7 +70,9 @@ export default function BrowsePage() {
         // 2) Fetch menu items for this restaurant
         const { data: menuRows, error: menuError } = await supabase
           .from("menu_items")
-          .select("id, name, description, price, category, images, available")
+          .select(
+            "id, name, description, price, category, images, available, inventory_out_of_stock"
+          )
           .eq("restaurant_id", tableRow.restaurant_id)
           .eq("available", true)
           .order("name", { ascending: true });
@@ -96,6 +99,7 @@ export default function BrowsePage() {
               image: typeof firstImage === "string" ? firstImage : undefined,
               categoryId,
               categoryLabel,
+              outOfStock: Boolean((row as unknown as { inventory_out_of_stock?: boolean }).inventory_out_of_stock),
             };
           }) ?? [];
 

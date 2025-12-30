@@ -14,6 +14,7 @@ const Route = {
   TABLES: "/dashboard/tables",
   ANALYTICS: "/dashboard/analytics",
   DISCOUNT: "/dashboard/discounts",
+  INVENTORY: "/dashboard/inventory",
   SETTINGS: "/dashboard/settings",
   LOGOUT: "/logout",
 };

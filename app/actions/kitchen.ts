@@ -95,6 +95,49 @@ export type KitchenOrder = {
   items: Array<{ name: string; qty: number }>;
 };
 
+export type KitchenLowStockIngredient = {
+  id: string;
+  name: string;
+  unit: string;
+  current_quantity: number;
+  min_threshold: number;
+};
+
+export async function kitchenFetchLowStock(
+  restaurantId: string
+): Promise<KitchenLowStockIngredient[]> {
+  const cfg = await getKitchenConfigOrThrow(restaurantId);
+  if (!cfg.kitchen_enabled) throw new Error("Kitchen mode is disabled");
+  if (cfg.kitchen_pin_hash) await requireKitchenSession(restaurantId);
+
+  const service = createServiceSupabase();
+  const { data, error } = await service
+    .from("ingredients")
+    .select("id, name, unit, current_quantity, min_threshold")
+    .eq("restaurant_id", restaurantId);
+
+  // Filter in memory (Supabase JS doesn't support column-to-column compare here).
+  if (error) throw new Error("Failed to load low stock");
+  const rows = (data ?? []) as unknown as Array<{
+    id: string;
+    name: string;
+    unit: string;
+    current_quantity: number | string | null;
+    min_threshold: number | string | null;
+  }>;
+
+  return rows
+    .map((r) => ({
+      id: String(r.id),
+      name: String(r.name),
+      unit: String(r.unit),
+      current_quantity: Number(r.current_quantity ?? 0),
+      min_threshold: Number(r.min_threshold ?? 0),
+    }))
+    .filter((r) => r.current_quantity <= r.min_threshold)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export async function kitchenFetchOrders(restaurantId: string): Promise<KitchenOrder[]> {
   const cfg = await getKitchenConfigOrThrow(restaurantId);
   if (!cfg.kitchen_enabled) throw new Error("Kitchen mode is disabled");

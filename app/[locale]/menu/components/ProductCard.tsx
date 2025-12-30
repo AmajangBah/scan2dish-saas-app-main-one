@@ -16,6 +16,7 @@ export default function ProductCard({
     desc?: string;
     price: number;
     image?: string;
+    outOfStock?: boolean;
   };
 }) {
   const { add } = useCart();
@@ -26,8 +27,15 @@ export default function ProductCard({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="w-full text-left flex gap-4 items-start p-4 bg-card rounded-2xl border shadow-sm hover:bg-muted/30 transition-colors"
+        onClick={() => {
+          if (product.outOfStock) return;
+          setOpen(true);
+        }}
+        className={`w-full text-left flex gap-4 items-start p-4 bg-card rounded-2xl border shadow-sm transition-colors ${
+          product.outOfStock
+            ? "opacity-70 cursor-not-allowed"
+            : "hover:bg-muted/30"
+        }`}
       >
         <div className="w-20 h-20 rounded-xl shrink-0 bg-muted overflow-hidden border">
           {product.image ? (
@@ -44,9 +52,16 @@ export default function ProductCard({
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-base sm:text-lg leading-tight truncate">
-            {product.name}
-          </h3>
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="font-semibold text-base sm:text-lg leading-tight truncate">
+              {product.name}
+            </h3>
+            {product.outOfStock && (
+              <span className="shrink-0 text-[11px] font-semibold px-2 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/15">
+                Out of stock
+              </span>
+            )}
+          </div>
           {product.desc && (
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
               {product.desc}
@@ -59,8 +74,10 @@ export default function ProductCard({
             <Button
               type="button"
               variant="outline"
+              disabled={Boolean(product.outOfStock)}
               onClick={(e) => {
                 e.stopPropagation();
+                if (product.outOfStock) return;
                 add(
                   {
                     id: product.id,
