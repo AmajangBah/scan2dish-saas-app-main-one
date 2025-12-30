@@ -18,13 +18,29 @@ const intlMiddleware = createMiddleware({
  * 3. Refresh Supabase session
  */
 export async function proxy(request: NextRequest) {
-  // Handle i18n first
-  const intlResponse = intlMiddleware(request);
+  /**
+   * Only run i18n routing for translated, customer-facing menu routes.
+   * Dashboards + home must remain stable and non-localized.
+   */
+  const pathname = request.nextUrl.pathname;
+  const localePrefixRegex = new RegExp(`^/(${locales.join("|")})(/|$)`);
+  const isMenuRoute =
+    pathname === "/menu" ||
+    pathname.startsWith("/menu/") ||
+    (localePrefixRegex.test(pathname) &&
+      (pathname.split("/").filter(Boolean)[1] === "menu"));
 
-  // If i18n middleware wants to redirect, let it
-  if (intlResponse && intlResponse.headers.get("x-middleware-rewrite")) {
+  const intlResponse = isMenuRoute ? intlMiddleware(request) : null;
+
+  // If i18n middleware wants to redirect/rewrite, let it.
+  if (
+    intlResponse &&
+    (intlResponse.headers.get("x-middleware-rewrite") ||
+      intlResponse.headers.get("location"))
+  ) {
     return intlResponse;
   }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
