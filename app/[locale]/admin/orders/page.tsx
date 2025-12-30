@@ -43,6 +43,27 @@ export default async function AdminOrders({
 
   const { data: orders } = await query;
 
+  // Normalize a few fields for rendering safety (Supabase joins can be object or array).
+  type RestaurantJoin = { id: string; name: string; currency?: string | null };
+  type TableJoin = { id: string; table_number?: string | null };
+  type OrderRow = {
+    id: string;
+    created_at: string;
+    status: string;
+    total: number | string | null;
+    commission_amount: number | string | null;
+    restaurant: RestaurantJoin | RestaurantJoin[] | null;
+    table: TableJoin | TableJoin[] | null;
+  } & Record<string, unknown>;
+
+  const safeOrders = ((orders as unknown as OrderRow[]) ?? []).map((o) => {
+    const restaurant = Array.isArray(o.restaurant) ? o.restaurant[0] : o.restaurant;
+    const table = Array.isArray(o.table) ? o.table[0] : o.table;
+    const total = Number(o.total ?? 0);
+    const commission = Number(o.commission_amount ?? 0);
+    return { ...o, restaurant, table, total, commission_amount: commission };
+  });
+
   // Get restaurants for filter
   const { data: restaurants } = await supabase
     .from("restaurants")
@@ -116,30 +137,34 @@ export default async function AdminOrders({
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-600">Total Orders</p>
           <p className="text-2xl font-bold text-gray-900">
-            {orders?.length || 0}
+            {safeOrders.length || 0}
           </p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-600">Total Revenue</p>
           <p className="text-2xl font-bold text-gray-900">
-            ${orders?.reduce((sum, o) => sum + Number(o.total), 0).toFixed(2) || "0.00"}
+            $
+            {safeOrders
+              .reduce((sum, o) => sum + Number(o.total ?? 0), 0)
+              .toFixed(2) || "0.00"}
           </p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-600">Total Commission</p>
           <p className="text-2xl font-bold text-orange-600">
-            ${orders
-              ?.reduce((sum, o) => sum + Number(o.commission_amount), 0)
+            $
+            {safeOrders
+              .reduce((sum, o) => sum + Number(o.commission_amount ?? 0), 0)
               .toFixed(2) || "0.00"}
           </p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-600">Avg Order Value</p>
           <p className="text-2xl font-bold text-gray-900">
-            ${orders && orders.length > 0
+            ${safeOrders.length > 0
               ? (
-                  orders.reduce((sum, o) => sum + Number(o.total), 0) /
-                  orders.length
+                  safeOrders.reduce((sum, o) => sum + Number(o.total ?? 0), 0) /
+                  safeOrders.length
                 ).toFixed(2)
               : "0.00"}
           </p>
@@ -176,21 +201,25 @@ export default async function AdminOrders({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {orders?.map((order) => (
+              {safeOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-mono">
-                    {order.id.slice(0, 8)}...
+                    {String(order.id).slice(0, 8)}...
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <Link
-                      href={`/${locale}/admin/restaurants/${order.restaurant?.id}`}
+                      href={
+                        order.restaurant?.id
+                          ? `/${locale}/admin/restaurants/${order.restaurant.id}`
+                          : `/${locale}/admin/restaurants`
+                      }
                       className="font-medium text-orange-600 hover:text-orange-700"
                     >
-                      {order.restaurant?.name}
+                      {order.restaurant?.name ?? "Unknown"}
                     </Link>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    {order.table?.table_number}
+                    {order.table?.table_number ?? "—"}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {new Date(order.created_at).toLocaleDateString()}
@@ -214,16 +243,16 @@ export default async function AdminOrders({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    ${order.total.toFixed(2)}
+                    ${Number(order.total ?? 0).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 text-sm font-semibold text-orange-600">
-                    ${order.commission_amount.toFixed(2)}
+                    ${Number(order.commission_amount ?? 0).toFixed(2)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {(!orders || orders.length === 0) && (
+          {safeOrders.length === 0 && (
             <div className="text-center py-12 text-gray-500">
               <p>No orders found</p>
             </div>

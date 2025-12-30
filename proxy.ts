@@ -7,7 +7,8 @@ import { locales, defaultLocale } from "./i18n";
 const intlMiddleware = createMiddleware({
   locales,
   defaultLocale,
-  localePrefix: "as-needed", // Don't add /en prefix for default locale
+  // App routes are nested under /[locale]/..., so keep prefixes consistent.
+  localePrefix: "always",
 });
 
 /**

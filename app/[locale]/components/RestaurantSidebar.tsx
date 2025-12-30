@@ -33,7 +33,7 @@ const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
       {/* HEADER */}
       <SidebarHeader className="border-b px-3 py-4">
         <div className="flex flex-col gap-1">
-          <div className="text-xs font-medium text-muted-foreground">
+          <div className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
             Scan2Dish
           </div>
           <h2 className="text-base font-semibold leading-tight truncate">
@@ -45,13 +45,15 @@ const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
       {/* MAIN NAV */}
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Overview</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] tracking-wide uppercase text-muted-foreground">
+            Overview
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SideBarLink
                 href={Route.DASHBOARD}
                 label="Overview"
-                icon={<LayoutDashboard className="h-5 w-5" />}
+                icon={<LayoutDashboard className="h-4 w-4" />}
               />
             </SidebarMenu>
           </SidebarGroupContent>
@@ -60,50 +62,54 @@ const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
         <SidebarSeparator />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Operations</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] tracking-wide uppercase text-muted-foreground">
+            Operations
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SideBarLink
                 href={Route.ORDERS}
                 label="Orders"
-                icon={<Notebook className="h-5 w-5" />}
+                icon={<Notebook className="h-4 w-4" />}
               />
 
               <SideBarLink
                 href={Route.MENU}
                 label="Menu"
-                icon={<Utensils className="h-5 w-5" />}
+                icon={<Utensils className="h-4 w-4" />}
               />
 
               <SideBarLink
                 href={Route.TABLES}
                 label="Tables"
-                icon={<Table2 className="h-5 w-5" />}
+                icon={<Table2 className="h-4 w-4" />}
               />
 
               <SideBarLink
                 href={Route.INVENTORY}
                 label="Inventory"
-                icon={<Boxes className="h-5 w-5" />}
+                icon={<Boxes className="h-4 w-4" />}
               />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Insights</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] tracking-wide uppercase text-muted-foreground">
+            Insights
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SideBarLink
                 href={Route.ANALYTICS}
                 label="Analytics"
-                icon={<BarChart2 className="h-5 w-5" />}
+                icon={<BarChart2 className="h-4 w-4" />}
               />
 
               <SideBarLink
                 href={Route.DISCOUNT}
                 label="Discounts"
-                icon={<BadgePercent className="h-5 w-5" />}
+                icon={<BadgePercent className="h-4 w-4" />}
               />
             </SidebarMenu>
           </SidebarGroupContent>
@@ -113,19 +119,21 @@ const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
       {/* FOOTER */}
       <SidebarFooter className="mb-4">
         <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] tracking-wide uppercase text-muted-foreground">
+            Account
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SideBarLink
                 href={Route.SETTINGS}
                 label="Settings"
-                icon={<Settings className="h-5 w-5" />}
+                icon={<Settings className="h-4 w-4" />}
               />
 
               <SideBarLink
                 href={Route.LOGOUT}
                 label="Logout"
-                icon={<LogOut className="h-5 w-5" />}
+                icon={<LogOut className="h-4 w-4" />}
               />
             </SidebarMenu>
           </SidebarGroupContent>

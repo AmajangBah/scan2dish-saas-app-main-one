@@ -28,23 +28,25 @@ function formatAge(minutesAgo: number) {
 }
 
 function useKitchenChime(restaurantId: string) {
-  const [enabled, setEnabled] = useState(true);
-  const [volume, setVolume] = useState(0.6);
-  const audioRef = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null);
-
-  useEffect(() => {
+  const [enabled, setEnabled] = useState(() => {
     try {
       const e = window.localStorage.getItem(storageKey(restaurantId, "sound_enabled"));
-      const v = window.localStorage.getItem(storageKey(restaurantId, "sound_volume"));
-      if (e != null) setEnabled(e === "true");
-      if (v != null) {
-        const n = Number(v);
-        if (!Number.isNaN(n)) setVolume(Math.min(1, Math.max(0, n)));
-      }
+      return e == null ? true : e === "true";
     } catch {
-      // ignore
+      return true;
     }
-  }, [restaurantId]);
+  });
+  const [volume, setVolume] = useState(() => {
+    try {
+      const v = window.localStorage.getItem(storageKey(restaurantId, "sound_volume"));
+      const n = v == null ? 0.6 : Number(v);
+      if (Number.isNaN(n)) return 0.6;
+      return Math.min(1, Math.max(0, n));
+    } catch {
+      return 0.6;
+    }
+  });
+  const audioRef = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null);
 
   useEffect(() => {
     try {

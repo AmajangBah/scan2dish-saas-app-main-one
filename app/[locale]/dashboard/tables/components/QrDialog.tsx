@@ -34,7 +34,8 @@ export default function QrDialog({
   }, [pathname]);
 
   const tableId = table?.id ?? "";
-  const menuPath = tableId ? `/${locale}/menu/${tableId}/browse` : "";
+  // Use the new intentional intro screen first; customers can proceed to browse from there.
+  const menuPath = tableId ? `/${locale}/menu/${tableId}` : "";
   const menuUrl =
     typeof window !== "undefined" && menuPath
       ? new URL(menuPath, window.location.origin).toString()

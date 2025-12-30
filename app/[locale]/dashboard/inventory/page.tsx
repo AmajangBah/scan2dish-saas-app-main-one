@@ -47,7 +47,9 @@ export default async function InventoryPage() {
         name: String(m.name),
         category: m.category ? String(m.category) : null,
         available: Boolean(m.available),
-        inventory_out_of_stock: Boolean((m as any).inventory_out_of_stock),
+        inventory_out_of_stock: Boolean(
+          (m as { inventory_out_of_stock?: unknown }).inventory_out_of_stock
+        ),
       }))}
       recipeRows={(recipeRows ?? []).map((r) => ({
         menu_item_id: String(r.menu_item_id),
