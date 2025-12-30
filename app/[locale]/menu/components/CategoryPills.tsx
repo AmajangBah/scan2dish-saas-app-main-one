@@ -12,18 +12,19 @@ export default function CategoryPills({
   onChange?: (id: string) => void;
 }) {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
+    <div className="flex gap-2 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]">
       {categories.map((c) => {
         const isActive = c.id === active;
         return (
           <Button
             key={c.id}
             onClick={() => onChange?.(c.id)}
-            className={`px-4 py-2 rounded-full text-sm ${
+            variant={isActive ? "default" : "secondary"}
+            className={
               isActive
-                ? "bg-orange-600 text-white"
-                : "bg-gray-100 text-gray-800"
-            }`}
+                ? "rounded-full bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
+                : "rounded-full"
+            }
           >
             {c.label}
           </Button>

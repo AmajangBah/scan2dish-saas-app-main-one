@@ -13,12 +13,15 @@ import { useRef, useState, useEffect } from "react";
 import { Order, OrderStatus } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, CookingPot, Hourglass, Printer } from "lucide-react";
+import { Ban, CheckCircle2, CookingPot, Hourglass, Printer } from "lucide-react";
+import { formatPrice } from "@/lib/utils/currency";
+import { cancelOrder } from "@/app/actions/orderCancel";
 
 interface OrderDetailsModalProps {
   open: boolean;
   onClose: () => void;
   order: Order | null;
+  currency: string;
   saving?: boolean;
   onStatusChange: (id: string, newStatus: OrderStatus) => void;
 }
@@ -27,6 +30,7 @@ export default function OrderDetailsModal({
   open,
   onClose,
   order,
+  currency,
   saving = false,
   onStatusChange,
 }: OrderDetailsModalProps) {
@@ -57,6 +61,11 @@ export default function OrderDetailsModal({
       label: "Completed",
       badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
       icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+    },
+    cancelled: {
+      label: "Cancelled",
+      badgeClass: "bg-muted text-muted-foreground border-border",
+      icon: <Ban className="h-3.5 w-3.5" />,
     },
   };
 
@@ -101,6 +110,8 @@ export default function OrderDetailsModal({
   const meta = statusMeta[status ?? order.status];
   const itemsTotal = order.items.reduce((sum, i) => sum + i.qty * i.price, 0);
   const itemsCount = order.items.reduce((sum, i) => sum + i.qty, 0);
+  const orderTotal = Number(order.total || 0);
+  const discount = Math.max(0, itemsTotal - orderTotal);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -132,19 +143,32 @@ export default function OrderDetailsModal({
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-lg border bg-muted/20 p-3">
               <div className="text-xs text-muted-foreground">Total</div>
-              <div className="font-semibold">${order.total}</div>
+              <div className="font-semibold">
+                {formatPrice(Number(order.total || 0), currency)}
+              </div>
             </div>
             <div className="rounded-lg border bg-muted/20 p-3">
               <div className="text-xs text-muted-foreground">Items</div>
               <div className="font-semibold">{itemsCount}</div>
             </div>
             <div className="rounded-lg border bg-muted/20 p-3">
-              <div className="text-xs text-muted-foreground">Items total</div>
+              <div className="text-xs text-muted-foreground">
+                {discount > 0 ? "Subtotal" : "Items total"}
+              </div>
               <div className="font-semibold">
-                ${Number.isFinite(itemsTotal) ? itemsTotal.toFixed(2) : "—"}
+                {formatPrice(itemsTotal, currency)}
               </div>
             </div>
           </div>
+
+          {discount > 0 && (
+            <div className="flex items-center justify-between rounded-lg border bg-emerald-50 px-3 py-2 text-sm">
+              <span className="text-emerald-900 font-medium">Discount applied</span>
+              <span className="text-emerald-900 font-semibold">
+                −{formatPrice(discount, currency)}
+              </span>
+            </div>
+          )}
 
           <Separator />
 
@@ -167,7 +191,7 @@ export default function OrderDetailsModal({
                         {item.qty}
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">
-                        ${item.price}
+                        {formatPrice(Number(item.price || 0), currency)}
                       </td>
                     </tr>
                   ))}
@@ -198,6 +222,22 @@ export default function OrderDetailsModal({
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={onClose}>
               Close
+            </Button>
+            <Button
+              variant="outline"
+              className="text-destructive"
+              disabled={saving || order.status === "completed" || order.status === "cancelled"}
+              onClick={async () => {
+                if (!confirm("Cancel this order? Inventory will be restored.")) return;
+                setStatus("cancelled");
+                const res = await cancelOrder({ order_id: order.id });
+                if (!res.success) {
+                  setStatus(order.status);
+                }
+                // Let parent refresh via subscription/polling; show local error if needed
+              }}
+            >
+              Cancel order
             </Button>
             <Button onClick={handlePrint} className="gap-2">
               <Printer className="h-4 w-4" />

@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ShoppingCart, Globe } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { Button } from "@/components/ui/button";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 
 export default function TopHeader({
   title,
@@ -13,26 +15,37 @@ export default function TopHeader({
 }) {
   const { tableId } = useParams();
   const { items } = useCart();
+  const { tableNumber } = useMenuRestaurant();
 
   return (
-    <header className="flex items-center justify-between px-4 py-4 bg-white shadow-sm sticky top-0 z-40">
-      <div>
-        <h2 className="text-xl font-bold">{title}</h2>
-      </div>
+    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto w-full max-w-2xl px-4 py-3 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] text-muted-foreground font-medium">
+            Table {tableNumber}
+          </div>
+          <h2 className="text-base sm:text-lg font-semibold leading-tight truncate">
+            {title}
+          </h2>
+        </div>
 
-      <div className="flex items-center gap-4">
-        <Button className="p-2 rounded-md">
-          <Globe className="w-5 h-5 text-gray-600" />
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <LanguageSwitcher triggerClassName="w-[44px] px-2 sm:w-[140px]" />
 
-        <Link href={`/menu/${tableId}/cart`} className="relative">
-          <ShoppingCart className="w-6 h-6 text-gray-700" />
-          {items.length > 0 && (
-            <span className="absolute -top-2 -right-2 bg-orange-600 text-white text-xs px-2 py-0.5 rounded-full">
-              {items.reduce((s, i) => s + i.qty, 0)}
-            </span>
-          )}
-        </Link>
+          <Button asChild variant="ghost" size="icon" className="relative">
+            <Link href={`/menu/${tableId}/cart`} aria-label="Open cart">
+              <ShoppingCart className="h-5 w-5" />
+              {items.length > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full text-[11px] font-semibold text-white bg-[var(--menu-brand)] flex items-center justify-center"
+                  aria-label={`${items.reduce((s, i) => s + i.qty, 0)} items in cart`}
+                >
+                  {items.reduce((s, i) => s + i.qty, 0)}
+                </span>
+              )}
+            </Link>
+          </Button>
+        </div>
       </div>
     </header>
   );

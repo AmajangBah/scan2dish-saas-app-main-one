@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "../context/CartContext";
 import QuantitySelector from "./QuantitySelector";
 import { formatPrice } from "@/lib/utils/currency";
+import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 
 export default function CartItem({
   item,
@@ -11,20 +12,24 @@ export default function CartItem({
   item: { id: string; name: string; price: number; qty: number };
 }) {
   const { updateQty, remove } = useCart();
+  const { currency } = useMenuRestaurant();
 
   return (
-    <div className="p-4 bg-white rounded-2xl shadow-sm flex items-center gap-4">
-      <div className="w-16 h-16 bg-orange-600 rounded-lg" />
+    <div className="p-4 bg-card rounded-2xl border shadow-sm flex items-center gap-4">
+      <div className="w-16 h-16 rounded-xl bg-muted border" />
       <div className="flex-1">
         <div className="flex justify-between items-start">
           <div>
             <h4 className="font-medium">{item.name}</h4>
-            <p className="text-sm text-gray-500">{formatPrice(item.price, "GMD")}</p>
+            <p className="text-sm text-muted-foreground">
+              {formatPrice(item.price, currency)}
+            </p>
           </div>
 
           <div className="text-right">
             <Button
-              className="text-sm text-red-600"
+              variant="ghost"
+              className="text-sm text-destructive hover:text-destructive"
               onClick={() => remove(item.id)}
             >
               Remove

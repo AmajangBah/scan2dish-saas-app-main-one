@@ -11,6 +11,7 @@
  import { createBrowserSupabase } from "@/lib/supabase/client";
  import { toast } from "sonner";
  import { CheckCircle2, CookingPot, Hourglass, ArrowRight } from "lucide-react";
+import { formatPrice } from "@/lib/utils/currency";
 
  type OrderStatus = "pending" | "preparing" | "completed";
 
@@ -38,9 +39,11 @@
 
  export default function LiveOrdersWidget({
    restaurantId,
+  currency,
    initialOrders,
  }: {
    restaurantId: string;
+  currency: string;
    initialOrders: LiveOrderSummary[];
  }) {
    const pathname = usePathname();
@@ -421,7 +424,7 @@
                        )}
                      </div>
                      <div className="text-xs text-muted-foreground truncate">
-                       ${o.total} •{" "}
+                      {formatPrice(Number(o.total || 0), currency)} •{" "}
                        {new Date(o.createdAt).toLocaleTimeString("en-US", {
                          hour: "2-digit",
                          minute: "2-digit",

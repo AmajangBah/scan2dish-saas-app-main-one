@@ -6,6 +6,7 @@ import { Order } from "./types";
 export default async function OrdersPage() {
   const ctx = await requireRestaurantPage();
   const restaurant_id = ctx.restaurant.id;
+  const currency = ctx.restaurant.currency ?? "GMD";
 
   const supabase = await createServerSupabase();
 
@@ -73,5 +74,11 @@ export default async function OrdersPage() {
     };
   });
 
-  return <OrdersClient restaurantId={restaurant_id} initialOrders={mappedOrders} />;
+  return (
+    <OrdersClient
+      restaurantId={restaurant_id}
+      currency={currency}
+      initialOrders={mappedOrders}
+    />
+  );
 }

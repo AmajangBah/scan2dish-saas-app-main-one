@@ -7,10 +7,12 @@ import { ActivityItem } from "@/types/activity";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
 import LiveOrdersWidget, { type LiveOrderSummary } from "./LiveOrdersWidget";
+import { formatPrice } from "@/lib/utils/currency";
 
 export default async function Dashboard() {
   const ctx = await requireRestaurantPage();
   const restaurant_id = ctx.restaurant.id;
+  const currency = ctx.restaurant.currency ?? "GMD";
 
   const supabase = await createServerSupabase();
 
@@ -168,7 +170,7 @@ export default async function Dashboard() {
           />
           <DashboardCard
             heading="Revenue"
-            figure={Math.round(revenue)}
+            figureText={formatPrice(revenue, currency)}
             accent="green"
             icon={<DollarSign />}
           />
@@ -189,6 +191,7 @@ export default async function Dashboard() {
         <div className="lg:col-span-4 grid gap-4">
           <LiveOrdersWidget
             restaurantId={restaurant_id}
+            currency={currency}
             initialOrders={initialLiveOrders}
           />
           <Link href={Route.TABLES} className="block">

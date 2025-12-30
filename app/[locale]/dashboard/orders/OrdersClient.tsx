@@ -7,6 +7,7 @@ import OrderCard from "./components/OrderCard";
 import OrderDetailsModal from "./components/OrderDetailsModal";
 import { Order, OrderStatus } from "./types";
 import { updateOrderStatus } from "@/app/actions/orderStatus";
+import { cancelOrder } from "@/app/actions/orderCancel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,9 +33,11 @@ type OrderRow = {
 
 export default function OrdersClient({
   restaurantId,
+  currency,
   initialOrders,
 }: {
   restaurantId: string;
+  currency: string;
   initialOrders: Order[];
 }) {
   const [search, setSearch] = useState("");
@@ -113,7 +116,10 @@ export default function OrdersClient({
       setSelectedOrder({ ...selectedOrder, status: newStatus });
     }
 
-    const res = await updateOrderStatus({ order_id: id, status: newStatus });
+    const res =
+      newStatus === "cancelled"
+        ? await cancelOrder({ order_id: id })
+        : await updateOrderStatus({ order_id: id, status: newStatus });
     if (!res.success) {
       // rollback
       setOrders(prev);
@@ -454,6 +460,7 @@ export default function OrdersClient({
     { id: "pending", label: "Pending", toneClass: "text-red-600" },
     { id: "preparing", label: "Preparing", toneClass: "text-amber-600" },
     { id: "completed", label: "Completed", toneClass: "text-emerald-600" },
+    { id: "cancelled", label: "Cancelled", toneClass: "text-muted-foreground" },
   ];
 
   return (
@@ -608,6 +615,7 @@ export default function OrdersClient({
             <OrderCard
               key={order.id}
               order={order}
+              currency={currency}
               saving={savingOrderId === order.id}
               isNew={Boolean(newOrderSince[order.id]) && order.status === "pending"}
               onView={handleView}
@@ -660,6 +668,7 @@ export default function OrdersClient({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         order={selectedOrder}
+        currency={currency}
         saving={selectedOrder ? savingOrderId === selectedOrder.id : false}
         onStatusChange={handleStatusChange}
       />

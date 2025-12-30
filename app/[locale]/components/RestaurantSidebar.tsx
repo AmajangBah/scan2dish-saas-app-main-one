@@ -19,6 +19,7 @@ import {
   Table2,
   BarChart2,
   BadgePercent,
+  Boxes,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -78,6 +79,12 @@ const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
                 href={Route.TABLES}
                 label="Tables"
                 icon={<Table2 className="h-5 w-5" />}
+              />
+
+              <SideBarLink
+                href={Route.INVENTORY}
+                label="Inventory"
+                icon={<Boxes className="h-5 w-5" />}
               />
             </SidebarMenu>
           </SidebarGroupContent>

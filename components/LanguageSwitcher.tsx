@@ -15,7 +15,11 @@ import {
  * Language switcher component
  * Allows users to switch between English, French, and Spanish
  */
-export default function LanguageSwitcher() {
+export default function LanguageSwitcher({
+  triggerClassName,
+}: {
+  triggerClassName?: string;
+}) {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -34,7 +38,7 @@ export default function LanguageSwitcher() {
 
   return (
     <Select value={locale} onValueChange={handleChange}>
-      <SelectTrigger className="w-[140px]">
+      <SelectTrigger className={triggerClassName || "w-[140px]"}>
         <SelectValue>
           <span className="flex items-center gap-2">
             <span>{localeFlags[locale as Locale]}</span>

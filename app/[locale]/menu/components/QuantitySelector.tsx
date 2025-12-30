@@ -11,18 +11,22 @@ export default function QuantitySelector({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <button
+      <Button
+        type="button"
+        variant="outline"
+        size="icon-sm"
         onClick={() => onChange(Math.max(1, value - 1))}
-        className="w-8 h-8 rounded-md bg-gray-100"
       >
         −
-      </button>
-      <div className="w-10 h-8 rounded-md bg-white border flex items-center justify-center">
+      </Button>
+      <div className="min-w-10 h-8 rounded-md bg-background border flex items-center justify-center text-sm font-medium px-2">
         {value}
       </div>
       <Button
+        type="button"
+        variant="outline"
+        size="icon-sm"
         onClick={() => onChange(value + 1)}
-        className="w-8 h-8 rounded-md bg-gray-100"
       >
         +
       </Button>

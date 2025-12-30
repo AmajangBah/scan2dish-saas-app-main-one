@@ -5,6 +5,7 @@ import React from "react";
 interface DashboardCardProps {
   heading: string;
   figure?: number;
+  figureText?: string;
   isAddCard?: boolean;
   icon?: React.ReactNode;
   accent?: string; // e.g. "orange", "green", "blue"
@@ -13,6 +14,7 @@ interface DashboardCardProps {
 const DashboardCard = ({
   heading,
   figure,
+  figureText,
   isAddCard,
   icon,
   accent,
@@ -50,7 +52,7 @@ const DashboardCard = ({
           </div>
         ) : (
           <p className={`text-3xl font-semibold tracking-tight ${accentClass}`}>
-            {figure?.toLocaleString() ?? "—"}
+            {figureText ?? (figure?.toLocaleString() ?? "—")}
           </p>
         )}
       </CardContent>
