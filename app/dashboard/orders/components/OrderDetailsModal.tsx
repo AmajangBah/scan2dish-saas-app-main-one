@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Ban, CheckCircle2, CookingPot, Hourglass, Printer } from "lucide-react";
 import { formatPrice } from "@/lib/utils/currency";
-import { cancelOrder } from "@/app/actions/orderCancel";
 
 interface OrderDetailsModalProps {
   open: boolean;
@@ -24,6 +23,7 @@ interface OrderDetailsModalProps {
   currency: string;
   saving?: boolean;
   onStatusChange: (id: string, newStatus: OrderStatus) => void;
+  onRequestCancel: () => void;
 }
 
 export default function OrderDetailsModal({
@@ -33,6 +33,7 @@ export default function OrderDetailsModal({
   currency,
   saving = false,
   onStatusChange,
+  onRequestCancel,
 }: OrderDetailsModalProps) {
   const printRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<OrderStatus | undefined>(order?.status);
@@ -172,6 +173,23 @@ export default function OrderDetailsModal({
 
           <Separator />
 
+          {(order.customerName || order.notes) && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <div className="text-xs text-muted-foreground">Customer</div>
+                <div className="font-semibold">
+                  {order.customerName?.trim() ? order.customerName : "—"}
+                </div>
+              </div>
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <div className="text-xs text-muted-foreground">Notes</div>
+                <div className="text-sm whitespace-pre-wrap">
+                  {order.notes?.trim() ? order.notes : "—"}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <div className="text-sm font-semibold">Items</div>
             <div className="rounded-lg border overflow-hidden">
@@ -227,15 +245,7 @@ export default function OrderDetailsModal({
               variant="outline"
               className="text-destructive"
               disabled={saving || order.status === "completed" || order.status === "cancelled"}
-              onClick={async () => {
-                if (!confirm("Cancel this order? Inventory will be restored.")) return;
-                setStatus("cancelled");
-                const res = await cancelOrder({ order_id: order.id });
-                if (!res.success) {
-                  setStatus(order.status);
-                }
-                // Let parent refresh via subscription/polling; show local error if needed
-              }}
+              onClick={onRequestCancel}
             >
               Cancel order
             </Button>

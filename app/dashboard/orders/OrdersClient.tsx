@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 type OrderItemRow = { name?: string; quantity?: number; price?: string | number };
 type RestaurantTableJoin =
@@ -27,6 +28,8 @@ type OrderRow = {
   status: OrderStatus;
   total: number | string | null;
   items: unknown;
+  customer_name?: string | null;
+  notes?: string | null;
   created_at: string;
   restaurant_tables: RestaurantTableJoin;
 };
@@ -46,6 +49,7 @@ export default function OrdersClient({
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<
@@ -248,6 +252,8 @@ export default function OrdersClient({
       time,
       createdAt,
       items: mapItems(row.items),
+      customerName: row.customer_name ?? null,
+      notes: row.notes ?? null,
     };
   }
 
@@ -263,6 +269,8 @@ export default function OrdersClient({
         status,
         total,
         items,
+        customer_name,
+        notes,
         created_at,
         restaurant_tables(table_number)
       `
@@ -286,6 +294,8 @@ export default function OrdersClient({
         status,
         total,
         items,
+        customer_name,
+        notes,
         created_at,
         restaurant_tables(table_number)
       `
@@ -671,6 +681,22 @@ export default function OrdersClient({
         currency={currency}
         saving={selectedOrder ? savingOrderId === selectedOrder.id : false}
         onStatusChange={handleStatusChange}
+        onRequestCancel={() => setConfirmCancelOpen(true)}
+      />
+
+      <ConfirmDialog
+        open={confirmCancelOpen}
+        onOpenChange={setConfirmCancelOpen}
+        title="Cancel this order?"
+        description="Inventory will be restored. This action cannot be undone."
+        confirmLabel="Cancel order"
+        onConfirm={async () => {
+          const o = selectedOrder;
+          if (!o) return;
+          setConfirmCancelOpen(false);
+          await handleStatusChange(o.id, "cancelled");
+        }}
+        confirmDisabled={!selectedOrder || savingOrderId === selectedOrder?.id || selectedOrder?.status === "completed" || selectedOrder?.status === "cancelled"}
       />
     </div>
   );
