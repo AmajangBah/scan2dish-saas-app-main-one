@@ -35,7 +35,6 @@ export default function CartPage() {
   const locale = typeof params.locale === "string" ? params.locale : null;
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
-  const [payNow, setPayNow] = useState(false);
   const { currency, restaurantId } = useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
 
@@ -44,6 +43,7 @@ export default function CartPage() {
     discount: number;
     total: number;
   } | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(false);
 
   const [displayNameById, setDisplayNameById] = useState<Record<string, string>>(
     {}
@@ -63,12 +63,22 @@ export default function CartPage() {
     async function load() {
       if (!pricingInput) {
         setPricing(null);
+        setPricingLoading(false);
         return;
       }
+      // Prevent stale totals: show instant local subtotal while pricing recalculates.
+      setPricingLoading(true);
+      setPricing(null);
+
+      // Small debounce to avoid hammering server actions on rapid +/- taps.
+      await new Promise((r) => setTimeout(r, 200));
+      if (cancelled) return;
+
       const res = await previewOrderPricing(pricingInput);
       if (cancelled) return;
-      if (res.success) setPricing(res);
+      if (res.success) setPricing({ subtotal: res.subtotal, discount: res.discount, total: res.total });
       else setPricing(null);
+      setPricingLoading(false);
     }
     load();
     return () => {
@@ -122,49 +132,9 @@ export default function CartPage() {
     };
   }, [items, restaurantId, locale]);
 
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const placeOrder = async () => {
-    if (!tableId) {
-      setError("Invalid table ID");
-      return;
-    }
-
-    if (items.length === 0) {
-      setError("Cart is empty");
-      return;
-    }
-
-    setIsPlacingOrder(true);
-    setError(null);
-
-    try {
-      const { createOrder } = await import("@/app/actions/orders");
-      
-      const result = await createOrder({
-        table_id: tableId,
-        items: items.map((item) => ({
-          id: item.id,
-          name: displayNameById[item.id] || item.name,
-          price: item.price,
-          qty: item.qty,
-          image: item.image,
-        })),
-      });
-
-      if (result.success && result.orderId) {
-        clear();
-        router.push(`${base}/menu/${tableId}/order/${result.orderId}`);
-      } else {
-        setError(result.error || "Failed to place order");
-      }
-    } catch (err) {
-      console.error("Order placement error:", err);
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsPlacingOrder(false);
-    }
+  const goToCheckout = () => {
+    if (!tableId) return;
+    router.push(`${base}/menu/${tableId}/checkout`);
   };
 
   return (
@@ -214,7 +184,7 @@ export default function CartPage() {
           <div className="flex justify-between py-2">
             <div className="text-lg font-medium">Subtotal</div>
             <div className="font-semibold">
-              {formatPrice(pricing?.subtotal ?? subtotal, currency)}
+              {formatPrice(pricingLoading ? subtotal : (pricing?.subtotal ?? subtotal), currency)}
             </div>
           </div>
 
@@ -233,30 +203,31 @@ export default function CartPage() {
             <div>
               <div className="text-lg font-semibold">Total</div>
               <div className="text-sm text-gray-500">
-                {formatPrice(pricing?.total ?? subtotal, currency)}
+                {formatPrice(pricingLoading ? subtotal : (pricing?.total ?? subtotal), currency)}
               </div>
+              {pricingLoading && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Updating totals…
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col items-end">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={payNow}
-                  onChange={() => setPayNow(!payNow)}
-                  className="w-4 h-4"
-                />{" "}
-                Pay now
-              </label>
-
-              {error && (
-                <div className="text-red-600 text-sm mb-2">{error}</div>
-              )}
               <Button
-                onClick={placeOrder}
-                disabled={isPlacingOrder || items.length === 0}
+                onClick={goToCheckout}
+                disabled={items.length === 0}
                 className="mt-3 w-48 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
               >
-                {isPlacingOrder ? "Placing Order..." : "Place Order"}
+                Continue to checkout
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="mt-1 text-muted-foreground"
+                onClick={clear}
+                disabled={items.length === 0}
+              >
+                Clear cart
               </Button>
             </div>
           </div>
