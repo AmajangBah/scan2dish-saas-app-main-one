@@ -5,6 +5,8 @@ import SearchBar from "@/components/ui/search-bar";
 import Pagination from "./components/Pagination";
 import OrderCard from "./components/OrderCard";
 import OrderDetailsModal from "./components/OrderDetailsModal";
+import OrderDetailsSheet from "./components/OrderDetailsSheet";
+import OrdersTable from "./components/OrdersTable";
 import { Order, OrderStatus } from "./types";
 import { updateOrderStatus } from "@/app/actions/orderStatus";
 import { cancelOrder } from "@/app/actions/orderCancel";
@@ -16,6 +18,8 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { LayoutGrid, Table as TableIcon } from "lucide-react";
 
 type OrderItemRow = { name?: string; quantity?: number; price?: string | number };
 type RestaurantTableJoin =
@@ -43,18 +47,20 @@ export default function OrdersClient({
   currency: string;
   initialOrders: Order[];
 }) {
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<
     "connecting" | "live" | "reconnecting" | "offline"
   >("connecting");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   // "New order" highlighting (visual even if sound is muted)
   const [newOrderSince, setNewOrderSince] = useState<Record<string, number>>({});
@@ -70,7 +76,7 @@ export default function OrdersClient({
   const ordersRef = useRef<Order[]>(initialOrders);
   const liveStatusRef = useRef(liveStatus);
 
-  const ITEMS_PER_PAGE = 6;
+  const ITEMS_PER_PAGE = viewMode === "table" ? 12 : 6;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -97,7 +103,7 @@ export default function OrdersClient({
 
   const handleView = (order: Order) => {
     setSelectedOrder(order);
-    setModalOpen(true);
+    setDetailsOpen(true);
     // Mark as "seen" (stop highlight) when opened
     setNewOrderSince((prev) => {
       if (!prev[order.id]) return prev;
@@ -581,6 +587,27 @@ export default function OrdersClient({
                 placeholder="Search by table or order ID…"
               />
             </div>
+            <div className="flex items-center gap-2 justify-between md:justify-end">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={viewMode === "cards" ? "default" : "outline"}
+                  onClick={() => setViewMode("cards")}
+                >
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  Cards
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={viewMode === "table" ? "default" : "outline"}
+                  onClick={() => setViewMode("table")}
+                >
+                  <TableIcon className="h-4 w-4 mr-2" />
+                  Table
+                </Button>
+              </div>
             <div className="flex flex-wrap gap-2">
               {statusTabs.map((tab) => (
                 <Button
@@ -601,6 +628,7 @@ export default function OrdersClient({
                 </Button>
               ))}
             </div>
+            </div>
           </div>
 
           {(error || savingOrderId) && (
@@ -620,19 +648,30 @@ export default function OrdersClient({
 
       {/* Content */}
       {paginated.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {paginated.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              currency={currency}
-              saving={savingOrderId === order.id}
-              isNew={Boolean(newOrderSince[order.id]) && order.status === "pending"}
-              onView={handleView}
-              onStatusChange={handleStatusChange}
-            />
-          ))}
-        </div>
+        viewMode === "table" ? (
+          <OrdersTable
+            orders={paginated}
+            currency={currency}
+            savingOrderId={savingOrderId}
+            newOrderSince={newOrderSince}
+            onView={handleView}
+            onStatusChange={handleStatusChange}
+          />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {paginated.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                currency={currency}
+                saving={savingOrderId === order.id}
+                isNew={Boolean(newOrderSince[order.id]) && order.status === "pending"}
+                onView={handleView}
+                onStatusChange={handleStatusChange}
+              />
+            ))}
+          </div>
+        )
       ) : (
         <Card className="border-dashed">
           <CardContent className="py-12">
@@ -674,15 +713,27 @@ export default function OrdersClient({
         onPageChange={setCurrentPage}
       />
 
-      <OrderDetailsModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        order={selectedOrder}
-        currency={currency}
-        saving={selectedOrder ? savingOrderId === selectedOrder.id : false}
-        onStatusChange={handleStatusChange}
-        onRequestCancel={() => setConfirmCancelOpen(true)}
-      />
+      {isMobile ? (
+        <OrderDetailsModal
+          open={detailsOpen}
+          onClose={() => setDetailsOpen(false)}
+          order={selectedOrder}
+          currency={currency}
+          saving={selectedOrder ? savingOrderId === selectedOrder.id : false}
+          onStatusChange={handleStatusChange}
+          onRequestCancel={() => setConfirmCancelOpen(true)}
+        />
+      ) : (
+        <OrderDetailsSheet
+          open={detailsOpen}
+          onOpenChange={(o) => setDetailsOpen(o)}
+          order={selectedOrder}
+          currency={currency}
+          saving={selectedOrder ? savingOrderId === selectedOrder.id : false}
+          onStatusChange={handleStatusChange}
+          onRequestCancel={() => setConfirmCancelOpen(true)}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmCancelOpen}
