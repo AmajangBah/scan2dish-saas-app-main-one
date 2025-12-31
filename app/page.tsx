@@ -1,14 +1,14 @@
-import CtaSection from "./[locale]/components/CtaSection";
-import FAQSection from "./[locale]/components/FAQs";
-import FooterSection from "./[locale]/components/FooterSection";
-import FourthSection from "./[locale]/components/FourthSection";
-import NavBar from "./[locale]/components/NavBar";
-import PricingSection from "./[locale]/components/PricingSection";
-import ProductDisplay from "./[locale]/components/ProductDisplay";
-import SecondSection from "./[locale]/components/SecondSection";
-import TestimonialSection from "./[locale]/components/TestimonialSection";
-import ThirdSection from "./[locale]/components/ThirdSection";
-import TopSection from "./[locale]/components/TopSection";
+import CtaSection from "./components/marketing/CtaSection";
+import FAQSection from "./components/marketing/FAQs";
+import FooterSection from "./components/marketing/FooterSection";
+import FourthSection from "./components/marketing/FourthSection";
+import NavBar from "./components/marketing/NavBar";
+import PricingSection from "./components/marketing/PricingSection";
+import ProductDisplay from "./components/marketing/ProductDisplay";
+import SecondSection from "./components/marketing/SecondSection";
+import TestimonialSection from "./components/marketing/TestimonialSection";
+import ThirdSection from "./components/marketing/ThirdSection";
+import TopSection from "./components/marketing/TopSection";
 
 export default function Home() {
   return (

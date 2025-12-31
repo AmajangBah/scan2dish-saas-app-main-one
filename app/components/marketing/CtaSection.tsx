@@ -34,7 +34,7 @@ const CtaSection = () => {
 
         {/* Star Icon (top-right) */}
         <Image
-          src="/star.svg"
+          src="/Star.svg"
           alt="Star"
           width={56}
           height={56}

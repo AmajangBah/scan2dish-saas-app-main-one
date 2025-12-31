@@ -18,6 +18,24 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { previewOrderPricing } from "@/app/actions/orderPricing";
+import { createBrowserSupabase } from "@/lib/supabase/client";
+
+function pickTranslatedText({
+  locale,
+  base,
+  translations,
+}: {
+  locale: string | null;
+  base: string;
+  translations: unknown;
+}) {
+  if (!locale || locale === "en") return base;
+  if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+    return base;
+  }
+  const v = (translations as Record<string, unknown>)[locale];
+  return typeof v === "string" && v.trim() ? v : base;
+}
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -25,7 +43,7 @@ export default function CheckoutPage() {
   const locale = typeof params.locale === "string" ? params.locale : null;
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
-  const { currency, restaurantName, tableNumber } = useMenuRestaurant();
+  const { currency, restaurantName, tableNumber, restaurantId } = useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -37,6 +55,10 @@ export default function CheckoutPage() {
     discount: number;
     total: number;
   } | null>(null);
+
+  const [displayNameById, setDisplayNameById] = useState<Record<string, string>>(
+    {}
+  );
 
   const pricingInput = useMemo(() => {
     if (!tableId) return null;
@@ -64,6 +86,51 @@ export default function CheckoutPage() {
       cancelled = true;
     };
   }, [pricingInput]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadNames() {
+      try {
+        if (!restaurantId || items.length === 0) {
+          setDisplayNameById({});
+          return;
+        }
+
+        const supabase = createBrowserSupabase();
+        const ids = items.map((i) => i.id);
+        const { data, error } = await supabase
+          .from("menu_items")
+          .select("id, name, name_translations")
+          .eq("restaurant_id", restaurantId)
+          .in("id", ids);
+
+        if (error) {
+          setDisplayNameById({});
+          return;
+        }
+
+        const map: Record<string, string> = {};
+        for (const row of data ?? []) {
+          const baseName = String((row as unknown as { name?: unknown }).name ?? "");
+          if (!baseName) continue;
+          map[String((row as unknown as { id?: unknown }).id)] = pickTranslatedText({
+            locale,
+            base: baseName,
+            translations: (row as unknown as { name_translations?: unknown }).name_translations,
+          });
+        }
+
+        if (!cancelled) setDisplayNameById(map);
+      } catch {
+        if (!cancelled) setDisplayNameById({});
+      }
+    }
+
+    loadNames();
+    return () => {
+      cancelled = true;
+    };
+  }, [items, restaurantId, locale]);
 
   const appendNote = (text: string) => {
     setNotes((prev) => {
@@ -94,7 +161,7 @@ export default function CheckoutPage() {
         table_id: tableId,
         items: items.map((item) => ({
           id: item.id,
-          name: item.name,
+          name: displayNameById[item.id] || item.name,
           price: item.price,
           qty: item.qty,
           image: item.image,
@@ -161,7 +228,7 @@ export default function CheckoutPage() {
                     {items.map((it) => (
                       <div key={it.id} className="flex justify-between text-sm">
                         <span className="text-muted-foreground">
-                          {it.qty}× {it.name}
+                          {it.qty}× {displayNameById[it.id] || it.name}
                         </span>
                         <span className="font-medium">
                           {formatPrice(it.price * it.qty, currency)}

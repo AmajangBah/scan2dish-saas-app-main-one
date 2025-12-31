@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
         destination: "/auth/admin/sign-in",
         permanent: false,
       },
+      {
+        source: "/:locale/kitchen/:path*",
+        destination: "/kitchen/:path*",
+        permanent: false,
+      },
 
       // Non-localized auth + onboarding.
       {

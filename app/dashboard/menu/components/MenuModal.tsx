@@ -33,6 +33,12 @@ export default function MenuModal({
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [nameTranslations, setNameTranslations] = useState<Record<string, string>>(
+    {}
+  );
+  const [descriptionTranslations, setDescriptionTranslations] = useState<
+    Record<string, string>
+  >({});
   const [price, setPrice] = useState(0);
   const [category, setCategory] = useState<MenuCategory>("Mains");
   const [available, setAvailable] = useState(true);
@@ -65,6 +71,8 @@ export default function MenuModal({
     if (itemToEdit) {
       setName(itemToEdit.name);
       setDescription(itemToEdit.description);
+      setNameTranslations(itemToEdit.nameTranslations || {});
+      setDescriptionTranslations(itemToEdit.descriptionTranslations || {});
       setPrice(itemToEdit.price);
       setCategory(itemToEdit.category);
       setAvailable(itemToEdit.available);
@@ -80,6 +88,8 @@ export default function MenuModal({
     } else {
       setName("");
       setDescription("");
+      setNameTranslations({});
+      setDescriptionTranslations({});
       setPrice(0);
       setCategory("Mains");
       setAvailable(true);
@@ -143,6 +153,8 @@ export default function MenuModal({
       id: itemToEdit ? itemToEdit.id : Date.now().toString(),
       name,
       description,
+      nameTranslations,
+      descriptionTranslations,
       price,
       category,
       available,
@@ -193,6 +205,61 @@ export default function MenuModal({
             >
               <Sparkles size={16} className="mr-1" /> AI
             </Button>
+          </div>
+
+          {/* TRANSLATIONS (OPTIONAL) */}
+          <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+            <div className="text-sm font-semibold">Translations (optional)</div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">
+                  Français (fr)
+                </div>
+                <Input
+                  placeholder="Name (FR)"
+                  value={nameTranslations.fr ?? ""}
+                  onChange={(e) =>
+                    setNameTranslations((prev) => ({ ...prev, fr: e.target.value }))
+                  }
+                />
+                <Textarea
+                  placeholder="Description (FR)"
+                  value={descriptionTranslations.fr ?? ""}
+                  onChange={(e) =>
+                    setDescriptionTranslations((prev) => ({
+                      ...prev,
+                      fr: e.target.value,
+                    }))
+                  }
+                  className="min-h-[80px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">
+                  Español (es)
+                </div>
+                <Input
+                  placeholder="Name (ES)"
+                  value={nameTranslations.es ?? ""}
+                  onChange={(e) =>
+                    setNameTranslations((prev) => ({ ...prev, es: e.target.value }))
+                  }
+                />
+                <Textarea
+                  placeholder="Description (ES)"
+                  value={descriptionTranslations.es ?? ""}
+                  onChange={(e) =>
+                    setDescriptionTranslations((prev) => ({
+                      ...prev,
+                      es: e.target.value,
+                    }))
+                  }
+                  className="min-h-[80px]"
+                />
+              </div>
+            </div>
           </div>
 
           {/* PRICE */}

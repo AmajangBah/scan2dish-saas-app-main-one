@@ -34,7 +34,7 @@ const PricingSection = () => {
           exampleText="Example: earn ₦1M this month, pay ₦50K in commission."
           buttonText="Get started today"
           buttonColor="#D65A00"
-          starImageUrl="/star.svg"
+          starImageUrl="/Star.svg"
           onButtonClick={handleGetStarted}
         />
       </div>

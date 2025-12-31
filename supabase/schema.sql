@@ -124,6 +124,10 @@ create table if not exists public.menu_items (
   restaurant_id uuid not null references public.restaurants(id) on delete cascade,
   name text not null,
   description text not null default '',
+  -- Optional per-locale overrides for customer menu.
+  -- Example: {"fr":"Poulet Yassa","es":"Pollo Yassa"}
+  name_translations jsonb not null default '{}'::jsonb,
+  description_translations jsonb not null default '{}'::jsonb,
   category text,
   price numeric(10,2) not null,
   images text[] not null default '{}'::text[],
@@ -134,6 +138,8 @@ create table if not exists public.menu_items (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint menu_items_price_nonnegative check (price >= 0),
+  constraint menu_items_name_translations_is_object check (jsonb_typeof(name_translations) = 'object'),
+  constraint menu_items_description_translations_is_object check (jsonb_typeof(description_translations) = 'object'),
   constraint menu_items_tags_is_object check (jsonb_typeof(tags) = 'object'),
   constraint menu_items_variants_is_array check (jsonb_typeof(variants) = 'array')
 );

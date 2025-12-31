@@ -31,6 +31,15 @@ export default async function MenuPage() {
     id: item.id,
     name: item.name,
     description: item.description || "",
+    nameTranslations:
+      typeof item.name_translations === "object" && item.name_translations !== null
+        ? item.name_translations
+        : {},
+    descriptionTranslations:
+      typeof item.description_translations === "object" &&
+      item.description_translations !== null
+        ? item.description_translations
+        : {},
     price: parseFloat(item.price) || 0,
     category: (item.category || "Mains") as MenuCategory,
     images: Array.isArray(item.images) ? item.images : [],

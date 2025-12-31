@@ -4,10 +4,25 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRestaurant } from "@/lib/auth/restaurant";
+import { locales } from "@/i18n";
 
 const MenuItemSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().default(""),
+  nameTranslations: z
+    .record(z.string(), z.string())
+    .default({})
+    .refine(
+      (obj) => Object.keys(obj).every((k) => (locales as readonly string[]).includes(k)),
+      "Invalid locale key in name translations"
+    ),
+  descriptionTranslations: z
+    .record(z.string(), z.string())
+    .default({})
+    .refine(
+      (obj) => Object.keys(obj).every((k) => (locales as readonly string[]).includes(k)),
+      "Invalid locale key in description translations"
+    ),
   price: z.number().positive("Price must be positive"),
   category: z.string().min(1, "Category is required"),
   images: z.array(z.string()).default([]),
@@ -48,6 +63,8 @@ export async function createMenuItem(input: MenuItemInput): Promise<MenuActionRe
         restaurant_id,
         name: validated.name,
         description: validated.description,
+        name_translations: validated.nameTranslations,
+        description_translations: validated.descriptionTranslations,
         price: validated.price,
         category: validated.category,
         images: validated.images,
@@ -94,6 +111,12 @@ export async function updateMenuItem(
     const updateData: Partial<MenuItemInput> = {};
     if (validated.name !== undefined) updateData.name = validated.name;
     if (validated.description !== undefined) updateData.description = validated.description;
+    if (validated.nameTranslations !== undefined) {
+      updateData.nameTranslations = validated.nameTranslations;
+    }
+    if (validated.descriptionTranslations !== undefined) {
+      updateData.descriptionTranslations = validated.descriptionTranslations;
+    }
     if (validated.price !== undefined) updateData.price = validated.price;
     if (validated.category !== undefined) updateData.category = validated.category;
     if (validated.images !== undefined) updateData.images = validated.images;
@@ -103,7 +126,24 @@ export async function updateMenuItem(
 
     const { error } = await supabase
       .from("menu_items")
-      .update(updateData)
+      .update({
+        ...(updateData.name !== undefined ? { name: updateData.name } : null),
+        ...(updateData.description !== undefined
+          ? { description: updateData.description }
+          : null),
+        ...(updateData.nameTranslations !== undefined
+          ? { name_translations: updateData.nameTranslations }
+          : null),
+        ...(updateData.descriptionTranslations !== undefined
+          ? { description_translations: updateData.descriptionTranslations }
+          : null),
+        ...(updateData.price !== undefined ? { price: updateData.price } : null),
+        ...(updateData.category !== undefined ? { category: updateData.category } : null),
+        ...(updateData.images !== undefined ? { images: updateData.images } : null),
+        ...(updateData.available !== undefined ? { available: updateData.available } : null),
+        ...(updateData.tags !== undefined ? { tags: updateData.tags } : null),
+        ...(updateData.variants !== undefined ? { variants: updateData.variants } : null),
+      })
       .eq("id", id)
       .eq("restaurant_id", restaurant_id);
 

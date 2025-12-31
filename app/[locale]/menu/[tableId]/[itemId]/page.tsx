@@ -11,10 +11,29 @@ import { useCart } from "../../context/CartContext";
 import { useMenuRestaurant } from "../../context/MenuRestaurantContext";
 import { formatPrice } from "@/lib/utils/currency";
 
+function pickTranslatedText({
+  locale,
+  base,
+  translations,
+}: {
+  locale: string | null;
+  base: string;
+  translations: unknown;
+}) {
+  if (!locale || locale === "en") return base;
+  if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+    return base;
+  }
+  const v = (translations as Record<string, unknown>)[locale];
+  return typeof v === "string" && v.trim() ? v : base;
+}
+
 type MenuItem = {
   id: string;
   name: string;
   description?: string | null;
+  name_translations?: unknown;
+  description_translations?: unknown;
   price: number;
   images?: string[] | null;
   available?: boolean | null;
@@ -33,6 +52,25 @@ export default function MenuItemPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [item, setItem] = useState<MenuItem | null>(null);
+
+  const displayName = useMemo(() => {
+    if (!item) return "";
+    return pickTranslatedText({
+      locale,
+      base: String(item.name),
+      translations: item.name_translations,
+    });
+  }, [item, locale]);
+
+  const displayDescription = useMemo(() => {
+    const baseText = item?.description ? String(item.description) : "";
+    if (!baseText) return "";
+    return pickTranslatedText({
+      locale,
+      base: baseText,
+      translations: item?.description_translations,
+    });
+  }, [item, locale]);
 
   const firstImage = useMemo(() => item?.images?.[0], [item?.images]);
 
@@ -53,7 +91,9 @@ export default function MenuItemPage() {
         const supabase = createBrowserSupabase();
         const { data, error: e } = await supabase
           .from("menu_items")
-          .select("id, name, description, price, images, available")
+          .select(
+            "id, name, description, name_translations, description_translations, price, images, available"
+          )
           .eq("restaurant_id", restaurantId)
           .eq("id", itemId)
           .single();
@@ -101,7 +141,7 @@ export default function MenuItemPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={firstImage}
-                  alt={item.name}
+                  alt={displayName || item.name}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -110,10 +150,12 @@ export default function MenuItemPage() {
             </div>
             <div className="p-5 space-y-3">
               <div>
-                <h1 className="text-xl font-semibold tracking-tight">{item.name}</h1>
-                {item.description && (
+                <h1 className="text-xl font-semibold tracking-tight">
+                  {displayName}
+                </h1>
+                {displayDescription && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    {item.description}
+                    {displayDescription}
                   </p>
                 )}
               </div>
@@ -137,7 +179,9 @@ export default function MenuItemPage() {
 
               <Button
                 className="w-full bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
-                onClick={() => add({ id: item.id, name: item.name, price: item.price }, qty)}
+                onClick={() =>
+                  add({ id: item.id, name: displayName, price: item.price }, qty)
+                }
               >
                 Add to cart
               </Button>

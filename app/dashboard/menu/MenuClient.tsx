@@ -117,6 +117,8 @@ export default function MenuClient({
         result = await updateMenuItem(item.id, {
           name: item.name,
           description: item.description,
+          nameTranslations: item.nameTranslations ?? {},
+          descriptionTranslations: item.descriptionTranslations ?? {},
           price: item.price,
           category: item.category,
           images: item.images,
@@ -129,6 +131,8 @@ export default function MenuClient({
         result = await createMenuItem({
           name: item.name,
           description: item.description,
+          nameTranslations: item.nameTranslations ?? {},
+          descriptionTranslations: item.descriptionTranslations ?? {},
           price: item.price,
           category: item.category,
           images: item.images,

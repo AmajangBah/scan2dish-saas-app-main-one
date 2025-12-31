@@ -58,7 +58,7 @@ const FooterSection = () => {
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Image
-              src="/logo.png"
+              src="/Logo.png"
               alt="Scan2Dish Logo"
               width={150}
               height={50}
@@ -115,7 +115,7 @@ const FooterSection = () => {
             </Link>
 
             <Link href="https://tiktok.com/@scan2dish" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-              <Image src="/tiktok.png" alt="TikTok" width={20} height={20} />
+              <Image src="/tiktok.svg" alt="TikTok" width={20} height={20} />
             </Link>
           </div>
         </div>

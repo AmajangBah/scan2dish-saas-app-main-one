@@ -6,8 +6,10 @@ import React, { useState } from "react";
 const ProductDisplay = () => {
   const showcaseImages = [
     "/product-display-1.png",
-    "/product-display-2.png",
-    "/product-display-3.png",
+    // These files don't currently exist in /public on Linux deployments.
+    // Keep the carousel functional without broken asset requests.
+    "/product-display-1.png",
+    "/product-display-1.png",
   ];
 
   const [currentImages, setCurrentImages] = useState(showcaseImages);
