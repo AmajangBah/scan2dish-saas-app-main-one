@@ -25,8 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" className="scroll-smooth ">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
+      >
         {children}
         <Toaster
           position="top-right"
@@ -39,4 +42,3 @@ export default function RootLayout({
     </html>
   );
 }
-

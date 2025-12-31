@@ -36,9 +36,7 @@ export default async function AdminActivity() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Activity Logs</h1>
-        <p className="text-gray-600 mt-1">
-          Audit trail of all admin actions
-        </p>
+        <p className="text-gray-600 mt-1">Audit trail of all admin actions</p>
       </div>
 
       {/* Activity Feed */}
@@ -68,7 +66,7 @@ export default async function AdminActivity() {
                         </div>
                       )}
                     </div>
-                    <div className="text-right text-sm text-gray-500 flex-shrink-0">
+                    <div className="text-right text-sm text-gray-500 shrink-0">
                       <div>{new Date(log.created_at).toLocaleDateString()}</div>
                       <div className="text-xs">
                         {new Date(log.created_at).toLocaleTimeString()}
