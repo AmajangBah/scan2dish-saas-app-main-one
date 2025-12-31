@@ -9,8 +9,27 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import CartBar from "../../components/CartBar";
 
+function pickTranslatedText({
+  locale,
+  base,
+  translations,
+}: {
+  locale: string | null;
+  base: string;
+  translations: unknown;
+}) {
+  if (!locale || locale === "en") return base;
+  if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+    return base;
+  }
+  const v = (translations as Record<string, unknown>)[locale];
+  return typeof v === "string" && v.trim() ? v : base;
+}
+
 export default function BrowsePage() {
-  const { tableId } = useParams();
+  const params = useParams();
+  const tableId = typeof params.tableId === "string" ? params.tableId : null;
+  const locale = typeof params.locale === "string" ? params.locale : null;
 
   const [activeCategory, setActiveCategory] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
@@ -48,7 +67,7 @@ export default function BrowsePage() {
         setLoading(true);
         setError(null);
 
-        if (!tableId || typeof tableId !== "string") {
+        if (!tableId) {
           setItems([]);
           setError("Invalid table ID");
           return;
@@ -71,7 +90,7 @@ export default function BrowsePage() {
         const { data: menuRows, error: menuError } = await supabase
           .from("menu_items")
           .select(
-            "id, name, description, price, category, images, available, inventory_out_of_stock"
+            "id, name, description, name_translations, description_translations, price, category, images, available, inventory_out_of_stock"
           )
           .eq("restaurant_id", tableRow.restaurant_id)
           .eq("available", true)
@@ -91,10 +110,25 @@ export default function BrowsePage() {
             const images = Array.isArray(row.images) ? row.images : [];
             const firstImage = images[0];
 
+            const name = pickTranslatedText({
+              locale,
+              base: String(row.name),
+              translations: (row as unknown as { name_translations?: unknown })
+                .name_translations,
+            });
+            const desc = row.description
+              ? pickTranslatedText({
+                  locale,
+                  base: String(row.description),
+                  translations: (row as unknown as { description_translations?: unknown })
+                    .description_translations,
+                })
+              : undefined;
+
             return {
               id: String(row.id),
-              name: String(row.name),
-              desc: row.description ? String(row.description) : undefined,
+              name,
+              desc,
               price: Number(row.price ?? 0),
               image: typeof firstImage === "string" ? firstImage : undefined,
               categoryId,
@@ -106,9 +140,9 @@ export default function BrowsePage() {
         if (!cancelled) {
           setItems(mapped);
           // If the active category no longer exists (e.g. after load), reset it
-          if (activeCategory && !mapped.some((m) => m.categoryId === activeCategory)) {
-            setActiveCategory(undefined);
-          }
+          setActiveCategory((prev) =>
+            prev && !mapped.some((m) => m.categoryId === prev) ? undefined : prev
+          );
         }
       } catch (e) {
         if (!cancelled) {
@@ -125,8 +159,7 @@ export default function BrowsePage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableId]);
+  }, [tableId, locale]);
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();

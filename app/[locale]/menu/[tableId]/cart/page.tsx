@@ -10,6 +10,24 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { previewOrderPricing } from "@/app/actions/orderPricing";
+import { createBrowserSupabase } from "@/lib/supabase/client";
+
+function pickTranslatedText({
+  locale,
+  base,
+  translations,
+}: {
+  locale: string | null;
+  base: string;
+  translations: unknown;
+}) {
+  if (!locale || locale === "en") return base;
+  if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+    return base;
+  }
+  const v = (translations as Record<string, unknown>)[locale];
+  return typeof v === "string" && v.trim() ? v : base;
+}
 
 export default function CartPage() {
   const params = useParams();
@@ -18,7 +36,7 @@ export default function CartPage() {
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
   const [payNow, setPayNow] = useState(false);
-  const { currency } = useMenuRestaurant();
+  const { currency, restaurantId } = useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
 
   const [pricing, setPricing] = useState<{
@@ -26,6 +44,10 @@ export default function CartPage() {
     discount: number;
     total: number;
   } | null>(null);
+
+  const [displayNameById, setDisplayNameById] = useState<Record<string, string>>(
+    {}
+  );
 
   const pricingInput = useMemo(() => {
     if (!tableId) return null;
@@ -54,6 +76,52 @@ export default function CartPage() {
     };
   }, [pricingInput]);
 
+  // Keep cart item names in-sync with the selected locale (for display + order payload).
+  useEffect(() => {
+    let cancelled = false;
+    async function loadNames() {
+      try {
+        if (!restaurantId || items.length === 0) {
+          setDisplayNameById({});
+          return;
+        }
+
+        const supabase = createBrowserSupabase();
+        const ids = items.map((i) => i.id);
+        const { data, error } = await supabase
+          .from("menu_items")
+          .select("id, name, name_translations")
+          .eq("restaurant_id", restaurantId)
+          .in("id", ids);
+
+        if (error) {
+          setDisplayNameById({});
+          return;
+        }
+
+        const map: Record<string, string> = {};
+        for (const row of data ?? []) {
+          const baseName = String((row as unknown as { name?: unknown }).name ?? "");
+          if (!baseName) continue;
+          map[String((row as unknown as { id?: unknown }).id)] = pickTranslatedText({
+            locale,
+            base: baseName,
+            translations: (row as unknown as { name_translations?: unknown }).name_translations,
+          });
+        }
+
+        if (!cancelled) setDisplayNameById(map);
+      } catch {
+        if (!cancelled) setDisplayNameById({});
+      }
+    }
+
+    loadNames();
+    return () => {
+      cancelled = true;
+    };
+  }, [items, restaurantId, locale]);
+
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +146,7 @@ export default function CartPage() {
         table_id: tableId,
         items: items.map((item) => ({
           id: item.id,
-          name: item.name,
+          name: displayNameById[item.id] || item.name,
           price: item.price,
           qty: item.qty,
           image: item.image,
@@ -135,7 +203,10 @@ export default function CartPage() {
           )}
 
           {items.map((it) => (
-            <CartItem key={it.id} item={it} />
+            <CartItem
+              key={it.id}
+              item={{ ...it, name: displayNameById[it.id] || it.name }}
+            />
           ))}
         </div>
 
