@@ -6,6 +6,7 @@ import { MenuItem, MenuCategory } from "./types";
 export default async function MenuPage() {
   const ctx = await requireRestaurantPage();
   const restaurant_id = ctx.restaurant.id;
+  const currency = ctx.restaurant.currency || "GMD";
 
   const supabase = await createServerSupabase();
 
@@ -55,5 +56,5 @@ export default async function MenuPage() {
     variants: Array.isArray(item.variants) ? item.variants : [],
   }));
 
-  return <MenuClient initialMenuItems={mappedItems} />;
+  return <MenuClient initialMenuItems={mappedItems} currency={currency} />;
 }

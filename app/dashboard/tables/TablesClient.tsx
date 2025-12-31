@@ -12,7 +12,8 @@ import { QrCode, Table2 } from "lucide-react";
 import Link from "next/link";
 
 // ACTIONS
-import { updateTableStatus } from "@/app/actions/tables";
+import { deleteTable, updateTableStatus } from "@/app/actions/tables";
+import { toast } from "sonner";
 
 // TYPES
 import type { Table, TableStatus } from "./types";
@@ -30,6 +31,26 @@ export default function TablesClient({
   const [tables, setTables] = useState<Table[]>(initialTables);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    const t = tables.find((x) => x.id === id);
+    const label = t?.number ? `Table ${t.number}` : "this table";
+    if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+
+    const backup = tables;
+    setTables((prev) => prev.filter((x) => x.id !== id));
+
+    startTransition(async () => {
+      const res = await deleteTable(id);
+      if (!res.success) {
+        setTables(backup);
+        setError(res.error || "Failed to delete table");
+        toast.error("Failed to delete table");
+      } else {
+        toast.success("Table deleted");
+      }
+    });
+  };
 
   // Handle status change
   const handleStatusChange = async (id: string, status: TableStatus) => {
@@ -169,6 +190,7 @@ export default function TablesClient({
               table={table}
               onStatusChange={handleStatusChange}
               onQrView={handleQrView}
+              onDelete={handleDelete}
             />
           ))}
         </div>
