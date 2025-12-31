@@ -2,14 +2,21 @@ import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/utils/currency";
+import OrderSuccessSplash from "../../../components/OrderSuccessSplash";
 
 export default async function OrderTracker({
   params,
+  searchParams,
 }: {
   params: { locale: string; tableId: string; orderId: string };
+  searchParams?: Record<string, string | string[] | undefined>;
 }) {
   const { locale, tableId, orderId } = params;
   const supabase = await createServerSupabase();
+  const success =
+    searchParams?.success === "1" ||
+    searchParams?.success === "true" ||
+    (Array.isArray(searchParams?.success) && searchParams?.success[0] === "1");
 
   // Fetch the order
   const { data: order, error } = await supabase
@@ -89,9 +96,11 @@ export default async function OrderTracker({
   const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
   const currency = Array.isArray(rt) ? rt[0]?.restaurants?.currency : rt?.restaurants?.currency;
   const currencyCode = currency ? String(currency) : "GMD";
+  const trackHref = `/${locale}/menu/${tableId}/order/${orderId}`;
 
   return (
     <div className="min-h-dvh pb-10 px-4 pt-6 bg-background">
+      {success && <OrderSuccessSplash trackHref={trackHref} />}
       <div className="max-w-xl mx-auto">
         <h2 className="text-2xl font-semibold tracking-tight text-center mb-2">
           Order Tracking

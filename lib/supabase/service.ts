@@ -12,7 +12,8 @@ export function hasSupabaseServiceKey() {
 }
 
 export function createServiceSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // On the server we can safely use non-public env vars too.
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 

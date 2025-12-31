@@ -35,6 +35,9 @@ export default function MenuCard({
               ? "w-24 h-24 object-cover rounded-md"
               : "w-full h-32 object-cover rounded-md mb-2"
           }`}
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
         />
       )}
 

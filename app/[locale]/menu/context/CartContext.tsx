@@ -27,45 +27,36 @@ function storageKey(tableId: string | null) {
   return tableId ? `s2d_cart_${tableId}` : "s2d_cart";
 }
 
+function loadCartFromStorage(tableId: string | null): CartItem[] {
+  try {
+    if (typeof window === "undefined") return [];
+    const raw = window.localStorage.getItem(storageKey(tableId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((it) => {
+        if (!it || typeof it !== "object") return null;
+        const r = it as Record<string, unknown>;
+        const id = typeof r.id === "string" ? r.id : "";
+        const name = typeof r.name === "string" ? r.name : "";
+        const price = typeof r.price === "number" ? r.price : Number(r.price);
+        const qty = typeof r.qty === "number" ? r.qty : Number(r.qty);
+        const image = typeof r.image === "string" ? r.image : undefined;
+        if (!id || !name || !Number.isFinite(price) || !Number.isFinite(qty)) return null;
+        return { id, name, price, qty: Math.max(1, Math.floor(qty)), image };
+      })
+      .filter(Boolean) as CartItem[];
+  } catch {
+    return [];
+  }
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const tableId = typeof params.tableId === "string" ? params.tableId : null;
 
-  const [items, setItems] = useState<CartItem[]>([]);
-
-  // Restore cart from localStorage (best-effort).
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(storageKey(tableId));
-      if (!raw) {
-        setItems([]);
-        return;
-      }
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) {
-        setItems([]);
-        return;
-      }
-      const sanitized: CartItem[] = parsed
-        .map((it) => {
-          if (!it || typeof it !== "object") return null;
-          const r = it as Record<string, unknown>;
-          const id = typeof r.id === "string" ? r.id : "";
-          const name = typeof r.name === "string" ? r.name : "";
-          const price = typeof r.price === "number" ? r.price : Number(r.price);
-          const qty = typeof r.qty === "number" ? r.qty : Number(r.qty);
-          const image = typeof r.image === "string" ? r.image : undefined;
-          if (!id || !name || !Number.isFinite(price) || !Number.isFinite(qty)) return null;
-          return { id, name, price, qty: Math.max(1, Math.floor(qty)), image };
-        })
-        .filter(Boolean) as CartItem[];
-
-      setItems(sanitized);
-    } catch {
-      setItems([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tableId]);
+  const [items, setItems] = useState<CartItem[]>(() => loadCartFromStorage(tableId));
 
   // Persist cart to localStorage (best-effort).
   useEffect(() => {

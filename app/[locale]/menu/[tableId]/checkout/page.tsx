@@ -180,7 +180,7 @@ export default function CheckoutPage() {
 
       if (result.success && result.orderId) {
         clear();
-        router.push(`${base}/menu/${tableId}/order/${result.orderId}`);
+        router.push(`${base}/menu/${tableId}/order/${result.orderId}?success=1`);
       } else {
         setError(result.error || "Failed to place order");
       }

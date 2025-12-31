@@ -10,12 +10,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import Image from "next/image";
 import { X, Sparkles } from "lucide-react";
-import Cropper, { type Area } from "react-easy-crop";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
-import { useState, useEffect, DragEvent } from "react";
+import { useState, useEffect } from "react";
 import { MenuItem, MenuCategory } from "../types";
 
 const categories: MenuCategory[] = ["Starters", "Mains", "Drinks", "Desserts"];
@@ -43,16 +40,9 @@ export default function MenuModal({
   const [category, setCategory] = useState<MenuCategory>("Mains");
   const [available, setAvailable] = useState(true);
 
-  // Images + crop
+  // Images (URLs only). Upload/crop is intentionally disabled until storage is wired.
   const [images, setImages] = useState<string[]>([]);
-  const [cropImage, setCropImage] = useState<string | null>(null);
-  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
-
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-
-  // Drag state
-  const [dragActive, setDragActive] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState("");
 
   // Nutrition tags
   const [tags, setTags] = useState({
@@ -76,7 +66,7 @@ export default function MenuModal({
       setPrice(itemToEdit.price);
       setCategory(itemToEdit.category);
       setAvailable(itemToEdit.available);
-      setImages(itemToEdit.images || []);
+      setImages((itemToEdit.images || []).filter((u) => typeof u === "string" && !u.startsWith("blob:")));
       setTags(
         itemToEdit.tags || {
           spicy: false,
@@ -94,48 +84,12 @@ export default function MenuModal({
       setCategory("Mains");
       setAvailable(true);
       setImages([]);
+      setNewImageUrl("");
       setTags({ spicy: false, vegetarian: false, glutenFree: false });
       setVariants([]);
     }
   }, [itemToEdit, open]);
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  // --------------------------------------------
-  // IMAGE UPLOAD + AUTO CROP
-  // --------------------------------------------
-
-  const handleFiles = (files: FileList) => {
-    const file = files[0];
-    if (!file) return;
-
-    const url = URL.createObjectURL(file);
-    setCropImage(url); // open cropper
-  };
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragActive(false);
-    if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
-  };
-
-  const completeCrop = async () => {
-    // For demo, just push the original
-    setImages((prev) => [...prev, cropImage as string]);
-    setCropImage(null);
-  };
-
-  // --------------------------------------------
-  // DRAG TO REORDER
-  // --------------------------------------------
-
-  const onDragEnd = (result: {destination?: {index: number} | null; source: {index: number}}) => {
-    if (!result.destination) return;
-
-    const reordered = [...images];
-    const [removed] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, removed);
-    setImages(reordered);
-  };
 
   // --------------------------------------------
   // AI DESCRIPTION GENERATION (stub)
@@ -158,7 +112,7 @@ export default function MenuModal({
       price,
       category,
       available,
-      images,
+      images: images.filter((u) => typeof u === "string" && !u.startsWith("blob:")),
       tags,
       variants,
     });
@@ -318,94 +272,64 @@ export default function MenuModal({
           </div>
 
           {/* DRAG & DROP UPLOAD */}
-          <div
-            onDragEnter={() => setDragActive(true)}
-            onDragLeave={() => setDragActive(false)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition
-                ${
-                  dragActive
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-gray-300"
-                }`}
-          >
-            <p>Drag & drop (auto-crop square)</p>
-
-            <input
-              type="file"
-              className="hidden"
-              id="upload"
-              onChange={(e) => e.target.files && handleFiles(e.target.files)}
-            />
-
-            <label
-              htmlFor="upload"
-              className="mt-2 inline-block px-4 py-1 bg-orange-500 text-white rounded-md cursor-pointer"
-            >
-              Upload
-            </label>
-          </div>
-
-          {/* CROP MODAL */}
-          {cropImage && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-              <div className="bg-white w-[90%] rounded-xl overflow-hidden p-4">
-                <div className="relative w-full h-64">
-                  <Cropper
-                    image={cropImage}
-                    aspect={1}
-                    crop={crop}
-                    zoom={zoom}
-                    onCropChange={setCrop}
-                    onZoomChange={setZoom}
-                    onCropComplete={(_, area) => setCroppedArea(area)}
-                  />
-                </div>
-
-                <div className="flex justify-between mt-4">
-                  <Button variant="outline" onClick={() => setCropImage(null)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={completeCrop}>Crop</Button>
-                </div>
-              </div>
+          <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+            <div className="text-sm font-semibold">Images</div>
+            <div className="text-xs text-muted-foreground">
+              Paste image URLs (e.g. from your website/CDN). Uploading isn’t enabled yet because Supabase Storage isn’t wired.
             </div>
-          )}
 
-          {/* IMAGE GALLERY (DRAG TO REORDER) */}
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="images" direction="horizontal">
-              {(provided) => (
-                <div
-                  className="flex gap-3 overflow-x-auto"
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                >
-                  {images.map((img, index) => (
-                    <Draggable key={img} draggableId={img} index={index}>
-                      {(provided) => (
-                        <div
-                          className="relative w-28 h-28 shrink-0"
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          <Image
-                            src={img}
-                            alt="menu"
-                            fill
-                            className="object-cover rounded-xl"
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                placeholder="https://…"
+                value={newImageUrl}
+                onChange={(e) => setNewImageUrl(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const url = newImageUrl.trim();
+                  if (!url) return;
+                  if (url.startsWith("blob:")) return;
+                  setImages((prev) => (prev.includes(url) ? prev : [...prev, url]));
+                  setNewImageUrl("");
+                }}
+              >
+                Add URL
+              </Button>
+            </div>
+
+            {images.length > 0 && (
+              <div className="space-y-2">
+                {images.map((img) => (
+                  <div key={img} className="flex items-center gap-3 rounded-lg border bg-background p-2">
+                    <div className="w-12 h-12 rounded-md overflow-hidden bg-muted border shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={img}
+                        alt="menu"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs text-muted-foreground truncate">{img}</div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setImages((prev) => prev.filter((u) => u !== img))}
+                      aria-label="Remove image"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* VARIANTS */}
           <div>
