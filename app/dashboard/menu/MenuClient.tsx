@@ -10,6 +10,7 @@ import MenuListItem from "./components/MenuListItem";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Grid, List, Plus, UtensilsCrossed, EyeOff, CheckCircle2, SearchX } from "lucide-react";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   createMenuItem,
   updateMenuItem,
@@ -43,6 +44,7 @@ export default function MenuClient({
   const [view, setView] = useState<"grid" | "list">("grid");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -100,7 +102,18 @@ export default function MenuClient({
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
+    setDeleteTargetId(id);
+  };
+
+  const deleteTarget = useMemo(
+    () => (deleteTargetId ? menuItems.find((i) => i.id === deleteTargetId) : null),
+    [deleteTargetId, menuItems]
+  );
+
+  const confirmDelete = async () => {
+    const id = deleteTargetId;
+    if (!id) return;
+    setDeleteTargetId(null);
 
     // Optimistic delete
     const backup = menuItems;
@@ -359,6 +372,17 @@ export default function MenuClient({
         onSave={handleSave}
         itemToEdit={itemToEdit}
         currency={currency}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTargetId)}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTargetId(null);
+        }}
+        title={deleteTarget ? `Delete “${deleteTarget.name}”?` : "Delete menu item?"}
+        description="This permanently removes the item from your menu. Customers will no longer see it."
+        confirmLabel="Delete item"
+        onConfirm={confirmDelete}
       />
     </div>
   );

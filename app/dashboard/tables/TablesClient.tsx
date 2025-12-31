@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 
 // COMPONENTS
 import TableCard from "./components/TableCard";
@@ -10,6 +10,7 @@ import QrDialog from "./components/QrDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QrCode, Table2 } from "lucide-react";
 import Link from "next/link";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 // ACTIONS
 import { deleteTable, updateTableStatus } from "@/app/actions/tables";
@@ -31,11 +32,21 @@ export default function TablesClient({
   const [tables, setTables] = useState<Table[]>(initialTables);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const handleDelete = async (id: string) => {
-    const t = tables.find((x) => x.id === id);
-    const label = t?.number ? `Table ${t.number}` : "this table";
-    if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+  const deleteTarget = useMemo(
+    () => (deleteTargetId ? tables.find((t) => t.id === deleteTargetId) : null),
+    [deleteTargetId, tables]
+  );
+
+  const requestDelete = (id: string) => {
+    setDeleteTargetId(id);
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteTargetId;
+    if (!id) return;
+    setDeleteTargetId(null);
 
     const backup = tables;
     setTables((prev) => prev.filter((x) => x.id !== id));
@@ -190,7 +201,7 @@ export default function TablesClient({
               table={table}
               onStatusChange={handleStatusChange}
               onQrView={handleQrView}
-              onDelete={handleDelete}
+              onDelete={requestDelete}
             />
           ))}
         </div>
@@ -244,6 +255,17 @@ export default function TablesClient({
         open={isQrDialogOpen}
         setOpen={setIsQrDialogOpen}
         table={selectedTable}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTargetId)}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTargetId(null);
+        }}
+        title={deleteTarget ? `Delete Table ${deleteTarget.number}?` : "Delete table?"}
+        description="This removes the table and its QR link from your dashboard. Guests won’t be able to scan and order from it."
+        confirmLabel="Delete table"
+        onConfirm={confirmDelete}
       />
     </div>
   );
