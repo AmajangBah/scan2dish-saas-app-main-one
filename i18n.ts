@@ -1,10 +1,9 @@
-import { notFound } from "next/navigation";
-import { getRequestConfig } from "next-intl/server";
-import en from "./messages/en.json";
-import fr from "./messages/fr.json";
-import es from "./messages/es.json";
+// Client-safe i18n constants.
+//
+// IMPORTANT:
+// - Keep server-only next-intl request configuration in `i18n/request.ts`
+// - This file is imported by client components (e.g. `components/LanguageSwitcher.tsx`)
 
-// Supported locales
 export const locales = ["en", "fr", "es"] as const;
 export type Locale = (typeof locales)[number];
 
@@ -21,14 +20,3 @@ export const localeFlags: Record<Locale, string> = {
   fr: "🇫🇷",
   es: "🇪🇸",
 };
-
-export default getRequestConfig(async ({ locale }) => {
-  const resolvedLocale = (locale ?? defaultLocale) as Locale;
-  // Validate that the incoming `locale` parameter is valid
-  if (!locales.includes(resolvedLocale)) notFound();
-
-  return {
-    locale: resolvedLocale,
-    messages: { en, fr, es }[resolvedLocale],
-  };
-});
