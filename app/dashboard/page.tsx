@@ -85,7 +85,9 @@ export default async function Dashboard() {
     (liveRows as unknown as LiveOrderRow[] | null | undefined) ?? []
   ).map((o) => {
     const rt = o.restaurant_tables;
-    const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
+    const tableNumber = Array.isArray(rt)
+      ? rt[0]?.table_number
+      : rt?.table_number;
     return {
       id: String(o.id),
       table: tableNumber || "Unknown",
@@ -122,30 +124,34 @@ export default async function Dashboard() {
   };
 
   const activityData: ActivityItem[] =
-    (recentOrders as unknown as RecentOrder[] | null | undefined)?.map((order) => {
-      const items = Array.isArray(order.items) ? order.items : [];
-      const rt = order.restaurant_tables;
-      const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
-      return {
-        id: order.id,
-        table: parseInt(tableNumber || "0"),
-        time: new Date(order.created_at).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        }),
-        items: items.map(
-          (item: {
-            name?: string;
-            quantity?: number;
-            price?: string | number;
-          }) => ({
-            name: item.name || "Unknown",
-            quantity: item.quantity || 1,
-            price: parseFloat(String(item.price || 0)),
-          })
-        ),
-      };
-    }) || [];
+    (recentOrders as unknown as RecentOrder[] | null | undefined)?.map(
+      (order) => {
+        const items = Array.isArray(order.items) ? order.items : [];
+        const rt = order.restaurant_tables;
+        const tableNumber = Array.isArray(rt)
+          ? rt[0]?.table_number
+          : rt?.table_number;
+        return {
+          id: order.id,
+          table: parseInt(tableNumber || "0"),
+          time: new Date(order.created_at).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+          }),
+          items: items.map(
+            (item: {
+              name?: string;
+              quantity?: number;
+              price?: string | number;
+            }) => ({
+              name: item.name || "Unknown",
+              quantity: item.quantity || 1,
+              price: parseFloat(String(item.price || 0)),
+            })
+          ),
+        };
+      }
+    ) || [];
 
   return (
     <section className="w-full space-y-6">
@@ -155,7 +161,7 @@ export default async function Dashboard() {
           Welcome back, {restaurantName}
         </h1>
         <p className="text-sm text-muted-foreground">
-          A quick snapshot of what’s happening today.
+          A quick snapshot of what's happening today.
         </p>
       </div>
 
@@ -209,8 +215,8 @@ export default async function Dashboard() {
             <div className="rounded-xl border bg-card p-6 text-center">
               <div className="text-base font-semibold">No orders yet</div>
               <p className="text-sm text-muted-foreground mt-1">
-                Once customers start scanning table QR codes, you’ll see activity
-                here.
+                Once customers start scanning table QR codes, you’ll see
+                activity here.
               </p>
             </div>
           )}
