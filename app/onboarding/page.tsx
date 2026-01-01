@@ -2,16 +2,11 @@ import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
 import { redirect } from "next/navigation";
 
-export default async function OnboardingPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await params;
+export default async function OnboardingPage() {
   const ctx = await requireRestaurantPage({ allowOnboardingIncomplete: true });
 
   if (ctx.onboardingCompleted) {
-    redirect(`/${locale}/dashboard`);
+    redirect("/dashboard");
   }
 
   return (
