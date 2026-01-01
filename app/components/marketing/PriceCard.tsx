@@ -33,6 +33,7 @@ const PriceCard = ({
     <Card className="relative w-full max-w-[650px] rounded-3xl border-3 border-[#e35300] p-10 shadow-lg bg-white hover:shadow-2xl transition-all duration-300 hover:scale-105">
       {/* Star Icon (top-right) */}
       {starImageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={starImageUrl}
           alt="Star"

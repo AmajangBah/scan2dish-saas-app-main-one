@@ -27,6 +27,7 @@ import { X, Sparkles, Info, ImageIcon, Flame, Leaf, WheatOff, Plus } from "lucid
 
 import { useState, useEffect } from "react";
 import { MenuItem, MenuCategory } from "../types";
+import { createBrowserSupabase } from "@/lib/supabase/client";
 
 const categories: MenuCategory[] = ["Starters", "Mains", "Drinks", "Desserts"];
 
@@ -36,12 +37,14 @@ export default function MenuModal({
   onSave,
   itemToEdit,
   currency,
+  restaurantId,
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (item: MenuItem) => void;
   itemToEdit?: MenuItem;
   currency: string;
+  restaurantId: string;
 }) {
   const currencyMeta = getCurrency(currency);
   const [name, setName] = useState("");
@@ -60,6 +63,8 @@ export default function MenuModal({
   // Images (URLs only). Upload/crop is intentionally disabled until storage is wired.
   const [images, setImages] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Nutrition tags
   const [tags, setTags] = useState({
@@ -73,7 +78,6 @@ export default function MenuModal({
     []
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (itemToEdit) {
       setName(itemToEdit.name);
@@ -106,8 +110,66 @@ export default function MenuModal({
       setVariants([]);
     }
     setFormError(null);
+    setUploadError(null);
   }, [itemToEdit, open]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+
+  async function uploadMenuImage(file: File) {
+    setUploadError(null);
+    if (!restaurantId) {
+      setUploadError("Missing restaurant ID");
+      return;
+    }
+    if (!file) return;
+
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setUploadError("Please upload a JPG, PNG, or WEBP image.");
+      return;
+    }
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setUploadError("Image too large. Please keep it under 5MB.");
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const supabase = createBrowserSupabase();
+      const ext =
+        file.type === "image/png"
+          ? "png"
+          : file.type === "image/webp"
+          ? "webp"
+          : "jpg";
+      const objectName = `restaurants/${restaurantId}/menu/${crypto.randomUUID()}.${ext}`;
+
+      const { error } = await supabase.storage
+        .from("menu-images")
+        .upload(objectName, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type,
+        });
+
+      if (error) {
+        setUploadError(error.message || "Upload failed");
+        return;
+      }
+
+      const { data } = supabase.storage.from("menu-images").getPublicUrl(objectName);
+      const url = data?.publicUrl;
+      if (!url) {
+        setUploadError("Upload succeeded but URL could not be created.");
+        return;
+      }
+
+      setImages((prev) => (prev.includes(url) ? prev : [...prev, url]));
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
 
   // --------------------------------------------
   // AI DESCRIPTION GENERATION (stub)
@@ -319,8 +381,30 @@ export default function MenuModal({
               <div className="font-semibold">Images</div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Paste public image URLs. Recommended: a clear photo, 1200px wide, 16:9 or square.
+              Upload a photo or paste a URL. Recommended: clear image, 1200px wide, 16:9 or square.
             </p>
+
+            <div className="flex flex-col sm:flex-row gap-2 items-start">
+              <label className="inline-flex items-center justify-center rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted/40 cursor-pointer">
+                Upload image
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  disabled={uploadingImage}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadMenuImage(f).catch(() => {});
+                    // allow re-uploading same file
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </label>
+              <div className="text-xs text-muted-foreground pt-2">
+                {uploadingImage ? "Uploading…" : "JPG/PNG/WEBP • max 5MB"}
+              </div>
+            </div>
+            {uploadError && <div className="text-sm text-destructive">{uploadError}</div>}
 
             <div className="flex flex-col sm:flex-row gap-2">
               <Input

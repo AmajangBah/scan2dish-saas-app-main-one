@@ -29,7 +29,7 @@ export async function createServerSupabase() {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options as CookieOptions);
             });
-          } catch (error) {
+          } catch {
             // Ignore errors from middleware/cookies() in middleware context
             // This is safe as cookies are set via Set-Cookie headers in middleware
           }

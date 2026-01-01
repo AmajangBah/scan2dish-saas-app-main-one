@@ -48,6 +48,7 @@ const TestimonialSectionCard = ({
 
         {/* Profile Image */}
         <div className="h-14 w-14 rounded-full overflow-hidden shadow-md border border-gray-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={businessOwnerImageUrl}
             alt={businessOwnerName}

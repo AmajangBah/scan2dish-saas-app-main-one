@@ -56,5 +56,11 @@ export default async function MenuPage() {
     variants: Array.isArray(item.variants) ? item.variants : [],
   }));
 
-  return <MenuClient initialMenuItems={mappedItems} currency={currency} />;
+  return (
+    <MenuClient
+      initialMenuItems={mappedItems}
+      currency={currency}
+      restaurantId={restaurant_id}
+    />
+  );
 }

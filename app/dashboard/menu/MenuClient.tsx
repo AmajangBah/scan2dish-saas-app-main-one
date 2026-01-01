@@ -22,9 +22,11 @@ import type { MenuActionResult } from "@/app/actions/menu";
 export default function MenuClient({
   initialMenuItems,
   currency,
+  restaurantId,
 }: {
   initialMenuItems: MenuItem[];
   currency: string;
+  restaurantId: string;
 }) {
   const categories: MenuCategory[] = [
     "Starters",
@@ -372,6 +374,7 @@ export default function MenuClient({
         onSave={handleSave}
         itemToEdit={itemToEdit}
         currency={currency}
+        restaurantId={restaurantId}
       />
 
       <ConfirmDialog
