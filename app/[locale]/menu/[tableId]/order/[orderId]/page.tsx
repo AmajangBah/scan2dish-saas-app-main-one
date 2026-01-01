@@ -4,24 +4,40 @@ import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/utils/currency";
 import OrderSuccessSplash from "../../../components/OrderSuccessSplash";
 
+/**
+ * Next.js 15 / 16:
+ * params and searchParams are Promises
+ */
+type PageProps = {
+  params: Promise<{
+    locale: string;
+    tableId: string;
+    orderId: string;
+  }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
 export default async function OrderTracker({
   params,
   searchParams,
-}: {
-  params: { locale: string; tableId: string; orderId: string };
-  searchParams?: Record<string, string | string[] | undefined>;
-}) {
-  const { locale, tableId, orderId } = params;
-  const supabase = await createServerSupabase();
-  const success =
-    searchParams?.success === "1" ||
-    searchParams?.success === "true" ||
-    (Array.isArray(searchParams?.success) && searchParams?.success[0] === "1");
+}: PageProps) {
+  // ✅ Await params & searchParams
+  const { locale, tableId, orderId } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
 
-  // Fetch the order
+  const supabase = await createServerSupabase();
+
+  const success =
+    resolvedSearchParams.success === "1" ||
+    resolvedSearchParams.success === "true" ||
+    (Array.isArray(resolvedSearchParams.success) &&
+      resolvedSearchParams.success[0] === "1");
+
+  // Fetch order
   const { data: order, error } = await supabase
     .from("orders")
-    .select(`
+    .select(
+      `
       id,
       status,
       items,
@@ -31,7 +47,8 @@ export default async function OrderTracker({
         table_number,
         restaurants!restaurant_id(currency)
       )
-    `)
+    `
+    )
     .eq("id", orderId)
     .eq("table_id", tableId)
     .single();
@@ -40,32 +57,34 @@ export default async function OrderTracker({
     notFound();
   }
 
-  // Map status to progress steps
-  const status = order.status as "pending" | "preparing" | "completed" | "cancelled";
-  
+  const status = order.status as
+    | "pending"
+    | "preparing"
+    | "completed"
+    | "cancelled";
+
   const steps = [
-    { 
-      id: 1, 
-      label: "Order Received", 
-      done: ["pending", "preparing", "completed"].includes(status) 
+    {
+      id: 1,
+      label: "Order Received",
+      done: ["pending", "preparing", "completed"].includes(status),
     },
-    { 
-      id: 2, 
-      label: "Being Prepared", 
-      done: ["preparing", "completed"].includes(status) 
+    {
+      id: 2,
+      label: "Being Prepared",
+      done: ["preparing", "completed"].includes(status),
     },
-    { 
-      id: 3, 
-      label: "Ready", 
-      done: status === "completed" 
+    {
+      id: 3,
+      label: "Ready",
+      done: status === "completed",
     },
   ];
 
-  // Calculate estimated time based on order age and status
-  // eslint-disable-next-line react-hooks/purity
+  // Estimated time logic
   const orderAge = Date.now() - new Date(order.created_at).getTime();
   const minutesElapsed = Math.floor(orderAge / 60000);
-  
+
   let estimatedTime = "7–15 minutes";
   if (status === "preparing") {
     const remaining = Math.max(0, 15 - minutesElapsed);
@@ -76,53 +95,64 @@ export default async function OrderTracker({
     estimatedTime = "Cancelled";
   }
 
-  // Get items summary
   const items = Array.isArray(order.items) ? order.items : [];
+
   const itemCount = items.reduce(
-    (sum: number, item: { name?: string; quantity?: number; price?: number }) => {
-      // Don't count discount line-items (if ever added later)
+    (sum: number, item: { name?: string; quantity?: number }) => {
       if (String(item.name || "").toLowerCase() === "discount") return sum;
       return sum + (item.quantity || 1);
     },
     0
   );
-  const rt = (order as unknown as {
-    restaurant_tables:
-      | { table_number?: string; restaurants?: { currency?: string } }[]
-      | { table_number?: string; restaurants?: { currency?: string } }
-      | null
-      | undefined;
-  }).restaurant_tables;
-  const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
-  const currency = Array.isArray(rt) ? rt[0]?.restaurants?.currency : rt?.restaurants?.currency;
+
+  const rt = (
+    order as unknown as {
+      restaurant_tables:
+        | { table_number?: string; restaurants?: { currency?: string } }[]
+        | { table_number?: string; restaurants?: { currency?: string } }
+        | null;
+    }
+  ).restaurant_tables;
+
+  const tableNumber = Array.isArray(rt)
+    ? rt[0]?.table_number
+    : rt?.table_number;
+
+  const currency = Array.isArray(rt)
+    ? rt[0]?.restaurants?.currency
+    : rt?.restaurants?.currency;
+
   const currencyCode = currency ? String(currency) : "GMD";
+
   const trackHref = `/${locale}/menu/${tableId}/order/${orderId}`;
 
   return (
-    <div className="min-h-dvh pb-10 px-4 pt-6 bg-background">
+    <div className="min-h-dvh bg-background px-4 pt-6 pb-10">
       {success && <OrderSuccessSplash trackHref={trackHref} />}
-      <div className="max-w-xl mx-auto">
-        <h2 className="text-2xl font-semibold tracking-tight text-center mb-2">
+
+      <div className="mx-auto max-w-xl">
+        <h2 className="mb-2 text-center text-2xl font-semibold tracking-tight">
           Order Tracking
         </h2>
-        <p className="text-center text-muted-foreground text-sm mb-6">
+
+        <p className="mb-6 text-center text-sm text-muted-foreground">
           Table {tableNumber} • {itemCount} {itemCount === 1 ? "item" : "items"}
         </p>
 
-        <div className="bg-card p-6 rounded-2xl border shadow-sm">
-          {/* Progress Steps */}
-          <div className="flex items-center justify-between mb-8">
+        <div className="rounded-2xl border bg-card p-6 shadow-sm">
+          {/* Progress */}
+          <div className="mb-8 flex items-center justify-between">
             {steps.map((s, i) => (
-              <div key={s.id} className="flex-1 text-center relative">
+              <div key={s.id} className="relative flex-1 text-center">
                 {i > 0 && (
                   <div
-                    className={`absolute top-4 right-1/2 w-full h-1 -z-10 ${
+                    className={`absolute right-1/2 top-4 -z-10 h-1 w-full ${
                       steps[i - 1].done ? "bg-[var(--menu-brand)]" : "bg-muted"
                     }`}
                   />
                 )}
                 <div
-                  className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center ${
+                  className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full ${
                     s.done
                       ? "bg-[var(--menu-brand)] text-white"
                       : "bg-muted text-muted-foreground"
@@ -130,91 +160,104 @@ export default async function OrderTracker({
                 >
                   {s.done && "✓"}
                 </div>
-                <div className="text-xs mt-2 font-medium">{s.label}</div>
+                <div className="mt-2 text-xs font-medium">{s.label}</div>
               </div>
             ))}
           </div>
 
-          {/* Status Message */}
-          <div className="text-center mb-6">
+          {/* Status */}
+          <div className="mb-6 text-center">
             {status === "pending" && (
-              <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-xl border border-blue-100">
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-700">
                 <p className="font-semibold">Order received!</p>
                 <p className="text-sm">Your order is in the queue.</p>
               </div>
             )}
             {status === "preparing" && (
-              <div className="bg-primary/10 text-primary px-4 py-3 rounded-xl border border-primary/15">
+              <div className="rounded-xl border border-primary/15 bg-primary/10 px-4 py-3 text-primary">
                 <p className="font-semibold">Being prepared!</p>
                 <p className="text-sm">Your food is being cooked.</p>
               </div>
             )}
             {status === "completed" && (
-              <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl border border-green-100">
+              <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-green-700">
                 <p className="font-semibold">Order ready!</p>
                 <p className="text-sm">Your order is ready to be served.</p>
               </div>
             )}
             {status === "cancelled" && (
-              <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-xl border border-destructive/15">
+              <div className="rounded-xl border border-destructive/15 bg-destructive/10 px-4 py-3 text-destructive">
                 <p className="font-semibold">Order cancelled</p>
-                <p className="text-sm">Please contact staff if you still need help.</p>
+                <p className="text-sm">Please contact staff.</p>
               </div>
             )}
           </div>
 
-          {/* Estimated Time */}
-          <div className="text-center mb-6">
-            <p className="text-muted-foreground text-sm">Estimated time</p>
-            <p className="text-2xl font-semibold mt-1">{estimatedTime}</p>
+          {/* ETA */}
+          <div className="mb-6 text-center">
+            <p className="text-sm text-muted-foreground">Estimated time</p>
+            <p className="mt-1 text-2xl font-semibold">{estimatedTime}</p>
           </div>
 
-          {/* Order Items */}
-          <div className="border-t pt-4 mb-4">
-            <p className="text-sm font-semibold mb-2">Your order</p>
+          {/* Items */}
+          <div className="mb-4 border-t pt-4">
+            <p className="mb-2 text-sm font-semibold">Your order</p>
+
             <div className="space-y-1">
               {items.length === 0 && (
-                <div className="text-sm text-muted-foreground">No items.</div>
+                <p className="text-sm text-muted-foreground">No items.</p>
               )}
-              {items.map((item: {name?: string; quantity?: number; price?: number}, index: number) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {item.quantity}x {item.name}
-                  </span>
-                  <span className="text-foreground">
-                    {formatPrice(
-                      parseFloat(String(item.price || 0)) * (item.quantity || 1),
-                      currencyCode
-                    )}
-                  </span>
-                </div>
-              ))}
+
+              {items.map(
+                (
+                  item: { name?: string; quantity?: number; price?: number },
+                  index: number
+                ) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {item.quantity}x {item.name}
+                    </span>
+                    <span>
+                      {formatPrice(
+                        (item.price || 0) * (item.quantity || 1),
+                        currencyCode
+                      )}
+                    </span>
+                  </div>
+                )
+              )}
             </div>
+
             {(() => {
               const itemsSubtotal = items.reduce(
-                (sum: number, it: { price?: number; quantity?: number; name?: string }) => {
-                  const name = String(it.name || "").toLowerCase();
-                  if (name === "discount") return sum;
-                  return sum + parseFloat(String(it.price || 0)) * (it.quantity || 1);
+                (
+                  sum: number,
+                  it: { price?: number; quantity?: number; name?: string }
+                ) => {
+                  if (String(it.name || "").toLowerCase() === "discount")
+                    return sum;
+                  return sum + (it.price || 0) * (it.quantity || 1);
                 },
                 0
               );
-              const orderTotal = parseFloat(String(order.total || 0));
+
+              const orderTotal = Number(order.total || 0);
               const discount = Math.max(0, itemsSubtotal - orderTotal);
+
               return (
-                <div className="mt-2 pt-2 border-t space-y-1 text-sm">
+                <div className="mt-2 space-y-1 border-t pt-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{formatPrice(itemsSubtotal, currencyCode)}</span>
                   </div>
+
                   {discount > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Discount</span>
-                      <span className="text-emerald-700">
-                        −{formatPrice(discount, currencyCode)}
-                      </span>
+                    <div className="flex justify-between text-emerald-700">
+                      <span>Discount</span>
+                      <span>−{formatPrice(discount, currencyCode)}</span>
                     </div>
                   )}
+
                   <div className="flex justify-between font-bold">
                     <span>Total</span>
                     <span>{formatPrice(orderTotal, currencyCode)}</span>
@@ -226,7 +269,7 @@ export default async function OrderTracker({
 
           <Link
             href={`/${locale}/menu/${tableId}/browse`}
-            className="mt-4 block bg-[var(--menu-brand)] hover:bg-[var(--menu-brand)]/90 text-white text-center py-3 rounded-xl font-medium"
+            className="mt-4 block rounded-xl bg-[var(--menu-brand)] py-3 text-center font-medium text-white hover:bg-[var(--menu-brand)]/90"
           >
             Back to menu
           </Link>
