@@ -10,6 +10,7 @@ import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 export default function MenuIntroPage() {
   const params = useParams();
   const locale = typeof params.locale === "string" ? params.locale : null;
+  const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const base = locale ? `/${locale}` : "";
   const { restaurantName, tableNumber, tableSlug } = useMenuRestaurant();
 
@@ -36,9 +37,11 @@ export default function MenuIntroPage() {
           <div className="mt-5 grid gap-3">
             <div className="rounded-xl border bg-muted/20 p-4">
               <div className="text-xs text-muted-foreground">Table</div>
-              <div className="text-base font-semibold">Table {tableId}</div>
+              <div className="text-base font-semibold">
+                Table {tableNumber ?? tableId ?? ""}
+              </div>
               <div className="text-xs text-muted-foreground mt-1">
-                If this doesn't match your table, please ask staff for the
+                If this doesn&apos;t match your table, please ask staff for the
                 correct QR.
               </div>
             </div>
@@ -46,7 +49,7 @@ export default function MenuIntroPage() {
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="rounded-xl border p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold">
-                  <ShoppingBag className="h-4 w-4 `text-(--menu-brand)" />
+                  <ShoppingBag className="h-4 w-4 text-(--menu-brand)" />
                   Browse and add items
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">

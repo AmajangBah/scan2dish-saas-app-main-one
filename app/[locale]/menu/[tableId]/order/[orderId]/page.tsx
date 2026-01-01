@@ -3,6 +3,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/utils/currency";
 import OrderSuccessSplash from "../../../components/OrderSuccessSplash";
+import EstimatedTime from "./EstimatedTime";
 
 /**
  * Next.js 15 / 16:
@@ -80,20 +81,6 @@ export default async function OrderTracker({
       done: status === "completed",
     },
   ];
-
-  // Estimated time logic
-  const orderAge = Date.now() - new Date(order.created_at).getTime();
-  const minutesElapsed = Math.floor(orderAge / 60000);
-
-  let estimatedTime = "7–15 minutes";
-  if (status === "preparing") {
-    const remaining = Math.max(0, 15 - minutesElapsed);
-    estimatedTime = remaining > 0 ? `${remaining} minutes` : "Ready soon!";
-  } else if (status === "completed") {
-    estimatedTime = "Ready now!";
-  } else if (status === "cancelled") {
-    estimatedTime = "Cancelled";
-  }
 
   const items = Array.isArray(order.items) ? order.items : [];
 
@@ -200,7 +187,9 @@ export default async function OrderTracker({
           {/* ETA */}
           <div className="mb-6 text-center">
             <p className="text-sm text-muted-foreground">Estimated time</p>
-            <p className="mt-1 text-2xl font-semibold">{estimatedTime}</p>
+            <p className="mt-1 text-2xl font-semibold">
+              <EstimatedTime status={status} createdAt={String(order.created_at)} />
+            </p>
           </div>
 
           {/* Items */}

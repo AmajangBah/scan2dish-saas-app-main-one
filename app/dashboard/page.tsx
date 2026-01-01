@@ -161,7 +161,7 @@ export default async function Dashboard() {
           Welcome back, {restaurantName}
         </h1>
         <p className="text-sm text-muted-foreground">
-          A quick snapshot of what's happening today.
+          A quick snapshot of what&apos;s happening today.
         </p>
       </div>
 
