@@ -1,8 +1,7 @@
  "use client";
 
- import { useEffect, useMemo, useRef, useState } from "react";
+ import { useEffect, useRef, useState } from "react";
  import Link from "next/link";
- import { usePathname } from "next/navigation";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { Badge } from "@/components/ui/badge";
  import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@
  import { toast } from "sonner";
  import { CheckCircle2, CookingPot, Hourglass, ArrowRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils/currency";
+import Route from "@/app/constants/Route";
 
  type OrderStatus = "pending" | "preparing" | "completed";
 
@@ -46,12 +46,7 @@ import { formatPrice } from "@/lib/utils/currency";
   currency: string;
    initialOrders: LiveOrderSummary[];
  }) {
-   const pathname = usePathname();
-   const locale = useMemo(
-     () => pathname.split("/").filter(Boolean)[0] || "en",
-     [pathname]
-   );
-   const ordersHref = `/${locale}/dashboard/orders`;
+  const ordersHref = Route.ORDERS;
 
    const [orders, setOrders] = useState<LiveOrderSummary[]>(initialOrders);
    const [liveStatus, setLiveStatus] = useState<
