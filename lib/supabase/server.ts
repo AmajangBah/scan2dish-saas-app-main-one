@@ -8,13 +8,17 @@ import { cookies } from "next/headers";
 export async function createServerSupabase() {
   const cookieStore = await cookies();
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  // On the server we can safely use non-public env vars too.
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
     throw new Error("Missing Supabase environment variables");
   }
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -25,7 +29,7 @@ export async function createServerSupabase() {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options as CookieOptions);
             });
-          } catch (error) {
+          } catch {
             // Ignore errors from middleware/cookies() in middleware context
             // This is safe as cookies are set via Set-Cookie headers in middleware
           }

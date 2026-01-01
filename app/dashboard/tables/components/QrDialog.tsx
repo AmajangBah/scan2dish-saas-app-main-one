@@ -9,12 +9,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { QrCode, Download, Share2, Eye, Copy } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { QrCode, Download, Share2, Eye, Copy, Sparkles } from "lucide-react";
 import { Table } from "../types";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { QRCodeCanvas } from "qrcode.react";
+import { toPng } from "html-to-image";
 
 export default function QrDialog({
   open,
@@ -26,7 +30,25 @@ export default function QrDialog({
   table: Table | null;
 }) {
   const pathname = usePathname();
-  const qrWrapRef = useRef<HTMLDivElement | null>(null);
+  const qrCardRef = useRef<HTMLDivElement | null>(null);
+
+  const [mode, setMode] = useState<"branded" | "classic">("branded");
+  const [highContrast, setHighContrast] = useState(false);
+  const [showLogo, setShowLogo] = useState(true);
+  const [brandColor] = useState<string>(() => {
+    if (typeof window === "undefined") return "#C84501";
+    try {
+      // `--primary` is set at the dashboard layout wrapper; reading from body is usually enough.
+      const candidates = [document.body, document.documentElement] as HTMLElement[];
+      for (const el of candidates) {
+        const c = getComputedStyle(el).getPropertyValue("--primary").trim();
+        if (c) return c;
+      }
+      return "#C84501";
+    } catch {
+      return "#C84501";
+    }
+  });
 
   const locale = useMemo(() => {
     const seg = pathname.split("/").filter(Boolean)[0];
@@ -40,6 +62,17 @@ export default function QrDialog({
     typeof window !== "undefined" && menuPath
       ? new URL(menuPath, window.location.origin).toString()
       : menuPath;
+
+  const effectiveMode: "branded" | "classic" = highContrast ? "classic" : mode;
+  const effectiveShowLogo = highContrast ? false : showLogo;
+
+  const qrFg = highContrast
+    ? "#000000"
+    : effectiveMode === "branded"
+    ? brandColor || "#C84501"
+    : "#111827";
+  const qrBg = "#ffffff";
+  const qrLevel = effectiveShowLogo && !highContrast ? "H" : "M";
 
   const handlePreview = () => {
     if (!menuUrl) return;
@@ -76,16 +109,22 @@ export default function QrDialog({
 
   const handleDownload = () => {
     if (!table?.number) return;
-    const canvas = qrWrapRef.current?.querySelector("canvas");
-    if (!canvas) {
-      toast.error("QR not ready yet. Try again in a moment.");
-      return;
-    }
-    const dataUrl = canvas.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = `scan2dish-table-${table.number}.png`;
-    a.click();
+    const node = qrCardRef.current;
+    if (!node) return;
+    toPng(node, {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: "#ffffff",
+    })
+      .then((dataUrl) => {
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `scan2dish-table-${table.number}-${mode}${highContrast ? "-high-contrast" : ""}.png`;
+        a.click();
+      })
+      .catch(() => {
+        toast.error("Couldn’t generate the QR image. Try again.");
+      });
   };
 
   return (
@@ -98,39 +137,149 @@ export default function QrDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center py-4">
-          <div
-            ref={qrWrapRef}
-            className="rounded-xl border bg-background p-4 shadow-sm"
-          >
-            {menuUrl ? (
-              <QRCodeCanvas
-                value={menuUrl}
-                size={240}
-                includeMargin
-                level="M"
-              />
-            ) : (
-              <div className="h-[240px] w-[240px] grid place-items-center text-muted-foreground">
-                <QrCode className="h-12 w-12" />
+        <div className="space-y-4">
+          {/* Controls */}
+          <div className="rounded-xl border bg-muted/10 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold">QR style</div>
+              <Badge variant="outline" className="gap-2">
+                <span
+                  className="inline-block h-3 w-3 rounded-sm border"
+                  style={{ background: qrFg }}
+                  aria-hidden
+                />
+                {highContrast ? "High contrast" : mode === "branded" ? "Branded" : "Classic"}
+              </Badge>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={effectiveMode === "branded" && !highContrast ? "default" : "outline"}
+                onClick={() => setMode("branded")}
+                disabled={highContrast}
+                className="rounded-full"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Branded
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={effectiveMode === "classic" ? "default" : "outline"}
+                onClick={() => setMode("classic")}
+                className="rounded-full"
+              >
+                Classic
+              </Button>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">High contrast mode</div>
+                <div className="text-xs text-muted-foreground">
+                  Best for scan reliability on any printer.
+                </div>
               </div>
-            )}
+              <Switch checked={highContrast} onCheckedChange={setHighContrast} />
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">Show Scan2Dish logo</div>
+                <div className="text-xs text-muted-foreground">
+                  Uses higher error correction. Disable if scans fail.
+                </div>
+              </div>
+              <Switch
+                checked={effectiveShowLogo}
+                onCheckedChange={setShowLogo}
+                disabled={highContrast}
+              />
+            </div>
           </div>
 
-          {menuUrl && (
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="mt-3 max-w-full text-xs text-muted-foreground hover:text-foreground truncate"
-              title={menuUrl}
+          {/* Branded printable card */}
+          <div className="flex flex-col items-center">
+            <div
+              ref={qrCardRef}
+              className={cn(
+                "w-[320px] rounded-2xl border bg-white p-4 shadow-sm",
+                highContrast ? "border-neutral-300" : "border-neutral-200"
+              )}
             >
-              {menuUrl}
-            </button>
-          )}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] text-neutral-500">Scan to order</div>
+                  <div className="text-lg font-extrabold leading-tight text-neutral-900">
+                    Table {table?.number || "—"}
+                  </div>
+                  <div className="text-xs text-neutral-600 truncate">{table?.location || ""}</div>
+                </div>
+                {!highContrast && effectiveMode === "branded" && (
+                  <div
+                    className="h-8 w-8 rounded-xl border grid place-items-center"
+                    style={{ borderColor: `${brandColor}33`, background: `${brandColor}14`, color: brandColor }}
+                    aria-hidden
+                  >
+                    <QrCode className="h-4 w-4" />
+                  </div>
+                )}
+              </div>
 
-          <p className="text-sm mt-3 text-muted-foreground">
-            Scanned {table?.qrScans} times
-          </p>
+              <div className="mt-3 rounded-xl border bg-white p-3 flex items-center justify-center">
+                {menuUrl ? (
+                  <div className="relative">
+                    <QRCodeCanvas
+                      value={menuUrl}
+                      size={240}
+                      includeMargin
+                      level={qrLevel}
+                      bgColor={qrBg}
+                      fgColor={qrFg}
+                    />
+                    {effectiveShowLogo && !highContrast && (
+                      <div className="absolute inset-0 grid place-items-center pointer-events-none">
+                        <div className="h-14 w-14 rounded-2xl bg-white border shadow-sm grid place-items-center overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src="/Logo.png" alt="Scan2Dish" className="h-10 w-10 object-contain" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="h-[240px] w-[240px] grid place-items-center text-neutral-400">
+                    <QrCode className="h-12 w-12" />
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 text-center">
+                <div className="text-xs font-semibold text-neutral-900">
+                  Open menu on your phone
+                </div>
+                <div className="text-[11px] text-neutral-500 mt-1">
+                  Powered by <span className="font-semibold">Scan2Dish</span>
+                </div>
+              </div>
+            </div>
+
+            {menuUrl && (
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="mt-3 max-w-full text-xs text-muted-foreground hover:text-foreground truncate"
+                title={menuUrl}
+              >
+                {menuUrl}
+              </button>
+            )}
+
+            <p className="text-sm mt-3 text-muted-foreground">
+              Scanned {table?.qrScans} times
+            </p>
+          </div>
         </div>
 
         <DialogFooter className="flex flex-col sm:flex-row gap-2">

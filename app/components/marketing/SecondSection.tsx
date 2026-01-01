@@ -1,4 +1,3 @@
-import Image from "next/image";
 import FeatureCard from "./FeatureCard";
 
 const SecondSection = () => {

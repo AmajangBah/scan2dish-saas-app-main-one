@@ -1,14 +1,18 @@
+ "use client";
+
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, UtensilsCrossed, ShoppingBag, Info } from "lucide-react";
+import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 
-export default function MenuIntroPage({
-  params,
-}: {
-  params: { locale: string; tableId: string };
-}) {
-  const { locale, tableId } = params;
+export default function MenuIntroPage() {
+  const params = useParams();
+  const tableId = typeof params.tableId === "string" ? params.tableId : null;
+  const locale = typeof params.locale === "string" ? params.locale : null;
+  const base = locale ? `/${locale}` : "";
+  const { restaurantName, tableNumber } = useMenuRestaurant();
 
   return (
     <div className="px-4 pt-6 pb-10">
@@ -21,10 +25,10 @@ export default function MenuIntroPage({
             <div className="min-w-0">
               <div className="text-sm text-muted-foreground">Welcome</div>
               <h1 className="text-2xl font-semibold tracking-tight">
-                You’re about to order from this table
+                {restaurantName}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Review the details below, then continue to the menu.
+                Table {tableNumber} • Browse the menu and send your order to the kitchen.
               </p>
             </div>
           </div>

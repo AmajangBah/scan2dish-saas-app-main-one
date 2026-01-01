@@ -22,6 +22,8 @@ export default function ProductCard({
   const { add } = useCart();
   const { currency } = useMenuRestaurant();
   const [open, setOpen] = useState(false);
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  const imgBroken = Boolean(product.image && brokenUrl === product.image);
 
   return (
     <>
@@ -38,13 +40,14 @@ export default function ProductCard({
         }`}
       >
         <div className="w-20 h-20 rounded-xl shrink-0 bg-muted overflow-hidden border">
-          {product.image ? (
+          {product.image && !product.image.startsWith("blob:") && !imgBroken ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={product.image}
               alt={product.name}
               className="w-full h-full object-cover"
               loading="lazy"
+              onError={() => setBrokenUrl(product.image ?? null)}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-[var(--menu-brand)]/15 to-muted" />

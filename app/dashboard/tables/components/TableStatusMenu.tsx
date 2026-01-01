@@ -22,14 +22,16 @@ import { Table } from "../types";
 export default function TableStatusMenu({
   table,
   onStatusChange,
+  onDelete,
 }: {
   table: Table;
   onStatusChange: (tableId: string, status: Table["status"]) => void;
+  onDelete: (tableId: string) => void;
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="p-2 border rounded-md">
+        <button className="p-2 border rounded-lg hover:bg-muted/40" aria-label="Table actions">
           <MoreHorizontal className="h-4 w-4" />
         </button>
       </DropdownMenuTrigger>
@@ -56,7 +58,7 @@ export default function TableStatusMenu({
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem className="text-destructive">
+        <DropdownMenuItem className="text-destructive" onClick={() => onDelete(table.id)}>
           <Trash2 className="h-4 w-4 mr-2" /> Delete
         </DropdownMenuItem>
       </DropdownMenuContent>

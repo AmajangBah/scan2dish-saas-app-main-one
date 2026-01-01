@@ -7,7 +7,6 @@ import UsageSection from "./components/UsageSection";
 import BillingSection from "./components/BillingSection";
 import BusinessProfileSection from "./components/BusinessProfileSection";
 import BrandingSection from "./components/BrandingSection";
-import HoursSection from "./components/HoursSection";
 import PreferencesSection from "./components/PreferencesSection";
 import KitchenSection from "./components/KitchenSection";
 
@@ -26,7 +25,6 @@ export default function SettingsPage() {
         {active === "profile" && <BusinessProfileSection />}
         {active === "branding" && <BrandingSection />}
         {active === "kitchen" && <KitchenSection />}
-        {active === "hours" && <HoursSection />}
         {active === "preferences" && <PreferencesSection />}
       </div>
     </div>

@@ -57,7 +57,9 @@ export function signKitchenSession(params: { restaurantId: string; issuedAt: num
 }
 
 export function verifyKitchenSession(token: string, restaurantId: string) {
-  const secret = getKitchenSessionSecret();
+  // Kitchen pages should degrade gracefully when secret is missing (treat as unauthenticated).
+  const secret = process.env.KITCHEN_SESSION_SECRET;
+  if (!secret) return false;
   const parts = token.split(".");
   if (parts.length !== 4) return false;
   const [v, rid, issuedAtStr, sig] = parts;

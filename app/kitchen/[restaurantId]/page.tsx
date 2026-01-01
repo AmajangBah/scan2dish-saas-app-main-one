@@ -13,7 +13,8 @@ export default async function KitchenPage({
   const { restaurantId } = await params;
 
   const service = maybeCreateServiceSupabase();
-  if (!service) {
+  // Kitchen mode depends on server-only configuration.
+  if (!service || !process.env.KITCHEN_SESSION_SECRET) {
     return (
       <div className="min-h-dvh bg-black text-white flex items-center justify-center p-6">
         <div className="max-w-md w-full border border-neutral-800 bg-neutral-950 rounded-2xl p-6">

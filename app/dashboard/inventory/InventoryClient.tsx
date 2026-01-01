@@ -74,6 +74,8 @@ export default function InventoryClient({
   recipeRows: RecipeRow[];
   transactions: InventoryTx[];
 }) {
+  // Used for future per-restaurant inventory actions; keeps prop intentionally.
+  void restaurantId;
   const [view, setView] = useState<"ingredients" | "recipes" | "logs">("ingredients");
   const [search, setSearch] = useState("");
 

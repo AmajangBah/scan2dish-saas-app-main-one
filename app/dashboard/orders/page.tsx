@@ -7,6 +7,7 @@ export default async function OrdersPage() {
   const ctx = await requireRestaurantPage();
   const restaurant_id = ctx.restaurant.id;
   const currency = ctx.restaurant.currency ?? "GMD";
+  const restaurantName = ctx.restaurant.name ?? "Restaurant";
 
   const supabase = await createServerSupabase();
 
@@ -18,6 +19,8 @@ export default async function OrdersPage() {
       status,
       total,
       items,
+      customer_name,
+      notes,
       created_at,
       restaurant_tables!inner(table_number)
     `)
@@ -41,6 +44,8 @@ export default async function OrdersPage() {
     status: "pending" | "preparing" | "completed";
     total: number | string | null;
     items: unknown;
+    customer_name: string | null;
+    notes: string | null;
     created_at: string;
     restaurant_tables:
       | { table_number?: string }[]
@@ -71,6 +76,8 @@ export default async function OrdersPage() {
       }),
       createdAt: String(o.created_at),
       items: orderItems,
+      customerName: o.customer_name ? String(o.customer_name) : null,
+      notes: o.notes ? String(o.notes) : null,
     };
   });
 
@@ -78,6 +85,7 @@ export default async function OrdersPage() {
     <OrdersClient
       restaurantId={restaurant_id}
       currency={currency}
+      restaurantName={restaurantName}
       initialOrders={mappedOrders}
     />
   );

@@ -9,7 +9,6 @@ import {
   SelectContent,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { getCurrencyOptions } from "@/lib/utils/currency";
@@ -122,17 +121,6 @@ export default function PreferencesSection() {
           This color will be applied to buttons and headers on the customer
           page.
         </p>
-      </div>
-
-      {/* Notifications */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-0.5">
-          <Label>Order Notifications</Label>
-          <p className="text-xs text-muted-foreground">
-            Receive a sound alert when new orders are placed.
-          </p>
-        </div>
-        <Switch disabled />
       </div>
 
       <Button className="w-full mt-4" onClick={handleSave} disabled={saving || loading}>

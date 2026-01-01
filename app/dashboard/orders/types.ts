@@ -14,4 +14,6 @@ export interface Order {
   time: string;
   createdAt: string;
   items: OrderItem[];
+  customerName?: string | null;
+  notes?: string | null;
 }
