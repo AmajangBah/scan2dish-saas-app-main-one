@@ -19,6 +19,10 @@ import { toast } from "sonner";
 import { QRCodeCanvas } from "qrcode.react";
 import { toPng } from "html-to-image";
 
+function isHexColor(value: string) {
+  return /^#([0-9a-f]{6}|[0-9a-f]{3})$/i.test(value.trim());
+}
+
 export default function QrDialog({
   open,
   setOpen,
@@ -48,6 +52,26 @@ export default function QrDialog({
     }
   });
 
+  const [useCustomColor, setUseCustomColor] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem("s2d_qr_use_custom_color") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const [customColor, setCustomColor] = useState<string>(() => {
+    if (typeof window === "undefined") return "#C84501";
+    try {
+      const stored = window.localStorage.getItem("s2d_qr_custom_color");
+      if (stored && isHexColor(stored)) return stored;
+    } catch {
+      // ignore
+    }
+    return "#C84501";
+  });
+
   // Use clean customer URLs (table number) and let middleware add locale prefix.
   const tableNumber = table?.number ?? "";
   const menuPath = tableNumber ? `/menu/${encodeURIComponent(tableNumber)}` : "";
@@ -61,9 +85,11 @@ export default function QrDialog({
 
   const qrFg = highContrast
     ? "#000000"
-    : effectiveMode === "branded"
-    ? brandColor || "#C84501"
-    : "#111827";
+    : useCustomColor && isHexColor(customColor)
+      ? customColor
+      : effectiveMode === "branded"
+        ? brandColor || "#C84501"
+        : "#111827";
   const qrBg = "#ffffff";
   const qrLevel = effectiveShowLogo && !highContrast ? "H" : "M";
 
@@ -120,6 +146,14 @@ export default function QrDialog({
       });
   };
 
+  const presetColors = [
+    { name: "Brand", value: brandColor || "#C84501" },
+    { name: "Orange", value: "#C84501" },
+    { name: "Emerald", value: "#059669" },
+    { name: "Indigo", value: "#4F46E5" },
+    { name: "Slate", value: "#111827" },
+  ] as const;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
@@ -144,9 +178,9 @@ export default function QrDialog({
                   />
                   {highContrast
                     ? "High contrast"
-                    : mode === "branded"
-                      ? "Branded"
-                      : "Classic"}
+                    : `${mode === "branded" ? "Branded" : "Classic"}${
+                        useCustomColor ? " • Custom color" : ""
+                      }`}
                 </Badge>
               </div>
 
@@ -199,6 +233,84 @@ export default function QrDialog({
                     disabled={highContrast}
                   />
                 </div>
+
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">Custom QR color</div>
+                    <div className="text-xs text-muted-foreground">
+                      Pick a color for the QR. Disabled in high contrast mode.
+                    </div>
+                  </div>
+                  <Switch
+                    checked={useCustomColor}
+                    onCheckedChange={(v) => {
+                      setUseCustomColor(v);
+                      try {
+                        window.localStorage.setItem(
+                          "s2d_qr_use_custom_color",
+                          v ? "true" : "false"
+                        );
+                      } catch {
+                        // ignore
+                      }
+                    }}
+                    disabled={highContrast}
+                  />
+                </div>
+
+                {!highContrast && useCustomColor && (
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {presetColors.map((c) => (
+                        <button
+                          key={c.name}
+                          type="button"
+                          onClick={() => {
+                            setCustomColor(c.value);
+                            try {
+                              window.localStorage.setItem("s2d_qr_custom_color", c.value);
+                            } catch {
+                              // ignore
+                            }
+                          }}
+                          className={cn(
+                            "h-8 rounded-xl border px-2 text-xs flex items-center gap-2 bg-background hover:bg-muted/40",
+                            customColor.toLowerCase() === c.value.toLowerCase()
+                              ? "border-foreground/30"
+                              : "border-border"
+                          )}
+                          title={c.value}
+                        >
+                          <span
+                            className="h-3 w-3 rounded-sm border"
+                            style={{ background: c.value }}
+                            aria-hidden
+                          />
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    <label className="flex items-center justify-between gap-3 rounded-xl border bg-background px-3 py-2">
+                      <span className="text-xs text-muted-foreground">Pick</span>
+                      <input
+                        aria-label="Pick QR color"
+                        type="color"
+                        value={isHexColor(customColor) ? customColor : "#C84501"}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCustomColor(v);
+                          try {
+                            window.localStorage.setItem("s2d_qr_custom_color", v);
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                        className="h-7 w-10 rounded-md border bg-transparent p-0"
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 
