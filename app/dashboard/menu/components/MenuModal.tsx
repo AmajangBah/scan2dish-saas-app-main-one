@@ -12,13 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
@@ -26,10 +19,8 @@ import { getCurrency } from "@/lib/utils/currency";
 import { X, Sparkles, Info, ImageIcon, Flame, Leaf, WheatOff, Plus } from "lucide-react";
 
 import { useState, useEffect } from "react";
-import { MenuItem, MenuCategory } from "../types";
+import { MenuItem } from "../types";
 import { createBrowserSupabase } from "@/lib/supabase/client";
-
-const categories: MenuCategory[] = ["Starters", "Mains", "Drinks", "Desserts"];
 
 export default function MenuModal({
   open,
@@ -38,6 +29,7 @@ export default function MenuModal({
   itemToEdit,
   currency,
   restaurantId,
+  availableCategories,
 }: {
   open: boolean;
   onClose: () => void;
@@ -45,6 +37,7 @@ export default function MenuModal({
   itemToEdit?: MenuItem;
   currency: string;
   restaurantId: string;
+  availableCategories: string[];
 }) {
   const currencyMeta = getCurrency(currency);
   const [name, setName] = useState("");
@@ -56,7 +49,7 @@ export default function MenuModal({
     Record<string, string>
   >({});
   const [price, setPrice] = useState("0");
-  const [category, setCategory] = useState<MenuCategory>("Mains");
+  const [category, setCategory] = useState<string>("");
   const [available, setAvailable] = useState(true);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -85,7 +78,7 @@ export default function MenuModal({
       setNameTranslations(itemToEdit.nameTranslations || {});
       setDescriptionTranslations(itemToEdit.descriptionTranslations || {});
       setPrice(String(itemToEdit.price ?? 0));
-      setCategory(itemToEdit.category);
+      setCategory(String(itemToEdit.category ?? ""));
       setAvailable(itemToEdit.available);
       setImages((itemToEdit.images || []).filter((u) => typeof u === "string" && !u.startsWith("blob:")));
       setTags(
@@ -102,7 +95,7 @@ export default function MenuModal({
       setNameTranslations({});
       setDescriptionTranslations({});
       setPrice("0");
-      setCategory("Mains");
+      setCategory("");
       setAvailable(true);
       setImages([]);
       setNewImageUrl("");
@@ -191,6 +184,12 @@ export default function MenuModal({
       return;
     }
 
+    const trimmedCategory = category.trim();
+    if (!trimmedCategory) {
+      setFormError("Category is required.");
+      return;
+    }
+
     const cleaned = price.trim().replace(",", ".");
     const parsed = Number(cleaned);
     if (!Number.isFinite(parsed) || parsed < 0) {
@@ -210,7 +209,7 @@ export default function MenuModal({
       nameTranslations,
       descriptionTranslations,
       price: Math.round(parsed * 100) / 100,
-      category,
+      category: trimmedCategory,
       available,
       images: images.filter((u) => typeof u === "string" && !u.startsWith("blob:")),
       tags,
@@ -242,8 +241,8 @@ export default function MenuModal({
           )}
 
           {/* Core fields */}
-          <div className="grid gap-5 md:grid-cols-2">
-            <div className="space-y-2 md:col-span-1">
+          <div className="grid gap-5">
+            <div className="space-y-2">
               <Label>Item name *</Label>
               <Input
                 placeholder="e.g., Chicken Shawarma Wrap"
@@ -255,26 +254,28 @@ export default function MenuModal({
               </p>
             </div>
 
-            <div className="space-y-2 md:col-span-1">
+            <div className="space-y-2">
               <Label>Category *</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as MenuCategory)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
+              <Input
+                list="s2d-menu-categories"
+                placeholder="e.g., Starters"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
+              <datalist id="s2d-menu-categories">
+                {(availableCategories || [])
+                  .filter(Boolean)
+                  .slice(0, 50)
+                  .map((c) => (
+                    <option key={c} value={c} />
                   ))}
-                </SelectContent>
-              </Select>
+              </datalist>
               <p className="text-xs text-muted-foreground">
-                Categories help customers browse faster.
+                This defines what customers see in the menu category filters.
               </p>
             </div>
 
-            <div className="space-y-2 md:col-span-1">
+            <div className="space-y-2">
               <Label>Price *</Label>
               <div className="flex">
                 <div className="px-3 rounded-l-md border border-r-0 bg-muted text-sm flex items-center gap-2">
@@ -296,7 +297,7 @@ export default function MenuModal({
               </p>
             </div>
 
-            <div className="space-y-2 md:col-span-1">
+            <div className="space-y-2">
               <Label>Visible to customers</Label>
               <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3">
                 <div className="min-w-0">

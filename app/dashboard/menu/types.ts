@@ -1,4 +1,8 @@
-export type MenuCategory = "Starters" | "Mains" | "Drinks" | "Desserts";
+/**
+ * Dashboard menu categories are not fixed — they're defined by your actual menu items.
+ * We treat categories as free-form strings to match the customer menu structure.
+ */
+export type MenuCategory = string;
 
 export interface MenuItem {
   id: string;

@@ -7,6 +7,7 @@ import QuantitySelector from "./QuantitySelector";
 import { useCart } from "../context/CartContext";
 import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 import { formatPrice } from "@/lib/utils/currency";
+import { toast } from "sonner";
 
 export type MenuProduct = {
   id: string;
@@ -29,6 +30,7 @@ export default function MenuItemDialog({
   const { currency } = useMenuRestaurant();
   const [qty, setQty] = useState(1);
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  const [addedPulse, setAddedPulse] = useState(false);
 
   const lineTotal = useMemo(() => product.price * qty, [product.price, qty]);
   const imgBroken = Boolean(product.image && brokenUrl === product.image);
@@ -38,11 +40,14 @@ export default function MenuItemDialog({
       open={open}
       onOpenChange={(next) => {
         onOpenChange(next);
-        if (!next) setQty(1);
+        if (!next) {
+          setQty(1);
+          setAddedPulse(false);
+        }
       }}
     >
       <DialogContent className="p-0 overflow-hidden sm:max-w-lg">
-        <div className="grid gap-0">
+        <div className="flex flex-col">
           <div className="aspect-[16/9] bg-muted">
             {product.image && !product.image.startsWith("blob:") && !imgBroken ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -59,7 +64,7 @@ export default function MenuItemDialog({
 
           <div className="p-5">
             <DialogHeader>
-              <DialogTitle className="text-lg">{product.name}</DialogTitle>
+              <DialogTitle className="text-lg leading-tight">{product.name}</DialogTitle>
             </DialogHeader>
 
             {product.desc && (
@@ -84,23 +89,40 @@ export default function MenuItemDialog({
                 </div>
               </div>
 
-              <Button
-                onClick={() => {
-                  add(
-                    {
-                      id: product.id,
-                      name: product.name,
-                      price: product.price,
-                      image: product.image,
-                    },
-                    qty
-                  );
-                  onOpenChange(false);
-                }}
-                className="bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
-              >
-                Add to cart
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Done
+                </Button>
+                <Button
+                  onClick={() => {
+                    add(
+                      {
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        image: product.image,
+                      },
+                      qty
+                    );
+                    toast.success("Added to cart");
+                    setAddedPulse(true);
+                    // Keep the modal open so users can add more without losing context.
+                    setQty(1);
+                    window.setTimeout(() => setAddedPulse(false), 600);
+                  }}
+                  className={
+                    addedPulse
+                      ? "bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90 ring-2 ring-[var(--menu-brand)]/30"
+                      : "bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
+                  }
+                >
+                  Add to cart
+                </Button>
+              </div>
             </div>
           </div>
         </div>

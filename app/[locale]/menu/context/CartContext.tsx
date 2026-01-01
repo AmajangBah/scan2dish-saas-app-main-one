@@ -24,7 +24,15 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 function storageKey(tableId: string | null) {
   // Scope cart to a table to avoid cross-table leakage in real restaurants.
-  return tableId ? `s2d_cart_${tableId}` : "s2d_cart";
+  const restaurantId =
+    typeof document !== "undefined"
+      ? (document.cookie
+          .split("; ")
+          .find((c) => c.startsWith("s2d_restaurant_id="))
+          ?.split("=")[1] ?? "")
+      : "";
+  const restaurantPart = restaurantId ? decodeURIComponent(restaurantId) : "no-restaurant";
+  return tableId ? `s2d_cart_${restaurantPart}_${tableId}` : `s2d_cart_${restaurantPart}`;
 }
 
 function loadCartFromStorage(tableId: string | null): CartItem[] {

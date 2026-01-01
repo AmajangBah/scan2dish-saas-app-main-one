@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { formatPrice, getCurrency } from "@/lib/utils/currency";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +33,8 @@ export default function DiscountsClient({
   availableCategories,
   availableItems,
 }: DiscountsClientProps) {
+  const router = useRouter();
+  const currencyMeta = getCurrency(currency);
   const [discounts, setDiscounts] = useState<Discount[]>(initialDiscounts);
   const [createOpen, setCreateOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -50,7 +55,20 @@ export default function DiscountsClient({
     startTransition(async () => {
       const result = await createDiscount(formData);
 
-      if (result.success) {
+      if (result.success && result.id) {
+        const created: Discount = {
+          id: result.id,
+          restaurant_id: "",
+          discount_type: formData.discount_type,
+          discount_value: formData.discount_value,
+          apply_to: formData.apply_to,
+          category_id: formData.category_id ?? null,
+          item_id: formData.item_id ?? null,
+          start_time: null,
+          end_time: null,
+          is_active: Boolean(formData.is_active),
+        };
+        setDiscounts((prev) => [created, ...prev]);
         setCreateOpen(false);
         // Reset form
         setFormData({
@@ -61,10 +79,11 @@ export default function DiscountsClient({
           item_id: null,
           is_active: true,
         });
-        // Refresh will happen via revalidatePath
-        window.location.reload();
+        toast.success("Discount created");
+        router.refresh();
       } else {
         setError(result.error || "Failed to create discount");
+        toast.error(result.error || "Failed to create discount");
       }
     });
   };
@@ -83,6 +102,9 @@ export default function DiscountsClient({
           prev.map((d) => (d.id === id ? { ...d, is_active: currentStatus } : d))
         );
         setError(result.error || "Failed to toggle discount");
+        toast.error(result.error || "Failed to toggle discount");
+      } else {
+        router.refresh();
       }
     });
   };
@@ -100,6 +122,10 @@ export default function DiscountsClient({
         // Rollback on error
         setDiscounts(backup);
         setError(result.error || "Failed to delete discount");
+        toast.error(result.error || "Failed to delete discount");
+      } else {
+        toast.success("Discount deleted");
+        router.refresh();
       }
     });
   };
@@ -298,7 +324,7 @@ export default function DiscountsClient({
                 <div className="text-2xl font-bold text-[#C84501]">
                   {discount.discount_type === "percentage"
                     ? `${discount.discount_value}%`
-                    : `D${discount.discount_value}`}{" "}
+                    : formatPrice(Number(discount.discount_value || 0), currency)}{" "}
                   OFF
                 </div>
                 <div className="text-sm text-gray-600 mt-1">
@@ -368,7 +394,8 @@ export default function DiscountsClient({
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    discount_type: e.target.value as "percentage" | "fixed" | "category" | "item" | "time",
+                    discount_type: e.target
+                      .value as CreateDiscountInput["discount_type"],
                   })
                 }
               >
@@ -398,7 +425,7 @@ export default function DiscountsClient({
               <p className="text-xs text-gray-500 mt-1">
                 {formData.discount_type === "percentage"
                   ? "Enter percentage (e.g., 10 for 10% off)"
-                  : `Enter amount (e.g., 5 for ${currency} 5 off)`}
+                  : `Enter amount (e.g., ${currencyMeta.symbol}5 off)`}
               </p>
             </div>
 

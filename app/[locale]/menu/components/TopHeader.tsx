@@ -14,10 +14,9 @@ export default function TopHeader({
   title: string;
 }) {
   const params = useParams();
-  const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const locale = typeof params.locale === "string" ? params.locale : null;
   const { items } = useCart();
-  const { tableNumber } = useMenuRestaurant();
+  const { tableNumber, tableSlug } = useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
 
   return (
@@ -37,7 +36,7 @@ export default function TopHeader({
 
           <Button asChild variant="ghost" size="icon" className="relative">
             <Link
-              href={tableId ? `${base}/menu/${tableId}/cart` : `${base}/menu`}
+              href={tableSlug ? `${base}/menu/${tableSlug}/cart` : `${base}/menu`}
               aria-label="Open cart"
             >
               <ShoppingCart className="h-5 w-5" />

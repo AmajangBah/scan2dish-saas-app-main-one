@@ -14,7 +14,7 @@ export default function MenuLayout({
   // This layout wraps all menu pages and injects CartProvider
   return (
     <CartProvider key={tableId ?? "no-table"}>
-      <div className="min-h-screen bg-white">
+      <div className="min-h-dvh bg-background">
         <main>{children}</main>
       </div>
     </CartProvider>

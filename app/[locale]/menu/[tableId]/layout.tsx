@@ -4,10 +4,67 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import TopHeader from "../components/TopHeader";
 import { MenuRestaurantProvider } from "../context/MenuRestaurantContext";
+import type { Metadata } from "next";
+
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { tableId: string };
+}): Promise<Metadata> {
+  const tableIdOrNumber = params.tableId;
+  const supabase = await createClient();
+  const cookieStore = await cookies();
+  const restaurantIdCookie = cookieStore.get("s2d_restaurant_id")?.value ?? null;
+
+  const tableQuery = supabase
+    .from("restaurant_tables")
+    .select(
+      `
+      id,
+      table_number,
+      is_active,
+      restaurant_id,
+      restaurant:restaurants!restaurant_id(
+        id,
+        name
+      )
+    `
+    )
+    .eq("is_active", true);
+
+  const { data: table } = await (uuidRegex.test(tableIdOrNumber)
+    ? tableQuery.eq("id", tableIdOrNumber).maybeSingle()
+    : restaurantIdCookie
+      ? tableQuery
+          .eq("restaurant_id", restaurantIdCookie)
+          .eq("table_number", tableIdOrNumber)
+          .maybeSingle()
+      : tableQuery.eq("table_number", tableIdOrNumber).maybeSingle());
+
+  const restaurant = (() => {
+    if (!table) return null;
+    const r = (table as unknown as { restaurant?: unknown }).restaurant;
+    if (!r) return null;
+    if (Array.isArray(r)) return (r[0] ?? null) as unknown;
+    return r;
+  })() as unknown as { name?: unknown } | null;
+
+  const restaurantName = restaurant?.name ? String(restaurant.name) : "Menu";
+  const tableNumber = table?.table_number ? String(table.table_number) : "";
+
+  return {
+    title: tableNumber ? `${restaurantName} — Table ${tableNumber}` : restaurantName,
+    description: `Browse the menu and order from your table.`,
+  };
+}
 
 export default async function MenuLayout({
   children,
@@ -19,14 +76,18 @@ export default async function MenuLayout({
   const { tableId } = await params;
   const supabase = await createClient();
 
+  const cookieStore = await cookies();
+  const restaurantIdCookie = cookieStore.get("s2d_restaurant_id")?.value ?? null;
+
   // Get table and restaurant info
-  const { data: table, error: tableError } = await supabase
+  const tableQuery = supabase
     .from("restaurant_tables")
     .select(
       `
       id,
       table_number,
       is_active,
+      restaurant_id,
       restaurant:restaurants!restaurant_id(
         id,
         name,
@@ -37,8 +98,16 @@ export default async function MenuLayout({
       )
     `
     )
-    .eq("id", tableId)
-    .single();
+    .eq("is_active", true);
+
+  const { data: table, error: tableError } = await (uuidRegex.test(tableId)
+    ? tableQuery.eq("id", tableId).single()
+    : restaurantIdCookie
+      ? tableQuery
+          .eq("restaurant_id", restaurantIdCookie)
+          .eq("table_number", tableId)
+          .single()
+      : tableQuery.eq("table_number", tableId).single());
 
   // Table not found or inactive
   if (tableError || !table) {
@@ -106,7 +175,8 @@ export default async function MenuLayout({
       value={{
         restaurantId: String(restaurant?.id ?? ""),
         restaurantName: restaurant?.name ?? "",
-        tableId: String(tableId),
+        tableId: String(table.id),
+        tableSlug: String(table.table_number ?? ""),
         tableNumber: String(table.table_number ?? ""),
         currency: String(currency),
         brandColor: String(brandColor),

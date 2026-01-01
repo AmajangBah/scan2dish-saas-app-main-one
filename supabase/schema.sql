@@ -431,6 +431,19 @@ with check (
   )
 );
 
+-- Allow customers (anon) to read active discounts for menu pricing display.
+-- This is safe because discounts are promotional and intended to be public.
+drop policy if exists discounts_public_read_active on public.discounts;
+create policy discounts_public_read_active
+on public.discounts
+for select
+to anon, authenticated
+using (
+  is_active = true
+  and (start_time is null or start_time <= now())
+  and (end_time is null or end_time >= now())
+);
+
 -- -----------------------------------------------------------------------------
 -- onboarding_progress
 -- -----------------------------------------------------------------------------

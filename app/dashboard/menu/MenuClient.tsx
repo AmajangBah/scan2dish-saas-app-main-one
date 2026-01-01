@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { MenuItem, MenuCategory } from "./types";
+import { MenuItem } from "./types";
 import CategoryTabs from "./components/CategoryTabs";
 import SearchBar from "@/components/ui/search-bar";
 import MenuCard from "./components/MenuCard";
@@ -28,16 +28,7 @@ export default function MenuClient({
   currency: string;
   restaurantId: string;
 }) {
-  const categories: MenuCategory[] = [
-    "Starters",
-    "Mains",
-    "Drinks",
-    "Desserts",
-  ];
-
-  const [selectedCategory, setSelectedCategory] = useState<
-    MenuCategory | "All"
-  >("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
   const [search, setSearch] = useState("");
@@ -48,10 +39,20 @@ export default function MenuClient({
   const [error, setError] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const it of menuItems) {
+      const c = String(it.category ?? "").trim();
+      if (c) set.add(c);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [menuItems]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return menuItems.filter((item) => {
-      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      const matchesCategory =
+        selectedCategory === "All" || String(item.category) === selectedCategory;
       const matchesText =
         !q ||
         item.name.toLowerCase().includes(q) ||
@@ -306,7 +307,7 @@ export default function MenuClient({
         <CategoryTabs
           categories={categories}
           selected={selectedCategory}
-          onSelect={(category) => setSelectedCategory(category as MenuCategory | "All")}
+          onSelect={(category) => setSelectedCategory(category)}
         />
       </div>
 
@@ -375,6 +376,7 @@ export default function MenuClient({
         itemToEdit={itemToEdit}
         currency={currency}
         restaurantId={restaurantId}
+        availableCategories={categories}
       />
 
       <ConfirmDialog

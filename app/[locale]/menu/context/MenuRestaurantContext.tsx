@@ -5,7 +5,15 @@ import React, { createContext, useContext, useMemo } from "react";
 export type MenuRestaurantContextValue = {
   restaurantId: string;
   restaurantName: string;
+  /**
+   * Internal table UUID (used for pricing + order placement).
+   */
   tableId: string;
+  /**
+   * URL-safe identifier for customer routes (table number).
+   * Example: "12"
+   */
+  tableSlug: string;
   tableNumber: string;
   currency: string;
   brandColor: string;

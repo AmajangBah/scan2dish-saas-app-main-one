@@ -8,6 +8,7 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import CartBar from "../../components/CartBar";
+import { useMenuRestaurant } from "../../context/MenuRestaurantContext";
 
 function pickTranslatedText({
   locale,
@@ -28,8 +29,8 @@ function pickTranslatedText({
 
 export default function BrowsePage() {
   const params = useParams();
-  const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const locale = typeof params.locale === "string" ? params.locale : null;
+  const { restaurantId } = useMenuRestaurant();
 
   const [activeCategory, setActiveCategory] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
@@ -67,32 +68,17 @@ export default function BrowsePage() {
         setLoading(true);
         setError(null);
 
-        if (!tableId) {
-          setItems([]);
-          setError("Invalid table ID");
-          return;
-        }
+        if (!restaurantId) throw new Error("Missing restaurant context");
 
         const supabase = createBrowserSupabase();
 
-        // 1) Resolve restaurant_id from the table_id (public-read allowed for active tables)
-        const { data: tableRow, error: tableError } = await supabase
-          .from("restaurant_tables")
-          .select("restaurant_id")
-          .eq("id", tableId)
-          .single();
-
-        if (tableError || !tableRow?.restaurant_id) {
-          throw new Error("Table not found or inactive");
-        }
-
-        // 2) Fetch menu items for this restaurant
+        // Fetch menu items for this restaurant
         const { data: menuRows, error: menuError } = await supabase
           .from("menu_items")
           .select(
             "id, name, description, name_translations, description_translations, price, category, images, available, inventory_out_of_stock"
           )
-          .eq("restaurant_id", tableRow.restaurant_id)
+          .eq("restaurant_id", restaurantId)
           .eq("available", true)
           .order("name", { ascending: true });
 
@@ -162,7 +148,7 @@ export default function BrowsePage() {
     return () => {
       cancelled = true;
     };
-  }, [tableId, locale]);
+  }, [restaurantId, locale]);
 
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
