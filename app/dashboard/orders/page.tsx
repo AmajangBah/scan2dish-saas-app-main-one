@@ -7,6 +7,7 @@ export default async function OrdersPage() {
   const ctx = await requireRestaurantPage();
   const restaurant_id = ctx.restaurant.id;
   const currency = ctx.restaurant.currency ?? "GMD";
+  const restaurantName = ctx.restaurant.name ?? "Restaurant";
 
   const supabase = await createServerSupabase();
 
@@ -84,6 +85,7 @@ export default async function OrdersPage() {
     <OrdersClient
       restaurantId={restaurant_id}
       currency={currency}
+      restaurantName={restaurantName}
       initialOrders={mappedOrders}
     />
   );

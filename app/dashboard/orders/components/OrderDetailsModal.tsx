@@ -9,18 +9,20 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useRef, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Order, OrderStatus } from "../types";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Ban, CheckCircle2, CookingPot, Hourglass, Printer } from "lucide-react";
 import { formatPrice } from "@/lib/utils/currency";
+import { buildOrderReceiptHtml } from "./orderReceiptHtml";
 
 interface OrderDetailsModalProps {
   open: boolean;
   onClose: () => void;
   order: Order | null;
   currency: string;
+  restaurantName: string;
   saving?: boolean;
   onStatusChange: (id: string, newStatus: OrderStatus) => void;
   onRequestCancel: () => void;
@@ -31,11 +33,11 @@ export default function OrderDetailsModal({
   onClose,
   order,
   currency,
+  restaurantName,
   saving = false,
   onStatusChange,
   onRequestCancel,
 }: OrderDetailsModalProps) {
-  const printRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<OrderStatus | undefined>(order?.status);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -71,28 +73,10 @@ export default function OrderDetailsModal({
   };
 
   const handlePrint = () => {
-    if (!printRef.current) return;
-    const printContents = printRef.current.innerHTML;
-    const win = window.open("", "", "width=600,height=600");
+    if (!order) return;
+    const win = window.open("", "", "width=420,height=650");
     if (!win) return;
-    win.document.write(`
-      <html>
-        <head>
-          <title>Print Order</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <style>
-            body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding: 16px; color: #111827; }
-            h1,h2,h3 { margin: 0; }
-            .muted { color: #6b7280; }
-            .row { display:flex; justify-content:space-between; gap:12px; }
-            .box { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin-top: 12px; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { text-align: left; padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 12px; }
-          </style>
-        </head>
-        <body>${printContents}</body>
-      </html>
-    `);
+    win.document.write(buildOrderReceiptHtml({ restaurantName, order, currency }));
     win.document.close();
     win.focus();
     win.print();
@@ -126,7 +110,7 @@ export default function OrderDetailsModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div ref={printRef} className="space-y-4">
+        <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="text-xs text-muted-foreground">Order ID</div>

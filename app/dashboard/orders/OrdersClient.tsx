@@ -41,10 +41,12 @@ type OrderRow = {
 export default function OrdersClient({
   restaurantId,
   currency,
+  restaurantName,
   initialOrders,
 }: {
   restaurantId: string;
   currency: string;
+  restaurantName: string;
   initialOrders: Order[];
 }) {
   const isMobile = useIsMobile();
@@ -719,6 +721,7 @@ export default function OrdersClient({
           onClose={() => setDetailsOpen(false)}
           order={selectedOrder}
           currency={currency}
+          restaurantName={restaurantName}
           saving={selectedOrder ? savingOrderId === selectedOrder.id : false}
           onStatusChange={handleStatusChange}
           onRequestCancel={() => setConfirmCancelOpen(true)}
@@ -729,6 +732,7 @@ export default function OrdersClient({
           onOpenChange={(o) => setDetailsOpen(o)}
           order={selectedOrder}
           currency={currency}
+          restaurantName={restaurantName}
           saving={selectedOrder ? savingOrderId === selectedOrder.id : false}
           onStatusChange={handleStatusChange}
           onRequestCancel={() => setConfirmCancelOpen(true)}
