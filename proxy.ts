@@ -19,13 +19,13 @@ function isLocaleSegment(seg: string | undefined) {
 }
 
 /**
- * Middleware to:
+ * Proxy to:
  * 1. Handle internationalization (i18n) for customer menu routes
  * 2. Protect authenticated routes (dashboard/admin)
  * 3. Refresh Supabase session
  * 4. Clean customer menu URLs by redirecting UUID table IDs -> table numbers
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   /**
    * Only run i18n routing for translated, customer-facing menu routes.
    * Dashboards + home must remain stable and non-localized.
@@ -111,6 +111,39 @@ export async function middleware(request: NextRequest) {
             sameSite: "lax",
           });
           return redirectRes;
+        }
+      } else {
+        // If the URL is already using a table number, try to set disambiguation cookies
+        // (helps when table numbers are not globally unique).
+        const existingRestaurantId = request.cookies.get("s2d_restaurant_id")?.value ?? null;
+        if (!existingRestaurantId) {
+          const { data: matches, error } = await supabase
+            .from("restaurant_tables")
+            .select("id, restaurant_id, table_number")
+            .eq("table_number", tableSeg)
+            .eq("is_active", true)
+            .limit(2);
+
+          // Only set cookies if it uniquely identifies a single active table.
+          if (!error && Array.isArray(matches) && matches.length === 1) {
+            const t = matches[0] as unknown as {
+              id: string;
+              restaurant_id: string;
+              table_number: string;
+            };
+            response.cookies.set("s2d_table_id", String(t.id), {
+              path: "/",
+              sameSite: "lax",
+            });
+            response.cookies.set("s2d_restaurant_id", String(t.restaurant_id), {
+              path: "/",
+              sameSite: "lax",
+            });
+            response.cookies.set("s2d_table_number", String(t.table_number), {
+              path: "/",
+              sameSite: "lax",
+            });
+          }
         }
       }
     }

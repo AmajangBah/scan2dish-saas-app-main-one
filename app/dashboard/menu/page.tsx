@@ -1,7 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
 import MenuClient from "./MenuClient";
-import { MenuItem, MenuCategory } from "./types";
+import { MenuItem } from "./types";
 
 export default async function MenuPage() {
   const ctx = await requireRestaurantPage();
@@ -42,7 +42,7 @@ export default async function MenuPage() {
         ? item.description_translations
         : {},
     price: parseFloat(item.price) || 0,
-    category: (item.category || "Mains") as MenuCategory,
+    category: item.category ? String(item.category) : "Uncategorized",
     images: Array.isArray(item.images) ? item.images : [],
     available: item.available ?? true,
     tags:

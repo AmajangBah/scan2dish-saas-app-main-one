@@ -14,8 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { QrCode, Download, Share2, Eye, Copy, Sparkles } from "lucide-react";
 import { Table } from "../types";
-import { useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { QRCodeCanvas } from "qrcode.react";
 import { toPng } from "html-to-image";
@@ -29,7 +28,6 @@ export default function QrDialog({
   setOpen: (v: boolean) => void;
   table: Table | null;
 }) {
-  const pathname = usePathname();
   const qrCardRef = useRef<HTMLDivElement | null>(null);
 
   const [mode, setMode] = useState<"branded" | "classic">("branded");
@@ -49,11 +47,6 @@ export default function QrDialog({
       return "#C84501";
     }
   });
-
-  const locale = useMemo(() => {
-    const seg = pathname.split("/").filter(Boolean)[0];
-    return seg || "en";
-  }, [pathname]);
 
   // Use clean customer URLs (table number) and let middleware add locale prefix.
   const tableNumber = table?.number ?? "";

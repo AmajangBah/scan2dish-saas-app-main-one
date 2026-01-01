@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { formatPrice, getCurrency } from "@/lib/utils/currency";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export default function DiscountsClient({
   availableItems,
 }: DiscountsClientProps) {
   const router = useRouter();
+  const currencyMeta = getCurrency(currency);
   const [discounts, setDiscounts] = useState<Discount[]>(initialDiscounts);
   const [createOpen, setCreateOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -322,7 +324,7 @@ export default function DiscountsClient({
                 <div className="text-2xl font-bold text-[#C84501]">
                   {discount.discount_type === "percentage"
                     ? `${discount.discount_value}%`
-                    : `D${discount.discount_value}`}{" "}
+                    : formatPrice(Number(discount.discount_value || 0), currency)}{" "}
                   OFF
                 </div>
                 <div className="text-sm text-gray-600 mt-1">
@@ -392,7 +394,8 @@ export default function DiscountsClient({
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    discount_type: e.target.value as "percentage" | "fixed" | "category" | "item" | "time",
+                    discount_type: e.target
+                      .value as CreateDiscountInput["discount_type"],
                   })
                 }
               >
@@ -422,7 +425,7 @@ export default function DiscountsClient({
               <p className="text-xs text-gray-500 mt-1">
                 {formData.discount_type === "percentage"
                   ? "Enter percentage (e.g., 10 for 10% off)"
-                  : `Enter amount (e.g., 5 for ${currency} 5 off)`}
+                  : `Enter amount (e.g., ${currencyMeta.symbol}5 off)`}
               </p>
             </div>
 

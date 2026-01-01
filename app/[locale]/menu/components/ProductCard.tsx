@@ -6,6 +6,8 @@ import { formatPrice } from "@/lib/utils/currency";
 import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 import { useState } from "react";
 import MenuItemDialog from "./MenuItemDialog";
+import { Plus } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ProductCard({
   product,
@@ -33,7 +35,7 @@ export default function ProductCard({
           if (product.outOfStock) return;
           setOpen(true);
         }}
-        className={`w-full text-left flex gap-4 items-start p-4 bg-card rounded-2xl border shadow-sm transition-colors ${
+        className={`w-full text-left flex gap-4 items-start p-4 bg-card rounded-2xl border shadow-sm transition-colors active:scale-[0.99] ${
           product.outOfStock
             ? "opacity-70 cursor-not-allowed"
             : "hover:bg-muted/30"
@@ -90,8 +92,10 @@ export default function ProductCard({
                   },
                   1
                 );
+                toast.success("Added to cart");
               }}
             >
+              <Plus className="h-4 w-4 mr-2" />
               Add
             </Button>
           </div>
