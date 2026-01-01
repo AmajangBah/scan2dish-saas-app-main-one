@@ -13,7 +13,14 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdmin();
     const body = await request.json();
 
-    const { restaurant_id, amount, payment_method, reference_number, notes } = body;
+    const {
+      restaurant_id,
+      send_receipt,
+      amount,
+      payment_method,
+      reference_number,
+      notes,
+    } = body;
 
     // Validation
     if (!restaurant_id || !amount || !payment_method) {
@@ -50,6 +57,19 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    // Optionally mark receipt as "sent to restaurant dashboard"
+    // (No email/SMS integration here; restaurants will see it in Billing > Receipts.)
+    if (send_receipt !== false && data) {
+      await supabase
+        .from("commission_payments")
+        .update({
+          receipt_sent_at: new Date().toISOString(),
+          receipt_sent_via: "dashboard",
+          receipt_sent_by: admin.id,
+        })
+        .eq("id", data);
+    }
+
     // Log activity
     await logAdminActivity({
       action_type: "payment_recorded",
@@ -58,6 +78,7 @@ export async function POST(request: NextRequest) {
         amount,
         payment_method,
         reference_number,
+        send_receipt: send_receipt !== false,
       },
     });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 
 // COMPONENTS
 import TableCard from "./components/TableCard";
@@ -10,9 +10,11 @@ import QrDialog from "./components/QrDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QrCode, Table2 } from "lucide-react";
 import Link from "next/link";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 // ACTIONS
-import { updateTableStatus } from "@/app/actions/tables";
+import { deleteTable, updateTableStatus } from "@/app/actions/tables";
+import { toast } from "sonner";
 
 // TYPES
 import type { Table, TableStatus } from "./types";
@@ -30,6 +32,36 @@ export default function TablesClient({
   const [tables, setTables] = useState<Table[]>(initialTables);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const deleteTarget = useMemo(
+    () => (deleteTargetId ? tables.find((t) => t.id === deleteTargetId) : null),
+    [deleteTargetId, tables]
+  );
+
+  const requestDelete = (id: string) => {
+    setDeleteTargetId(id);
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteTargetId;
+    if (!id) return;
+    setDeleteTargetId(null);
+
+    const backup = tables;
+    setTables((prev) => prev.filter((x) => x.id !== id));
+
+    startTransition(async () => {
+      const res = await deleteTable(id);
+      if (!res.success) {
+        setTables(backup);
+        setError(res.error || "Failed to delete table");
+        toast.error("Failed to delete table");
+      } else {
+        toast.success("Table deleted");
+      }
+    });
+  };
 
   // Handle status change
   const handleStatusChange = async (id: string, status: TableStatus) => {
@@ -169,6 +201,7 @@ export default function TablesClient({
               table={table}
               onStatusChange={handleStatusChange}
               onQrView={handleQrView}
+              onDelete={requestDelete}
             />
           ))}
         </div>
@@ -222,6 +255,17 @@ export default function TablesClient({
         open={isQrDialogOpen}
         setOpen={setIsQrDialogOpen}
         table={selectedTable}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTargetId)}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTargetId(null);
+        }}
+        title={deleteTarget ? `Delete Table ${deleteTarget.number}?` : "Delete table?"}
+        description="This removes the table and its QR link from your dashboard. Guests won’t be able to scan and order from it."
+        confirmLabel="Delete table"
+        onConfirm={confirmDelete}
       />
     </div>
   );

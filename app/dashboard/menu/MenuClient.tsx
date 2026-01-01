@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { MenuItem, MenuCategory } from "./types";
 import CategoryTabs from "./components/CategoryTabs";
 import SearchBar from "@/components/ui/search-bar";
-import AddMenuButton from "./components/AddMenuButton";
 import MenuCard from "./components/MenuCard";
 import MenuModal from "./components/MenuModal";
 import MenuListItem from "./components/MenuListItem";
 import { Button } from "@/components/ui/button";
-import { Grid, List } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Grid, List, Plus, UtensilsCrossed, EyeOff, CheckCircle2, SearchX } from "lucide-react";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   createMenuItem,
   updateMenuItem,
@@ -20,8 +21,12 @@ import type { MenuActionResult } from "@/app/actions/menu";
 
 export default function MenuClient({
   initialMenuItems,
+  currency,
+  restaurantId,
 }: {
   initialMenuItems: MenuItem[];
+  currency: string;
+  restaurantId: string;
 }) {
   const categories: MenuCategory[] = [
     "Starters",
@@ -41,12 +46,27 @@ export default function MenuClient({
   const [view, setView] = useState<"grid" | "list">("grid");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const filtered = menuItems.filter(
-    (item) =>
-      (selectedCategory === "All" || item.category === selectedCategory) &&
-      item.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return menuItems.filter((item) => {
+      const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+      const matchesText =
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        (item.description ? item.description.toLowerCase().includes(q) : false);
+      return matchesCategory && matchesText;
+    });
+  }, [menuItems, search, selectedCategory]);
+
+  const stats = useMemo(() => {
+    const total = menuItems.length;
+    const available = menuItems.filter((i) => i.available).length;
+    const hidden = total - available;
+    const categoriesUsed = new Set(menuItems.map((i) => i.category)).size;
+    return { total, available, hidden, categoriesUsed };
+  }, [menuItems]);
 
   const handleAdd = () => {
     setItemToEdit(undefined);
@@ -84,7 +104,18 @@ export default function MenuClient({
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
+    setDeleteTargetId(id);
+  };
+
+  const deleteTarget = useMemo(
+    () => (deleteTargetId ? menuItems.find((i) => i.id === deleteTargetId) : null),
+    [deleteTargetId, menuItems]
+  );
+
+  const confirmDelete = async () => {
+    const id = deleteTargetId;
+    if (!id) return;
+    setDeleteTargetId(null);
 
     // Optimistic delete
     const backup = menuItems;
@@ -167,29 +198,80 @@ export default function MenuClient({
   };
 
   return (
-    <div className="p-6 min-h-screen space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Menu Management</h1>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <UtensilsCrossed className="h-4 w-4" />
+            Menu
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight">Menu management</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Add items, update prices, and hide sold-out dishes in seconds.
+          </p>
+        </div>
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button
-            variant={view === "grid" ? "default" : "outline"}
+            variant="outline"
             onClick={() => setView("grid")}
+            aria-pressed={view === "grid"}
           >
-            <Grid size={18} />
+            <Grid className="h-4 w-4 mr-2" />
+            Grid
           </Button>
-
           <Button
-            variant={view === "list" ? "default" : "outline"}
+            variant="outline"
             onClick={() => setView("list")}
+            aria-pressed={view === "list"}
           >
-            <List size={18} />
+            <List className="h-4 w-4 mr-2" />
+            List
+          </Button>
+          <Button onClick={handleAdd} className="bg-primary text-primary-foreground">
+            <Plus className="h-4 w-4 mr-2" />
+            Add item
           </Button>
         </div>
       </div>
 
+      {/* Stats (bento) */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="rounded-2xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Total items</div>
+            <div className="text-2xl font-semibold mt-1">{stats.total}</div>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Visible to customers</div>
+            <div className="mt-1 flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <div className="text-2xl font-semibold">{stats.available}</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Hidden / unavailable</div>
+            <div className="mt-1 flex items-center gap-2">
+              <EyeOff className="h-5 w-5 text-muted-foreground" />
+              <div className="text-2xl font-semibold">{stats.hidden}</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl shadow-sm">
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground">Categories used</div>
+            <div className="text-2xl font-semibold mt-1">{stats.categoriesUsed}</div>
+          </CardContent>
+        </Card>
+      </div>
+
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
           <button
             onClick={() => setError(null)}
@@ -201,35 +283,70 @@ export default function MenuClient({
       )}
 
       {isPending && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded text-sm">
-          Saving changes...
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+          Saving…
         </div>
       )}
 
-      <AddMenuButton onClick={handleAdd} />
+      {/* Filters */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search by name or description…"
+            className="max-w-xl"
+          />
+          <div className="text-sm text-muted-foreground">
+            Showing <span className="font-medium text-foreground">{filtered.length}</span> of{" "}
+            <span className="font-medium text-foreground">{menuItems.length}</span>
+          </div>
+        </div>
 
-      <CategoryTabs
-        categories={categories}
-        selected={selectedCategory}
-        onSelect={(category) =>
-          setSelectedCategory(category as MenuCategory | "All")
-        }
-      />
+        <CategoryTabs
+          categories={categories}
+          selected={selectedCategory}
+          onSelect={(category) => setSelectedCategory(category as MenuCategory | "All")}
+        />
+      </div>
 
-      <SearchBar 
-        value={search} 
-        onChange={setSearch} 
-        placeholder="Search menu items..."
-        className="max-w-md mx-auto"
-      />
-
-      {/* 🔥 SWITCH BETWEEN GRID AND LIST */}
-      {view === "grid" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+      {/* Results */}
+      {filtered.length === 0 ? (
+        <Card className="rounded-2xl border-dashed">
+          <CardContent className="py-10">
+            <div className="mx-auto max-w-lg text-center space-y-3">
+              <div className="mx-auto h-11 w-11 rounded-xl border bg-muted/30 grid place-items-center">
+                <SearchX className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div className="text-lg font-semibold">No items match your filters</div>
+              <p className="text-sm text-muted-foreground">
+                Try clearing the search, switching categories, or add a new menu item.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                <Button onClick={handleAdd}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add item
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearch("");
+                    setSelectedCategory("All");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : view === "grid" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((item) => (
             <MenuCard
               key={item.id}
               item={item}
+              currency={currency}
               onEdit={handleEdit}
               onToggleAvailability={handleToggleAvailability}
               onDelete={handleDelete}
@@ -237,11 +354,12 @@ export default function MenuClient({
           ))}
         </div>
       ) : (
-        <div className="flex flex-col gap-3 mt-4">
+        <div className="flex flex-col gap-3">
           {filtered.map((item) => (
             <MenuListItem
               key={item.id}
               item={item}
+              currency={currency}
               onEdit={handleEdit}
               onToggleAvailability={handleToggleAvailability}
               onDelete={handleDelete}
@@ -255,6 +373,19 @@ export default function MenuClient({
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         itemToEdit={itemToEdit}
+        currency={currency}
+        restaurantId={restaurantId}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTargetId)}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTargetId(null);
+        }}
+        title={deleteTarget ? `Delete “${deleteTarget.name}”?` : "Delete menu item?"}
+        description="This permanently removes the item from your menu. Customers will no longer see it."
+        confirmLabel="Delete item"
+        onConfirm={confirmDelete}
       />
     </div>
   );

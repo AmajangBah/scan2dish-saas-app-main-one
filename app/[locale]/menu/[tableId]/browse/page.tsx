@@ -130,7 +130,10 @@ export default function BrowsePage() {
               name,
               desc,
               price: Number(row.price ?? 0),
-              image: typeof firstImage === "string" ? firstImage : undefined,
+              image:
+                typeof firstImage === "string" && !firstImage.startsWith("blob:")
+                  ? firstImage
+                  : undefined,
               categoryId,
               categoryLabel,
               outOfStock: Boolean((row as unknown as { inventory_out_of_stock?: boolean }).inventory_out_of_stock),

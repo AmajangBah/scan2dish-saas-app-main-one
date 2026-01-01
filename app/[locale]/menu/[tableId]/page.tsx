@@ -1,14 +1,18 @@
+ "use client";
+
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, UtensilsCrossed, ShoppingBag, Info } from "lucide-react";
+import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 
-export default function MenuIntroPage({
-  params,
-}: {
-  params: { locale: string; tableId: string };
-}) {
-  const { locale, tableId } = params;
+export default function MenuIntroPage() {
+  const params = useParams();
+  const tableId = typeof params.tableId === "string" ? params.tableId : null;
+  const locale = typeof params.locale === "string" ? params.locale : null;
+  const base = locale ? `/${locale}` : "";
+  const { restaurantName, tableNumber } = useMenuRestaurant();
 
   return (
     <div className="px-4 pt-6 pb-10">
@@ -21,23 +25,15 @@ export default function MenuIntroPage({
             <div className="min-w-0">
               <div className="text-sm text-muted-foreground">Welcome</div>
               <h1 className="text-2xl font-semibold tracking-tight">
-                You’re about to order from this table
+                {restaurantName}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Review the details below, then continue to the menu.
+                Table {tableNumber} • Browse the menu and send your order to the kitchen.
               </p>
             </div>
           </div>
 
           <div className="mt-5 grid gap-3">
-            <div className="rounded-xl border bg-muted/20 p-4">
-              <div className="text-xs text-muted-foreground">Table</div>
-              <div className="text-base font-semibold">Table {tableId}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                If this doesn’t match your table, please ask staff for the correct QR.
-              </div>
-            </div>
-
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="rounded-xl border p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold">
@@ -62,10 +58,12 @@ export default function MenuIntroPage({
 
           <div className="mt-5 flex items-center justify-between gap-3">
             <Button asChild variant="outline" className="rounded-xl">
-              <Link href={`/${locale}/menu/${tableId}/browse`}>Browse menu</Link>
+              <Link href={tableId ? `${base}/menu/${tableId}/browse` : `${base}/menu`}>
+                Browse menu
+              </Link>
             </Button>
             <Button asChild className="rounded-xl bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90">
-              <Link href={`/${locale}/menu/${tableId}/browse`}>
+              <Link href={tableId ? `${base}/menu/${tableId}/browse` : `${base}/menu`}>
                 Continue <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             </Button>

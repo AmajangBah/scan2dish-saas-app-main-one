@@ -52,6 +52,7 @@ export default function MenuItemPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [item, setItem] = useState<MenuItem | null>(null);
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
 
   const displayName = useMemo(() => {
     if (!item) return "";
@@ -72,7 +73,14 @@ export default function MenuItemPage() {
     });
   }, [item, locale]);
 
-  const firstImage = useMemo(() => item?.images?.[0], [item?.images]);
+  const firstImage = useMemo(() => {
+    const img = item?.images?.[0];
+    if (typeof img !== "string") return undefined;
+    if (img.startsWith("blob:")) return undefined;
+    return img;
+  }, [item?.images]);
+
+  const imgBroken = Boolean(firstImage && brokenUrl === firstImage);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,12 +145,13 @@ export default function MenuItemPage() {
         {!loading && !error && item && (
           <Card className="overflow-hidden rounded-2xl">
             <div className="aspect-[16/9] bg-muted">
-              {firstImage ? (
+              {firstImage && !imgBroken ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={firstImage}
                   alt={displayName || item.name}
                   className="w-full h-full object-cover"
+                  onError={() => setBrokenUrl(firstImage)}
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-[var(--menu-brand)]/15 to-muted" />

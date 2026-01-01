@@ -55,6 +55,7 @@ export default function CheckoutPage() {
     discount: number;
     total: number;
   } | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(false);
 
   const [displayNameById, setDisplayNameById] = useState<Record<string, string>>(
     {}
@@ -74,12 +75,19 @@ export default function CheckoutPage() {
     async function load() {
       if (!pricingInput) {
         setPricing(null);
+        setPricingLoading(false);
         return;
       }
+      setPricingLoading(true);
+      setPricing(null);
+      await new Promise((r) => setTimeout(r, 200));
+      if (cancelled) return;
+
       const res = await previewOrderPricing(pricingInput);
       if (cancelled) return;
-      if (res.success) setPricing(res);
+      if (res.success) setPricing({ subtotal: res.subtotal, discount: res.discount, total: res.total });
       else setPricing(null);
+      setPricingLoading(false);
     }
     load();
     return () => {
@@ -172,7 +180,7 @@ export default function CheckoutPage() {
 
       if (result.success && result.orderId) {
         clear();
-        router.push(`${base}/menu/${tableId}/order/${result.orderId}`);
+        router.push(`${base}/menu/${tableId}/order/${result.orderId}?success=1`);
       } else {
         setError(result.error || "Failed to place order");
       }
@@ -294,11 +302,16 @@ export default function CheckoutPage() {
               <div>
                 <div className="text-sm text-muted-foreground">Total</div>
                 <div className="text-xl font-semibold">
-                  {formatPrice(pricing?.total ?? subtotal, currency)}
+                  {formatPrice(pricingLoading ? subtotal : (pricing?.total ?? subtotal), currency)}
                 </div>
                 {(pricing?.discount ?? 0) > 0 && (
                   <div className="text-xs text-emerald-700 mt-1">
                     Discount applied: −{formatPrice(pricing?.discount ?? 0, currency)}
+                  </div>
+                )}
+                {pricingLoading && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Updating totals…
                   </div>
                 )}
                 <div className="text-xs text-muted-foreground mt-1">

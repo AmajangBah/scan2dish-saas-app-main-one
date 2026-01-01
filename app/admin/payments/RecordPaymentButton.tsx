@@ -27,6 +27,7 @@ export default function RecordPaymentButton({
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     restaurant_id: "",
+    send_receipt: true,
     amount: "",
     payment_method: "cash",
     reference_number: "",
@@ -65,6 +66,7 @@ export default function RecordPaymentButton({
       setShowDialog(false);
       setFormData({
         restaurant_id: "",
+        send_receipt: true,
         amount: "",
         payment_method: "cash",
         reference_number: "",
@@ -152,6 +154,28 @@ export default function RecordPaymentButton({
                     placeholder="0.00"
                   />
                 </div>
+              </div>
+
+              {/* Send receipt */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={formData.send_receipt}
+                    onChange={(e) =>
+                      setFormData({ ...formData, send_receipt: e.target.checked })
+                    }
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      Send receipt to restaurant dashboard
+                    </div>
+                    <div className="text-xs text-gray-600 mt-0.5">
+                      The restaurant will see this payment under Billing → Receipts and can print/download it.
+                    </div>
+                  </div>
+                </label>
               </div>
 
               {/* Payment Method */}
