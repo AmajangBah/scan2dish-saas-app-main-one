@@ -55,9 +55,9 @@ export default function QrDialog({
     return seg || "en";
   }, [pathname]);
 
-  const tableId = table?.id ?? "";
-  // Use the new intentional intro screen first; customers can proceed to browse from there.
-  const menuPath = tableId ? `/${locale}/menu/${tableId}` : "";
+  // Use clean customer URLs (table number) and let middleware add locale prefix.
+  const tableNumber = table?.number ?? "";
+  const menuPath = tableNumber ? `/menu/${encodeURIComponent(tableNumber)}` : "";
   const menuUrl =
     typeof window !== "undefined" && menuPath
       ? new URL(menuPath, window.location.origin).toString()

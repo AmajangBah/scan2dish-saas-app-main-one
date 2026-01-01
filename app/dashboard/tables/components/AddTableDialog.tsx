@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Info, Plus } from "lucide-react";
 import { createTable } from "@/app/actions/tables";
+import type { Table } from "../types";
 
 export default function AddTableDialog({
   open,
@@ -31,8 +34,9 @@ export default function AddTableDialog({
 }: {
   open: boolean;
   setOpen: (v: boolean) => void;
-  onSuccess?: () => void;
+  onSuccess?: (table: Table) => void;
 }) {
+  const router = useRouter();
   const [tableNumber, setTableNumber] = useState("");
   const [capacity, setCapacity] = useState("4");
   const [locationPreset, setLocationPreset] = useState("Main Floor");
@@ -70,16 +74,30 @@ export default function AddTableDialog({
         location,
       });
 
-      if (result.success) {
+      if (result.success && result.id) {
+        const created: Table = {
+          id: result.id,
+          number: tableNumber.trim(),
+          capacity: capacityNum,
+          status: "available",
+          location,
+          qrAssigned: true,
+          qrScans: 0,
+        };
+
         setTableNumber("");
         setCapacity("4");
         setLocationPreset("Main Floor");
         setCustomLocation("");
         setError(null);
         setOpen(false);
-        if (onSuccess) onSuccess();
+        toast.success("Table created");
+        onSuccess?.(created);
+        // Ensure any server-fetched parts of the page (counts, etc.) update too.
+        router.refresh();
       } else {
         setError(result.error || "Failed to create table");
+        toast.error(result.error || "Failed to create table");
       }
     });
   };

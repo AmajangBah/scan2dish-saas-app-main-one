@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +32,7 @@ export default function DiscountsClient({
   availableCategories,
   availableItems,
 }: DiscountsClientProps) {
+  const router = useRouter();
   const [discounts, setDiscounts] = useState<Discount[]>(initialDiscounts);
   const [createOpen, setCreateOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -50,7 +53,20 @@ export default function DiscountsClient({
     startTransition(async () => {
       const result = await createDiscount(formData);
 
-      if (result.success) {
+      if (result.success && result.id) {
+        const created: Discount = {
+          id: result.id,
+          restaurant_id: "",
+          discount_type: formData.discount_type,
+          discount_value: formData.discount_value,
+          apply_to: formData.apply_to,
+          category_id: formData.category_id ?? null,
+          item_id: formData.item_id ?? null,
+          start_time: null,
+          end_time: null,
+          is_active: Boolean(formData.is_active),
+        };
+        setDiscounts((prev) => [created, ...prev]);
         setCreateOpen(false);
         // Reset form
         setFormData({
@@ -61,10 +77,11 @@ export default function DiscountsClient({
           item_id: null,
           is_active: true,
         });
-        // Refresh will happen via revalidatePath
-        window.location.reload();
+        toast.success("Discount created");
+        router.refresh();
       } else {
         setError(result.error || "Failed to create discount");
+        toast.error(result.error || "Failed to create discount");
       }
     });
   };
@@ -83,6 +100,9 @@ export default function DiscountsClient({
           prev.map((d) => (d.id === id ? { ...d, is_active: currentStatus } : d))
         );
         setError(result.error || "Failed to toggle discount");
+        toast.error(result.error || "Failed to toggle discount");
+      } else {
+        router.refresh();
       }
     });
   };
@@ -100,6 +120,10 @@ export default function DiscountsClient({
         // Rollback on error
         setDiscounts(backup);
         setError(result.error || "Failed to delete discount");
+        toast.error(result.error || "Failed to delete discount");
+      } else {
+        toast.success("Discount deleted");
+        router.refresh();
       }
     });
   };
