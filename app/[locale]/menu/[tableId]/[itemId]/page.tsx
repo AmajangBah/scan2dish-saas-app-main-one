@@ -41,11 +41,10 @@ type MenuItem = {
 
 export default function MenuItemPage() {
   const params = useParams();
-  const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const itemId = typeof params.itemId === "string" ? params.itemId : null;
   const locale = typeof params.locale === "string" ? params.locale : null;
   const { add } = useCart();
-  const { currency, restaurantId } = useMenuRestaurant();
+  const { currency, restaurantId, tableSlug } = useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
 
   const [qty, setQty] = useState(1);
@@ -125,7 +124,7 @@ export default function MenuItemPage() {
     <div className="px-4 pt-6 pb-10 bg-background min-h-dvh">
       <div className="max-w-xl mx-auto space-y-4">
         <Button asChild variant="outline" className="rounded-xl">
-          <Link href={tableId ? `${base}/menu/${tableId}/browse` : `${base}/menu`}>
+          <Link href={tableSlug ? `${base}/menu/${tableSlug}/browse` : `${base}/menu`}>
             Back to menu
           </Link>
         </Button>

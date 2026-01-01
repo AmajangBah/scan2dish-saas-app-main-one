@@ -39,11 +39,11 @@ function pickTranslatedText({
 
 export default function CheckoutPage() {
   const params = useParams();
-  const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const locale = typeof params.locale === "string" ? params.locale : null;
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
-  const { currency, restaurantName, tableNumber, restaurantId } = useMenuRestaurant();
+  const { currency, restaurantName, tableNumber, restaurantId, tableId, tableSlug } =
+    useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -180,7 +180,7 @@ export default function CheckoutPage() {
 
       if (result.success && result.orderId) {
         clear();
-        router.push(`${base}/menu/${tableId}/order/${result.orderId}?success=1`);
+        router.push(`${base}/menu/${tableSlug}/order/${result.orderId}?success=1`);
       } else {
         setError(result.error || "Failed to place order");
       }
@@ -202,14 +202,14 @@ export default function CheckoutPage() {
               {restaurantName} • Table {tableNumber}
             </p>
           </div>
-          {tableId && (
+          {tableSlug && (
             <Button asChild variant="outline" className="shrink-0">
-              <Link href={`${base}/menu/${tableId}/cart`}>Back</Link>
+              <Link href={`${base}/menu/${tableSlug}/cart`}>Back</Link>
             </Button>
           )}
         </div>
 
-        {items.length === 0 && tableId && (
+        {items.length === 0 && tableSlug && (
           <Card className="p-6 rounded-2xl">
             <div className="text-base font-semibold">Your cart is empty</div>
             <p className="text-sm text-muted-foreground mt-1">
@@ -219,7 +219,7 @@ export default function CheckoutPage() {
               asChild
               className="mt-4 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
             >
-              <Link href={`${base}/menu/${tableId}/browse`}>Browse menu</Link>
+              <Link href={`${base}/menu/${tableSlug}/browse`}>Browse menu</Link>
             </Button>
           </Card>
         )}
@@ -243,10 +243,10 @@ export default function CheckoutPage() {
                         </span>
                       </div>
                     ))}
-                    {tableId && (
+                    {tableSlug && (
                       <div className="pt-2">
                         <Button asChild variant="outline" size="sm" className="rounded-full">
-                          <Link href={`${base}/menu/${tableId}/cart`}>Edit cart</Link>
+                          <Link href={`${base}/menu/${tableSlug}/cart`}>Edit cart</Link>
                         </Button>
                       </div>
                     )}

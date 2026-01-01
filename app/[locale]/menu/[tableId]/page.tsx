@@ -9,10 +9,9 @@ import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 
 export default function MenuIntroPage() {
   const params = useParams();
-  const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const locale = typeof params.locale === "string" ? params.locale : null;
   const base = locale ? `/${locale}` : "";
-  const { restaurantName, tableNumber } = useMenuRestaurant();
+  const { restaurantName, tableNumber, tableSlug } = useMenuRestaurant();
 
   return (
     <div className="px-4 pt-6 pb-10">
@@ -58,12 +57,16 @@ export default function MenuIntroPage() {
 
           <div className="mt-5 flex items-center justify-between gap-3">
             <Button asChild variant="outline" className="rounded-xl">
-              <Link href={tableId ? `${base}/menu/${tableId}/browse` : `${base}/menu`}>
+              <Link
+                href={tableSlug ? `${base}/menu/${tableSlug}/browse` : `${base}/menu`}
+              >
                 Browse menu
               </Link>
             </Button>
             <Button asChild className="rounded-xl bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90">
-              <Link href={tableId ? `${base}/menu/${tableId}/browse` : `${base}/menu`}>
+              <Link
+                href={tableSlug ? `${base}/menu/${tableSlug}/browse` : `${base}/menu`}
+              >
                 Continue <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             </Button>

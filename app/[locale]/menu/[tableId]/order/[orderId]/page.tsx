@@ -29,11 +29,11 @@ export default async function OrderTracker({
       created_at,
       restaurant_tables!inner(
         table_number,
+        id,
         restaurants!restaurant_id(currency)
       )
     `)
     .eq("id", orderId)
-    .eq("table_id", tableId)
     .single();
 
   if (error || !order) {
@@ -96,7 +96,12 @@ export default async function OrderTracker({
   const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
   const currency = Array.isArray(rt) ? rt[0]?.restaurants?.currency : rt?.restaurants?.currency;
   const currencyCode = currency ? String(currency) : "GMD";
-  const trackHref = `/${locale}/menu/${tableId}/order/${orderId}`;
+  // Ensure the order belongs to the table indicated in the URL (now table number).
+  if (tableNumber && String(tableNumber) !== String(tableId)) {
+    notFound();
+  }
+
+  const trackHref = `/${locale}/menu/${encodeURIComponent(String(tableNumber ?? tableId))}/order/${orderId}`;
 
   return (
     <div className="min-h-dvh pb-10 px-4 pt-6 bg-background">
@@ -225,7 +230,7 @@ export default async function OrderTracker({
           </div>
 
           <Link
-            href={`/${locale}/menu/${tableId}/browse`}
+            href={`/${locale}/menu/${encodeURIComponent(String(tableNumber ?? tableId))}/browse`}
             className="mt-4 block bg-[var(--menu-brand)] hover:bg-[var(--menu-brand)]/90 text-white text-center py-3 rounded-xl font-medium"
           >
             Back to menu

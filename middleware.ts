@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
-import { locales, defaultLocale } from "./i18n";
+import { defaultLocale, locales } from "./i18n";
 
 // Create i18n middleware
 const intlMiddleware = createMiddleware({
@@ -11,13 +11,21 @@ const intlMiddleware = createMiddleware({
   localePrefix: "always",
 });
 
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isLocaleSegment(seg: string | undefined) {
+  return !!seg && (locales as readonly string[]).includes(seg);
+}
+
 /**
  * Middleware to:
- * 1. Handle internationalization (i18n)
- * 2. Protect authenticated routes
+ * 1. Handle internationalization (i18n) for customer menu routes
+ * 2. Protect authenticated routes (dashboard/admin)
  * 3. Refresh Supabase session
+ * 4. Clean customer menu URLs by redirecting UUID table IDs -> table numbers
  */
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   /**
    * Only run i18n routing for translated, customer-facing menu routes.
    * Dashboards + home must remain stable and non-localized.
@@ -28,7 +36,7 @@ export async function proxy(request: NextRequest) {
     pathname === "/menu" ||
     pathname.startsWith("/menu/") ||
     (localePrefixRegex.test(pathname) &&
-      (pathname.split("/").filter(Boolean)[1] === "menu"));
+      pathname.split("/").filter(Boolean)[1] === "menu");
 
   const intlResponse = isMenuRoute ? intlMiddleware(request) : null;
 
@@ -56,12 +64,8 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          response = NextResponse.next({
-            request,
-          });
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -69,6 +73,48 @@ export async function proxy(request: NextRequest) {
       },
     }
   );
+
+  // --- Menu URL cleanup: /menu/<uuid>/... -> /menu/<table_number>/...
+  if (isMenuRoute) {
+    const segments = pathname.split("/").filter(Boolean);
+    const hasLocale = isLocaleSegment(segments[0]);
+    const menuIdx = hasLocale ? 1 : 0;
+
+    if (segments[menuIdx] === "menu" && segments.length > menuIdx + 1) {
+      const tableSeg = segments[menuIdx + 1];
+      if (uuidRegex.test(tableSeg)) {
+        const { data: table, error } = await supabase
+          .from("restaurant_tables")
+          .select("id, restaurant_id, table_number, is_active")
+          .eq("id", tableSeg)
+          .eq("is_active", true)
+          .single();
+
+        if (!error && table?.table_number) {
+          const nextSegments = [...segments];
+          nextSegments[menuIdx + 1] = encodeURIComponent(String(table.table_number));
+
+          const url = request.nextUrl.clone();
+          url.pathname = `/${nextSegments.join("/")}`;
+
+          const redirectRes = NextResponse.redirect(url);
+          redirectRes.cookies.set("s2d_table_id", String(table.id), {
+            path: "/",
+            sameSite: "lax",
+          });
+          redirectRes.cookies.set("s2d_restaurant_id", String(table.restaurant_id), {
+            path: "/",
+            sameSite: "lax",
+          });
+          redirectRes.cookies.set("s2d_table_number", String(table.table_number), {
+            path: "/",
+            sameSite: "lax",
+          });
+          return redirectRes;
+        }
+      }
+    }
+  }
 
   // Refresh session if expired
   const {
@@ -138,9 +184,7 @@ export async function proxy(request: NextRequest) {
       .eq("restaurant_id", restaurant.id)
       .maybeSingle();
 
-    const onboardingCompleted = !!(
-      onboarding?.completed || onboarding?.skipped
-    );
+    const onboardingCompleted = !!(onboarding?.completed || onboarding?.skipped);
     if (!onboardingCompleted && request.nextUrl.pathname !== "/onboarding") {
       const url = new URL("/onboarding", request.url);
       url.searchParams.set("redirect", request.nextUrl.pathname);
@@ -176,3 +220,4 @@ export const config = {
     "/",
   ],
 };
+
