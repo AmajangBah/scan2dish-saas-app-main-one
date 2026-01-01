@@ -31,11 +31,10 @@ function pickTranslatedText({
 
 export default function CartPage() {
   const params = useParams();
-  const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const locale = typeof params.locale === "string" ? params.locale : null;
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
-  const { currency, restaurantId } = useMenuRestaurant();
+  const { currency, restaurantId, tableId, tableSlug } = useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
 
   const [pricing, setPricing] = useState<{
@@ -133,8 +132,8 @@ export default function CartPage() {
   }, [items, restaurantId, locale]);
 
   const goToCheckout = () => {
-    if (!tableId) return;
-    router.push(`${base}/menu/${tableId}/checkout`);
+    if (!tableSlug) return;
+    router.push(`${base}/menu/${tableSlug}/checkout`);
   };
 
   return (
@@ -147,9 +146,9 @@ export default function CartPage() {
               Review items, then place your order.
             </p>
           </div>
-          {tableId && (
+          {tableSlug && (
             <Button asChild variant="outline" className="shrink-0">
-              <Link href={`${base}/menu/${tableId}/browse`}>Add items</Link>
+              <Link href={`${base}/menu/${tableSlug}/browse`}>Add items</Link>
             </Button>
           )}
         </div>
@@ -161,12 +160,12 @@ export default function CartPage() {
               <p className="text-sm text-muted-foreground mt-1">
                 Add a few items to place an order.
               </p>
-              {tableId && (
+              {tableSlug && (
                 <Button
                   asChild
                   className="mt-4 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
                 >
-                  <Link href={`${base}/menu/${tableId}/browse`}>Browse menu</Link>
+                  <Link href={`${base}/menu/${tableSlug}/browse`}>Browse menu</Link>
                 </Button>
               )}
             </Card>

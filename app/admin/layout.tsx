@@ -3,6 +3,7 @@
  * Provides navigation and layout for admin pages
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/supabase/admin";
@@ -16,6 +17,10 @@ import {
   LogOut,
   Shield,
 } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard",
+};
 
 export default async function AdminLayout({
   children,

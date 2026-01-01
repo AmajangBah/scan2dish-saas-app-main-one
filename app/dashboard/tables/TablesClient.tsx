@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 // COMPONENTS
 import TableCard from "./components/TableCard";
@@ -24,6 +25,7 @@ export default function TablesClient({
 }: {
   initialTables: Table[];
 }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
@@ -59,6 +61,7 @@ export default function TablesClient({
         toast.error("Failed to delete table");
       } else {
         toast.success("Table deleted");
+        router.refresh();
       }
     });
   };
@@ -92,6 +95,9 @@ export default function TablesClient({
           )
         );
         setError(result.error || "Failed to update table status");
+        toast.error(result.error || "Failed to update table status");
+      } else {
+        router.refresh();
       }
     });
   };
@@ -113,9 +119,14 @@ export default function TablesClient({
   const activeTables = tables.filter((t) => t.status !== "cleaning").length;
   const missingQr = tables.filter((t) => !t.qrAssigned).length;
 
-  const handleTableAdded = () => {
-    // Refresh will happen via revalidatePath in the action
-    // Just close the dialog
+  const handleTableAdded = (created: Table) => {
+    setTables((prev) => {
+      if (prev.some((t) => t.id === created.id)) return prev;
+      const next = [...prev, created];
+      // Keep a stable sort similar to server ordering.
+      next.sort((a, b) => String(a.number).localeCompare(String(b.number)));
+      return next;
+    });
     setIsAddDialogOpen(false);
   };
 
