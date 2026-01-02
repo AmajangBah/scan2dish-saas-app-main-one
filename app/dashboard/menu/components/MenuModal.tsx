@@ -22,6 +22,8 @@ import { useState, useEffect } from "react";
 import { MenuItem } from "../types";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
+type MenuTags = MenuItem["tags"];
+
 export default function MenuModal({
   open,
   onClose,
@@ -60,10 +62,12 @@ export default function MenuModal({
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Nutrition tags
-  const [tags, setTags] = useState({
+  const [tags, setTags] = useState<MenuTags>({
     spicy: false,
     vegetarian: false,
     glutenFree: false,
+    menuType: undefined,
+    protein: undefined,
   });
 
   // Variants
@@ -86,6 +90,8 @@ export default function MenuModal({
           spicy: false,
           vegetarian: false,
           glutenFree: false,
+          menuType: undefined,
+          protein: undefined,
         }
       );
       setVariants(itemToEdit.variants || []);
@@ -99,7 +105,13 @@ export default function MenuModal({
       setAvailable(true);
       setImages([]);
       setNewImageUrl("");
-      setTags({ spicy: false, vegetarian: false, glutenFree: false });
+      setTags({
+        spicy: false,
+        vegetarian: false,
+        glutenFree: false,
+        menuType: undefined,
+        protein: undefined,
+      });
       setVariants([]);
     }
     setFormError(null);
@@ -373,6 +385,76 @@ export default function MenuModal({
             <p className="text-xs text-muted-foreground">
               These badges help customers decide quickly.
             </p>
+          </div>
+
+          {/* Recommendation tags */}
+          <div className="rounded-2xl border bg-muted/10 p-4 space-y-3">
+            <div className="font-semibold">Recommendation tags (optional)</div>
+            <p className="text-xs text-muted-foreground">
+              These improve “Chicken → recommended drinks” and similar pairings in the customer menu.
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Menu type</Label>
+                <select
+                  value={tags.menuType ?? ""}
+                  onChange={(e) =>
+                    setTags((t) => ({
+                      ...t,
+                      menuType: (e.target.value as "food" | "dessert" | "drink" | "") || undefined,
+                      // If switched away from food, clear protein automatically.
+                      protein:
+                        e.target.value === "food" ? t.protein : undefined,
+                    }))
+                  }
+                  className="w-full h-10 px-3 rounded-md border bg-background"
+                >
+                  <option value="">Auto (from category)</option>
+                  <option value="food">🍽️ Food</option>
+                  <option value="dessert">🍰 Dessert</option>
+                  <option value="drink">🥤 Drink</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Protein (for food)</Label>
+                <select
+                  value={tags.protein ?? ""}
+                  onChange={(e) =>
+                    setTags((t) => ({
+                      ...t,
+                      protein:
+                        (e.target.value as
+                          | "chicken"
+                          | "beef"
+                          | "fish"
+                          | "lamb"
+                          | "goat"
+                          | "shrimp"
+                          | "pork"
+                          | "vegetarian"
+                          | "") || undefined,
+                    }))
+                  }
+                  disabled={tags.menuType === "drink" || tags.menuType === "dessert"}
+                  className="w-full h-10 px-3 rounded-md border bg-background disabled:opacity-60"
+                >
+                  <option value="">None</option>
+                  <option value="chicken">🍗 Chicken</option>
+                  <option value="beef">🥩 Beef</option>
+                  <option value="fish">🐟 Fish</option>
+                  <option value="shrimp">🦐 Shrimp</option>
+                  <option value="lamb">🐑 Lamb</option>
+                  <option value="goat">🐐 Goat</option>
+                  <option value="pork">🥓 Pork</option>
+                  <option value="vegetarian">🥗 Vegetarian</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground">
+                  Tip: set Chicken for chicken meals, so the menu can suggest the best drinks.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Images */}

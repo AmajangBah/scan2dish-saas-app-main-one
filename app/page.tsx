@@ -9,14 +9,35 @@ import SecondSection from "./components/marketing/SecondSection";
 import TestimonialSection from "./components/marketing/TestimonialSection";
 import ThirdSection from "./components/marketing/ThirdSection";
 import TopSection from "./components/marketing/TopSection";
+import { getAdminUser } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getRestaurantAuthContext } from "@/lib/auth/restaurant";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isAuthenticated = !!user;
+
+  let dashboardHref = "/dashboard";
+  if (user) {
+    const adminUser = await getAdminUser();
+    if (adminUser) {
+      dashboardHref = "/admin";
+    } else {
+      const restaurantCtx = await getRestaurantAuthContext();
+      dashboardHref = restaurantCtx?.onboardingCompleted ? "/dashboard" : "/onboarding";
+    }
+  }
+
   return (
     <main className="scroll-smooth">
-      <NavBar />
+      <NavBar isAuthenticated={isAuthenticated} dashboardHref={dashboardHref} />
       {/* Hero Section */}
       <header className="min-h-screen bg-[#D35A0F] px-6">
-        <TopSection />
+        <TopSection isAuthenticated={isAuthenticated} dashboardHref={dashboardHref} />
       </header>
 
       {/* Features Section */}
@@ -43,7 +64,7 @@ export default function Home() {
 
       {/* CTA Section */}
       <section>
-        <CtaSection />
+        <CtaSection isAuthenticated={isAuthenticated} dashboardHref={dashboardHref} />
       </section>
 
       {/* FAQ Section */}

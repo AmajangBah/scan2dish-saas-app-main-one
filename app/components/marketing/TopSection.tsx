@@ -5,11 +5,17 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Route from "../../constants/Route";
 
-const TopSection = () => {
+const TopSection = ({
+  isAuthenticated,
+  dashboardHref,
+}: {
+  isAuthenticated: boolean;
+  dashboardHref: string;
+}) => {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    router.push(Route.SIGNUPPAGE);
+    router.push(isAuthenticated ? dashboardHref : Route.SIGNUPPAGE);
   };
 
   const handleSeeHowItWorks = () => {
@@ -35,7 +41,7 @@ const TopSection = () => {
             onClick={handleGetStarted}
             className="bg-white rounded-md text-black hover:bg-gray-100 hover:scale-105 transition-all duration-300 px-6 py-4"
           >
-            Get Started Now
+            {isAuthenticated ? "Go to Dashboard" : "Get Started Now"}
           </Button>
           <Button
             onClick={handleSeeHowItWorks}

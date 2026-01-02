@@ -193,7 +193,7 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="px-4 pt-6 pb-10">
+    <div className="px-4 pt-6 pb-10 bg-gradient-to-b from-[var(--menu-brand)]/10 via-background to-background">
       <div className="max-w-xl mx-auto">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="min-w-0">

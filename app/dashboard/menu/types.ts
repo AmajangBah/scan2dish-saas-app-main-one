@@ -22,6 +22,20 @@ export interface MenuItem {
     spicy: boolean;
     vegetarian: boolean;
     glutenFree: boolean;
+    /**
+     * Optional structured tags to power customer recommendations.
+     * These do NOT affect pricing/order logic.
+     */
+    menuType?: "food" | "dessert" | "drink";
+    protein?:
+      | "chicken"
+      | "beef"
+      | "fish"
+      | "lamb"
+      | "goat"
+      | "shrimp"
+      | "pork"
+      | "vegetarian";
   };
   variants: { label: string; price: number }[];
 }

@@ -18,6 +18,8 @@ export default function ProductCard({
     desc?: string;
     price: number;
     image?: string;
+    categoryLabel?: string;
+    tags?: unknown;
     outOfStock?: boolean;
   };
 }) {
@@ -35,7 +37,7 @@ export default function ProductCard({
           if (product.outOfStock) return;
           setOpen(true);
         }}
-        className={`w-full text-left flex gap-4 items-start p-4 bg-card rounded-2xl border shadow-sm transition-colors active:scale-[0.99] ${
+        className={`w-full text-left flex gap-4 items-start p-4 bg-card/90 backdrop-blur rounded-2xl border shadow-sm transition-colors active:scale-[0.99] ${
           product.outOfStock
             ? "opacity-70 cursor-not-allowed"
             : "hover:bg-muted/30"
@@ -78,7 +80,7 @@ export default function ProductCard({
             </div>
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               disabled={Boolean(product.outOfStock)}
               onClick={(e) => {
                 e.stopPropagation();
@@ -94,6 +96,7 @@ export default function ProductCard({
                 );
                 toast.success("Added to cart");
               }}
+              className="bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add

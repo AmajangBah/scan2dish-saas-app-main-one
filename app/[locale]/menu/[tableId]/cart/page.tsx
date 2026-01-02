@@ -11,6 +11,8 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { previewOrderPricing } from "@/app/actions/orderPricing";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { classifyMenuType, supabaseCategoryOrForMenuType } from "../../utils/menuType";
+import { toast } from "sonner";
 
 function pickTranslatedText({
   locale,
@@ -33,7 +35,7 @@ export default function CartPage() {
   const params = useParams();
   const locale = typeof params.locale === "string" ? params.locale : null;
   const router = useRouter();
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, clear, add } = useCart();
   const { currency, restaurantId, tableId, tableSlug } = useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
 
@@ -47,6 +49,16 @@ export default function CartPage() {
   const [displayNameById, setDisplayNameById] = useState<Record<string, string>>(
     {}
   );
+  const [categoryById, setCategoryById] = useState<Record<string, string | undefined>>(
+    {}
+  );
+  const [menuTypeById, setMenuTypeById] = useState<
+    Record<string, "food" | "dessert" | "drink" | undefined>
+  >({});
+  const [upsells, setUpsells] = useState<
+    { id: string; name: string; price: number; image?: string; outOfStock?: boolean }[]
+  >([]);
+  const [upsellsLoading, setUpsellsLoading] = useState(false);
 
   const pricingInput = useMemo(() => {
     if (!tableId) return null;
@@ -92,6 +104,8 @@ export default function CartPage() {
       try {
         if (!restaurantId || items.length === 0) {
           setDisplayNameById({});
+          setCategoryById({});
+          setMenuTypeById({});
           return;
         }
 
@@ -99,29 +113,55 @@ export default function CartPage() {
         const ids = items.map((i) => i.id);
         const { data, error } = await supabase
           .from("menu_items")
-          .select("id, name, name_translations")
+          .select("id, name, name_translations, category, tags")
           .eq("restaurant_id", restaurantId)
           .in("id", ids);
 
         if (error) {
           setDisplayNameById({});
+          setCategoryById({});
+          setMenuTypeById({});
           return;
         }
 
         const map: Record<string, string> = {};
+        const catMap: Record<string, string | undefined> = {};
+        const tagMenuTypeMap: Record<string, "food" | "dessert" | "drink" | undefined> = {};
         for (const row of data ?? []) {
           const baseName = String((row as unknown as { name?: unknown }).name ?? "");
           if (!baseName) continue;
-          map[String((row as unknown as { id?: unknown }).id)] = pickTranslatedText({
+          const id = String((row as unknown as { id?: unknown }).id);
+          map[id] = pickTranslatedText({
             locale,
             base: baseName,
             translations: (row as unknown as { name_translations?: unknown }).name_translations,
           });
+          const c = (row as unknown as { category?: unknown }).category;
+          catMap[id] = c ? String(c) : undefined;
+
+          const tagsObj =
+            (row as unknown as { tags?: unknown }).tags &&
+            typeof (row as unknown as { tags?: unknown }).tags === "object" &&
+            !Array.isArray((row as unknown as { tags?: unknown }).tags)
+              ? ((row as unknown as { tags?: unknown }).tags as Record<string, unknown>)
+              : null;
+          const mt =
+            tagsObj && typeof tagsObj.menuType === "string" ? String(tagsObj.menuType) : "";
+          tagMenuTypeMap[id] =
+            mt === "food" || mt === "dessert" || mt === "drink" ? (mt as any) : undefined;
         }
 
-        if (!cancelled) setDisplayNameById(map);
+        if (!cancelled) {
+          setDisplayNameById(map);
+          setCategoryById(catMap);
+          setMenuTypeById(tagMenuTypeMap);
+        }
       } catch {
-        if (!cancelled) setDisplayNameById({});
+        if (!cancelled) {
+          setDisplayNameById({});
+          setCategoryById({});
+          setMenuTypeById({});
+        }
       }
     }
 
@@ -131,13 +171,116 @@ export default function CartPage() {
     };
   }, [items, restaurantId, locale]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUpsells() {
+      if (!restaurantId) return;
+      if (items.length === 0) {
+        setUpsells([]);
+        setUpsellsLoading(false);
+        return;
+      }
+
+      const cartIds = new Set(items.map((i) => i.id));
+      const cartTypes = new Set(
+        items
+          .map((i) => menuTypeById[i.id] ?? classifyMenuType(categoryById[i.id]))
+          .filter(Boolean)
+      );
+
+      // If no drink in cart → recommend drinks
+      // Else if no dessert → recommend desserts
+      const target = !cartTypes.has("drink")
+        ? "drink"
+        : !cartTypes.has("dessert")
+          ? "dessert"
+          : null;
+
+      if (!target) {
+        setUpsells([]);
+        setUpsellsLoading(false);
+        return;
+      }
+
+      try {
+        setUpsellsLoading(true);
+        setUpsells([]);
+
+        const supabase = createBrowserSupabase();
+        const { data, error } = await supabase
+          .from("menu_items")
+          .select(
+            "id, name, description, name_translations, description_translations, price, category, images, available, inventory_out_of_stock"
+          )
+          .eq("restaurant_id", restaurantId)
+          .eq("available", true)
+          .eq("inventory_out_of_stock", false)
+          .or(supabaseCategoryOrForMenuType(target))
+          .order("name", { ascending: true })
+          .limit(8);
+
+        if (error) throw error;
+
+        const mapped =
+          data
+            ?.map((row) => {
+              const id = String((row as unknown as { id?: unknown }).id ?? "");
+              if (!id || cartIds.has(id)) return null;
+
+              const images = Array.isArray((row as unknown as { images?: unknown }).images)
+                ? ((row as unknown as { images?: unknown }).images as unknown[])
+                : [];
+              const firstImage = images[0];
+
+              const name = pickTranslatedText({
+                locale,
+                base: String((row as unknown as { name?: unknown }).name ?? ""),
+                translations: (row as unknown as { name_translations?: unknown }).name_translations,
+              });
+
+              return {
+                id,
+                name,
+                price: Number((row as unknown as { price?: unknown }).price ?? 0),
+                image:
+                  typeof firstImage === "string" && !firstImage.startsWith("blob:")
+                    ? firstImage
+                    : undefined,
+                outOfStock: Boolean(
+                  (row as unknown as { inventory_out_of_stock?: unknown }).inventory_out_of_stock
+                ),
+              };
+            })
+            .filter(Boolean) as {
+            id: string;
+            name: string;
+            price: number;
+            image?: string;
+            outOfStock?: boolean;
+          }[] ?? [];
+
+        if (!cancelled) setUpsells(mapped.slice(0, 4));
+      } catch {
+        if (!cancelled) setUpsells([]);
+      } finally {
+        if (!cancelled) setUpsellsLoading(false);
+      }
+    }
+
+    loadUpsells();
+    return () => {
+      cancelled = true;
+    };
+  }, [restaurantId, items, categoryById, menuTypeById, locale]);
+
   const goToCheckout = () => {
     if (!tableSlug) return;
     router.push(`${base}/menu/${tableSlug}/checkout`);
   };
 
   return (
-    <div className="px-4 pt-6 pb-10">
+    <div className="px-4 pt-6 pb-10 bg-gradient-to-b from-[var(--menu-brand)]/10 via-background to-background">
       <div className="max-w-xl mx-auto">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="min-w-0">
@@ -178,6 +321,51 @@ export default function CartPage() {
             />
           ))}
         </div>
+
+        {/* Upsell recommendations */}
+        {(upsellsLoading || upsells.length > 0) && (
+          <Card className="mt-6 p-4 rounded-2xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold">Recommended for you</div>
+                <div className="text-xs text-muted-foreground">
+                  Complete your order with one tap ✨
+                </div>
+              </div>
+              {upsellsLoading && (
+                <div className="text-xs text-muted-foreground">Loading…</div>
+              )}
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {upsells.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border bg-muted/10 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{u.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatPrice(u.price, currency)}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={Boolean(u.outOfStock)}
+                    className="shrink-0 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
+                    onClick={() => {
+                      if (u.outOfStock) return;
+                      add({ id: u.id, name: u.name, price: u.price, image: u.image }, 1);
+                      toast.success("Added to cart");
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         <Card className="mt-6 p-4 rounded-2xl">
           <div className="flex justify-between py-2">
