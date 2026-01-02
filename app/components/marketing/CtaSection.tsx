@@ -5,11 +5,17 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Route from "../../constants/Route";
 
-const CtaSection = () => {
+const CtaSection = ({
+  isAuthenticated,
+  dashboardHref,
+}: {
+  isAuthenticated: boolean;
+  dashboardHref: string;
+}) => {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    router.push(Route.SIGNUPPAGE);
+    router.push(isAuthenticated ? dashboardHref : Route.SIGNUPPAGE);
   };
 
   return (
@@ -29,7 +35,7 @@ const CtaSection = () => {
           onClick={handleGetStarted}
           className="bg-[#D35A0F] hover:bg-[#B14A08] hover:scale-105 transition-all duration-300 rounded-md py-4 px-8 sm:py-6 sm:px-12 my-10 sm:my-20"
         >
-          Get Started Today
+          {isAuthenticated ? "Open Dashboard" : "Get Started Today"}
         </Button>
 
         {/* Star Icon (top-right) */}

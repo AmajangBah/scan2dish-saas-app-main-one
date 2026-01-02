@@ -20,13 +20,15 @@ export default function TopHeader({
   const base = locale ? `/${locale}` : "";
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+    <header className="sticky top-0 z-40 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto w-full max-w-2xl px-4 py-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] text-muted-foreground font-medium">
-            Table {tableNumber}
+          <div className="flex items-center gap-2">
+            <div className="text-[11px] text-muted-foreground font-medium rounded-full border bg-muted/30 px-2 py-0.5">
+              🍽️ Table {tableNumber}
+            </div>
           </div>
-          <h2 className="text-base sm:text-lg font-semibold leading-tight truncate">
+          <h2 className="text-base sm:text-lg font-semibold leading-tight truncate mt-1">
             {title}
           </h2>
         </div>

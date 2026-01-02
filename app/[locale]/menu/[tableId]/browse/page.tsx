@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import CartBar from "../../components/CartBar";
 import { useMenuRestaurant } from "../../context/MenuRestaurantContext";
+import MenuTypeTabs, { type MenuType } from "../../components/MenuTypeTabs";
 
 function pickTranslatedText({
   locale,
@@ -33,6 +34,7 @@ export default function BrowsePage() {
   const { restaurantId } = useMenuRestaurant();
 
   const [activeCategory, setActiveCategory] = useState<string | undefined>(undefined);
+  const [activeType, setActiveType] = useState<MenuType>("all");
   const [search, setSearch] = useState("");
 
   const [loading, setLoading] = useState(true);
@@ -59,6 +61,30 @@ export default function BrowsePage() {
     }
     return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
   }, [items]);
+
+  function classifyType(categoryLabel?: string): Exclude<MenuType, "all"> {
+    const s = (categoryLabel ?? "").toLowerCase();
+    if (/(drink|beverage|juice|soda|soft|cocktail|mocktail|wine|beer|coffee|tea)/.test(s))
+      return "drink";
+    if (/(dessert|sweet|cake|ice cream|pastry|pudding|chocolate)/.test(s)) return "dessert";
+    return "food";
+  }
+
+  const categoriesForType = useMemo(() => {
+    if (activeType === "all") return categories;
+    const allowed = new Set<string>();
+    for (const it of items) {
+      if (!it.categoryId) continue;
+      const t = classifyType(it.categoryLabel);
+      if (t === activeType) allowed.add(it.categoryId);
+    }
+    return categories.filter((c) => allowed.has(c.id));
+  }, [activeType, categories, items]);
+
+  useEffect(() => {
+    // When switching the top-level filter, reset the category pill to avoid “empty state” confusion.
+    setActiveCategory(undefined);
+  }, [activeType]);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,36 +179,47 @@ export default function BrowsePage() {
   const filteredItems = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((it) => {
+      const matchesType =
+        activeType === "all" ? true : classifyType(it.categoryLabel) === activeType;
       const matchesCategory = !activeCategory || it.categoryId === activeCategory;
       const matchesSearch =
         !q ||
         it.name.toLowerCase().includes(q) ||
         (it.desc ? it.desc.toLowerCase().includes(q) : false);
-      return matchesCategory && matchesSearch;
+      return matchesType && matchesCategory && matchesSearch;
     });
-  }, [items, activeCategory, search]);
+  }, [items, activeType, activeCategory, search]);
 
   return (
     <>
-      <div className="px-4 pt-4 pb-24">
+      <div className="px-4 pt-4 pb-24 bg-gradient-to-b from-[var(--menu-brand)]/10 via-background to-background">
         <div className="max-w-2xl mx-auto space-y-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search menu…"
-              className="pl-9 h-11 rounded-2xl"
+              className="pl-9 h-11 rounded-2xl bg-card/80 backdrop-blur border shadow-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
+          {/* Quick filters */}
+          <div className="rounded-2xl border bg-card/80 backdrop-blur p-3 shadow-sm">
+            <div className="text-xs font-medium text-muted-foreground px-1 pb-2">
+              Filter
+            </div>
+            <MenuTypeTabs value={activeType} onChange={setActiveType} />
+          </div>
+
           {/* Categories */}
-          {categories.length > 0 && (
+          {categoriesForType.length > 0 && (
             <CategoryPills
-              categories={categories}
+              categories={categoriesForType}
               active={activeCategory}
-              onChange={(id) => setActiveCategory(id)}
+              onChange={(id) => setActiveCategory(id || undefined)}
+              allLabel="All"
             />
           )}
 

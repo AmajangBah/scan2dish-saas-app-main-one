@@ -10,7 +10,13 @@ import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
-const NavBar = () => {
+const NavBar = ({
+  isAuthenticated,
+  dashboardHref,
+}: {
+  isAuthenticated: boolean;
+  dashboardHref: string;
+}) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const NavLinks = [
@@ -81,19 +87,30 @@ const NavBar = () => {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex gap-3">
-            <Button
-              onClick={() => router.push(Route.LOGINPAGE)}
-              className="bg-transparent border border-white text-white px-5 py-2 hover:bg-white hover:text-[#D35A0F] transition-all duration-300 hover:scale-105"
-            >
-              Login
-            </Button>
+            {isAuthenticated ? (
+              <Button
+                onClick={() => router.push(dashboardHref)}
+                className="bg-white text-[#D35A0F] px-5 py-2 hover:bg-gray-100 transition-all duration-300 hover:scale-105 shadow-md"
+              >
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={() => router.push(Route.LOGINPAGE)}
+                  className="bg-transparent border border-white text-white px-5 py-2 hover:bg-white hover:text-[#D35A0F] transition-all duration-300 hover:scale-105"
+                >
+                  Login
+                </Button>
 
-            <Button
-              onClick={() => router.push(Route.SIGNUPPAGE)}
-              className="bg-white text-[#D35A0F] px-5 py-2 hover:bg-gray-100 transition-all duration-300 hover:scale-105 shadow-md"
-            >
-              Sign Up Free
-            </Button>
+                <Button
+                  onClick={() => router.push(Route.SIGNUPPAGE)}
+                  className="bg-white text-[#D35A0F] px-5 py-2 hover:bg-gray-100 transition-all duration-300 hover:scale-105 shadow-md"
+                >
+                  Sign Up Free
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -130,25 +147,39 @@ const NavBar = () => {
             ))}
 
             <div className="pt-4 space-y-2 border-t border-white/20">
-              <Button
-                onClick={() => {
-                  router.push(Route.LOGINPAGE);
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full bg-transparent border border-white text-white hover:bg-white hover:text-[#D35A0F] transition-colors"
-              >
-                Login
-              </Button>
+              {isAuthenticated ? (
+                <Button
+                  onClick={() => {
+                    router.push(dashboardHref);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full bg-white text-[#D35A0F] hover:bg-gray-100 transition-colors"
+                >
+                  Dashboard
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => {
+                      router.push(Route.LOGINPAGE);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-transparent border border-white text-white hover:bg-white hover:text-[#D35A0F] transition-colors"
+                  >
+                    Login
+                  </Button>
 
-              <Button
-                onClick={() => {
-                  router.push(Route.SIGNUPPAGE);
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full bg-white text-[#D35A0F] hover:bg-gray-100 transition-colors"
-              >
-                Sign Up Free
-              </Button>
+                  <Button
+                    onClick={() => {
+                      router.push(Route.SIGNUPPAGE);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-white text-[#D35A0F] hover:bg-gray-100 transition-colors"
+                  >
+                    Sign Up Free
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}
