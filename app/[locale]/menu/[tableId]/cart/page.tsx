@@ -52,6 +52,9 @@ export default function CartPage() {
   const [categoryById, setCategoryById] = useState<Record<string, string | undefined>>(
     {}
   );
+  const [menuTypeById, setMenuTypeById] = useState<
+    Record<string, "food" | "dessert" | "drink" | undefined>
+  >({});
   const [upsells, setUpsells] = useState<
     { id: string; name: string; price: number; image?: string; outOfStock?: boolean }[]
   >([]);
@@ -102,6 +105,7 @@ export default function CartPage() {
         if (!restaurantId || items.length === 0) {
           setDisplayNameById({});
           setCategoryById({});
+          setMenuTypeById({});
           return;
         }
 
@@ -109,18 +113,20 @@ export default function CartPage() {
         const ids = items.map((i) => i.id);
         const { data, error } = await supabase
           .from("menu_items")
-          .select("id, name, name_translations, category")
+          .select("id, name, name_translations, category, tags")
           .eq("restaurant_id", restaurantId)
           .in("id", ids);
 
         if (error) {
           setDisplayNameById({});
           setCategoryById({});
+          setMenuTypeById({});
           return;
         }
 
         const map: Record<string, string> = {};
         const catMap: Record<string, string | undefined> = {};
+        const tagMenuTypeMap: Record<string, "food" | "dessert" | "drink" | undefined> = {};
         for (const row of data ?? []) {
           const baseName = String((row as unknown as { name?: unknown }).name ?? "");
           if (!baseName) continue;
@@ -132,16 +138,29 @@ export default function CartPage() {
           });
           const c = (row as unknown as { category?: unknown }).category;
           catMap[id] = c ? String(c) : undefined;
+
+          const tagsObj =
+            (row as unknown as { tags?: unknown }).tags &&
+            typeof (row as unknown as { tags?: unknown }).tags === "object" &&
+            !Array.isArray((row as unknown as { tags?: unknown }).tags)
+              ? ((row as unknown as { tags?: unknown }).tags as Record<string, unknown>)
+              : null;
+          const mt =
+            tagsObj && typeof tagsObj.menuType === "string" ? String(tagsObj.menuType) : "";
+          tagMenuTypeMap[id] =
+            mt === "food" || mt === "dessert" || mt === "drink" ? (mt as any) : undefined;
         }
 
         if (!cancelled) {
           setDisplayNameById(map);
           setCategoryById(catMap);
+          setMenuTypeById(tagMenuTypeMap);
         }
       } catch {
         if (!cancelled) {
           setDisplayNameById({});
           setCategoryById({});
+          setMenuTypeById({});
         }
       }
     }
@@ -165,7 +184,9 @@ export default function CartPage() {
 
       const cartIds = new Set(items.map((i) => i.id));
       const cartTypes = new Set(
-        items.map((i) => classifyMenuType(categoryById[i.id])).filter(Boolean)
+        items
+          .map((i) => menuTypeById[i.id] ?? classifyMenuType(categoryById[i.id]))
+          .filter(Boolean)
       );
 
       // If no drink in cart → recommend drinks
@@ -251,7 +272,7 @@ export default function CartPage() {
     return () => {
       cancelled = true;
     };
-  }, [restaurantId, items, categoryById, locale]);
+  }, [restaurantId, items, categoryById, menuTypeById, locale]);
 
   const goToCheckout = () => {
     if (!tableSlug) return;

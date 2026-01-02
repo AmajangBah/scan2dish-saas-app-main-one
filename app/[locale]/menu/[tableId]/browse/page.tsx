@@ -50,6 +50,7 @@ export default function BrowsePage() {
       categoryId?: string;
       categoryLabel?: string;
       outOfStock?: boolean;
+      tags?: unknown;
     }[]
   >([]);
 
@@ -95,7 +96,7 @@ export default function BrowsePage() {
         const { data: menuRows, error: menuError } = await supabase
           .from("menu_items")
           .select(
-            "id, name, description, name_translations, description_translations, price, category, images, available, inventory_out_of_stock"
+            "id, name, description, name_translations, description_translations, price, category, images, available, inventory_out_of_stock, tags"
           )
           .eq("restaurant_id", restaurantId)
           .eq("available", true)
@@ -142,6 +143,7 @@ export default function BrowsePage() {
               categoryId,
               categoryLabel,
               outOfStock: Boolean((row as unknown as { inventory_out_of_stock?: boolean }).inventory_out_of_stock),
+              tags: (row as unknown as { tags?: unknown }).tags,
             };
           }) ?? [];
 

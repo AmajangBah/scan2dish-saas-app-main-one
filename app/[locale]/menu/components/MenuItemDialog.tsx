@@ -19,6 +19,7 @@ export type MenuProduct = {
   price: number;
   image?: string;
   categoryLabel?: string;
+  tags?: unknown;
   outOfStock?: boolean;
 };
 
@@ -73,7 +74,22 @@ export default function MenuItemDialog({
       // Core pairing heuristic:
       // - Food/Dessert → recommend Drinks
       // - Drink → recommend Desserts
-      const type = classifyMenuType(product.categoryLabel);
+      const tagsObj =
+        product.tags && typeof product.tags === "object" && !Array.isArray(product.tags)
+          ? (product.tags as Record<string, unknown>)
+          : null;
+
+      const explicitMenuType =
+        tagsObj && typeof tagsObj.menuType === "string"
+          ? (tagsObj.menuType as "food" | "dessert" | "drink")
+          : null;
+
+      const protein =
+        tagsObj && typeof tagsObj.protein === "string"
+          ? tagsObj.protein.toLowerCase()
+          : null;
+
+      const type = explicitMenuType ?? classifyMenuType(product.categoryLabel);
       const target = type === "drink" ? "dessert" : "drink";
 
       try {
@@ -92,7 +108,7 @@ export default function MenuItemDialog({
           .neq("id", product.id)
           .or(supabaseCategoryOrForMenuType(target))
           .order("name", { ascending: true })
-          .limit(6);
+          .limit(20);
 
         if (error) throw error;
 
@@ -138,7 +154,31 @@ export default function MenuItemDialog({
             } satisfies MenuProduct;
           }) ?? [];
 
-        if (!cancelled) setRecommendations(mapped.filter((r) => r.id));
+        // If a protein is set (e.g. chicken), boost matching drink names/categories.
+        const proteinBoostKeywords =
+          protein === "chicken"
+            ? ["lemon", "ginger", "cola", "juice", "iced", "tea", "soda", "lime"]
+            : protein === "fish" || protein === "shrimp"
+              ? ["lemon", "lime", "sparkling", "water", "soda"]
+              : protein === "beef" || protein === "lamb" || protein === "goat"
+                ? ["cola", "ginger", "malt", "sparkling", "water", "soda"]
+                : [];
+
+        const ranked = mapped
+          .filter((r) => r.id)
+          .map((r) => {
+            const hay = `${r.name} ${r.categoryLabel ?? ""}`.toLowerCase();
+            const score = proteinBoostKeywords.reduce(
+              (s, kw) => (hay.includes(kw) ? s + 1 : s),
+              0
+            );
+            return { r, score };
+          })
+          .sort((a, b) => b.score - a.score)
+          .map((x) => x.r)
+          .slice(0, 6);
+
+        if (!cancelled) setRecommendations(ranked);
       } catch {
         if (!cancelled) setRecommendations([]);
       } finally {
@@ -150,7 +190,7 @@ export default function MenuItemDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, restaurantId, locale, product.id, product.categoryLabel]);
+  }, [open, restaurantId, locale, product.id, product.categoryLabel, product.tags]);
 
   return (
     <Dialog

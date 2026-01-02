@@ -27,11 +27,27 @@ const MenuItemSchema = z.object({
   category: z.string().min(1, "Category is required"),
   images: z.array(z.string()).default([]),
   available: z.boolean().default(true),
-  tags: z.object({
-    spicy: z.boolean().default(false),
-    vegetarian: z.boolean().default(false),
-    glutenFree: z.boolean().default(false),
-  }).default({ spicy: false, vegetarian: false, glutenFree: false }),
+  tags: z
+    .object({
+      spicy: z.boolean().default(false),
+      vegetarian: z.boolean().default(false),
+      glutenFree: z.boolean().default(false),
+      // Optional structured tags (used for recommendations only)
+      menuType: z.enum(["food", "dessert", "drink"]).optional(),
+      protein: z
+        .enum([
+          "chicken",
+          "beef",
+          "fish",
+          "lamb",
+          "goat",
+          "shrimp",
+          "pork",
+          "vegetarian",
+        ])
+        .optional(),
+    })
+    .default({ spicy: false, vegetarian: false, glutenFree: false }),
   variants: z.array(z.object({
     label: z.string(),
     price: z.number(),
