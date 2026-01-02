@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import QuantitySelector from "./QuantitySelector";
@@ -8,6 +8,9 @@ import { useCart } from "../context/CartContext";
 import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 import { formatPrice } from "@/lib/utils/currency";
 import { toast } from "sonner";
+import { createBrowserSupabase } from "@/lib/supabase/client";
+import { useParams } from "next/navigation";
+import { classifyMenuType, supabaseCategoryOrForMenuType } from "../utils/menuType";
 
 export type MenuProduct = {
   id: string;
@@ -15,7 +18,26 @@ export type MenuProduct = {
   desc?: string;
   price: number;
   image?: string;
+  categoryLabel?: string;
+  outOfStock?: boolean;
 };
+
+function pickTranslatedText({
+  locale,
+  base,
+  translations,
+}: {
+  locale: string | null;
+  base: string;
+  translations: unknown;
+}) {
+  if (!locale || locale === "en") return base;
+  if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+    return base;
+  }
+  const v = (translations as Record<string, unknown>)[locale];
+  return typeof v === "string" && v.trim() ? v : base;
+}
 
 export default function MenuItemDialog({
   product,
@@ -31,9 +53,104 @@ export default function MenuItemDialog({
   const [qty, setQty] = useState(1);
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const [addedPulse, setAddedPulse] = useState(false);
+  const [recsLoading, setRecsLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState<MenuProduct[]>([]);
+
+  const params = useParams();
+  const locale = typeof params.locale === "string" ? params.locale : null;
+  const { restaurantId } = useMenuRestaurant();
 
   const lineTotal = useMemo(() => product.price * qty, [product.price, qty]);
   const imgBroken = Boolean(product.image && brokenUrl === product.image);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRecs() {
+      if (!open) return;
+      if (!restaurantId) return;
+
+      // Core pairing heuristic:
+      // - Food/Dessert → recommend Drinks
+      // - Drink → recommend Desserts
+      const type = classifyMenuType(product.categoryLabel);
+      const target = type === "drink" ? "dessert" : "drink";
+
+      try {
+        setRecsLoading(true);
+        setRecommendations([]);
+
+        const supabase = createBrowserSupabase();
+        const { data, error } = await supabase
+          .from("menu_items")
+          .select(
+            "id, name, description, name_translations, description_translations, price, category, images, available, inventory_out_of_stock"
+          )
+          .eq("restaurant_id", restaurantId)
+          .eq("available", true)
+          .eq("inventory_out_of_stock", false)
+          .neq("id", product.id)
+          .or(supabaseCategoryOrForMenuType(target))
+          .order("name", { ascending: true })
+          .limit(6);
+
+        if (error) throw error;
+
+        const mapped =
+          data?.map((row) => {
+            const images = Array.isArray((row as unknown as { images?: unknown }).images)
+              ? ((row as unknown as { images?: unknown }).images as unknown[])
+              : [];
+            const firstImage = images[0];
+
+            const name = pickTranslatedText({
+              locale,
+              base: String((row as unknown as { name?: unknown }).name ?? ""),
+              translations: (row as unknown as { name_translations?: unknown }).name_translations,
+            });
+            const descRaw = (row as unknown as { description?: unknown }).description;
+            const desc =
+              typeof descRaw === "string" && descRaw.trim()
+                ? pickTranslatedText({
+                    locale,
+                    base: descRaw,
+                    translations: (row as unknown as { description_translations?: unknown })
+                      .description_translations,
+                  })
+                : undefined;
+
+            return {
+              id: String((row as unknown as { id?: unknown }).id ?? ""),
+              name,
+              desc,
+              price: Number((row as unknown as { price?: unknown }).price ?? 0),
+              image:
+                typeof firstImage === "string" && !firstImage.startsWith("blob:")
+                  ? firstImage
+                  : undefined,
+              categoryLabel: (() => {
+                const c = (row as unknown as { category?: unknown }).category;
+                return c ? String(c) : undefined;
+              })(),
+              outOfStock: Boolean(
+                (row as unknown as { inventory_out_of_stock?: unknown }).inventory_out_of_stock
+              ),
+            } satisfies MenuProduct;
+          }) ?? [];
+
+        if (!cancelled) setRecommendations(mapped.filter((r) => r.id));
+      } catch {
+        if (!cancelled) setRecommendations([]);
+      } finally {
+        if (!cancelled) setRecsLoading(false);
+      }
+    }
+
+    loadRecs();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, restaurantId, locale, product.id, product.categoryLabel]);
 
   return (
     <Dialog
@@ -79,6 +196,54 @@ export default function MenuItemDialog({
             <div className="mt-4 flex items-center justify-between">
               <div className="text-sm text-muted-foreground">Quantity</div>
               <QuantitySelector value={qty} onChange={setQty} />
+            </div>
+
+            {/* Recommendations */}
+            <div className="mt-5 rounded-2xl border bg-muted/10 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold">Pairs well with</div>
+                <div className="text-xs text-muted-foreground">
+                  {recsLoading ? "Finding matches…" : "One-tap add"}
+                </div>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {!recsLoading && recommendations.length === 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    No recommendations available right now.
+                  </div>
+                )}
+
+                {recommendations.map((r) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border bg-background/60 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{r.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatPrice(r.price, currency)}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={Boolean(r.outOfStock)}
+                      onClick={() => {
+                        if (r.outOfStock) return;
+                        add(
+                          { id: r.id, name: r.name, price: r.price, image: r.image },
+                          1
+                        );
+                        toast.success("Added to cart");
+                      }}
+                      className="shrink-0 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="mt-5 flex items-center justify-between border-t pt-4">

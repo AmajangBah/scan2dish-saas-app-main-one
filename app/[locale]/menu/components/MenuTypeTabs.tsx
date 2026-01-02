@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 
-export type MenuType = "all" | "food" | "dessert" | "drink";
+export type { MenuType } from "../utils/menuType";
+import type { MenuType } from "../utils/menuType";
 
 const TABS: { id: MenuType; label: string }[] = [
   { id: "all", label: "✨ All" },

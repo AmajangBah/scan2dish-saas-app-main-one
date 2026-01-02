@@ -18,6 +18,7 @@ export default function ProductCard({
     desc?: string;
     price: number;
     image?: string;
+    categoryLabel?: string;
     outOfStock?: boolean;
   };
 }) {

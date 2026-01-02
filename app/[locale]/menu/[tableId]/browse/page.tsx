@@ -10,6 +10,7 @@ import { Search } from "lucide-react";
 import CartBar from "../../components/CartBar";
 import { useMenuRestaurant } from "../../context/MenuRestaurantContext";
 import MenuTypeTabs, { type MenuType } from "../../components/MenuTypeTabs";
+import { classifyMenuType } from "../../utils/menuType";
 
 function pickTranslatedText({
   locale,
@@ -62,20 +63,12 @@ export default function BrowsePage() {
     return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
   }, [items]);
 
-  function classifyType(categoryLabel?: string): Exclude<MenuType, "all"> {
-    const s = (categoryLabel ?? "").toLowerCase();
-    if (/(drink|beverage|juice|soda|soft|cocktail|mocktail|wine|beer|coffee|tea)/.test(s))
-      return "drink";
-    if (/(dessert|sweet|cake|ice cream|pastry|pudding|chocolate)/.test(s)) return "dessert";
-    return "food";
-  }
-
   const categoriesForType = useMemo(() => {
     if (activeType === "all") return categories;
     const allowed = new Set<string>();
     for (const it of items) {
       if (!it.categoryId) continue;
-      const t = classifyType(it.categoryLabel);
+      const t = classifyMenuType(it.categoryLabel);
       if (t === activeType) allowed.add(it.categoryId);
     }
     return categories.filter((c) => allowed.has(c.id));
@@ -180,7 +173,7 @@ export default function BrowsePage() {
     const q = search.trim().toLowerCase();
     return items.filter((it) => {
       const matchesType =
-        activeType === "all" ? true : classifyType(it.categoryLabel) === activeType;
+        activeType === "all" ? true : classifyMenuType(it.categoryLabel) === activeType;
       const matchesCategory = !activeCategory || it.categoryId === activeCategory;
       const matchesSearch =
         !q ||
