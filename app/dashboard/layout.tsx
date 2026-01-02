@@ -22,7 +22,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       }
     >
       <SidebarProvider>
-        <RestaurantSidebar restaurantName={ctx.restaurant.name} />
+        <RestaurantSidebar
+          restaurantId={ctx.restaurant.id}
+          restaurantName={ctx.restaurant.name}
+        />
         <SidebarInset className="min-w-0 bg-muted/30">
           <RestaurantNavBar restaurantName={ctx.restaurant.name} />
           <main className="p-4 md:p-6">
