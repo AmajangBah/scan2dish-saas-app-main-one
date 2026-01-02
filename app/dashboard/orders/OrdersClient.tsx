@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LayoutGrid, Table as TableIcon } from "lucide-react";
+import { markOrdersSeenNow } from "../components/useUnreadOrders";
 
 type OrderItemRow = { name?: string; quantity?: number; price?: string | number };
 type RestaurantTableJoin =
@@ -79,6 +80,11 @@ export default function OrdersClient({
   const liveStatusRef = useRef(liveStatus);
 
   const ITEMS_PER_PAGE = viewMode === "table" ? 12 : 6;
+
+  // Visiting the Orders page should clear the sidebar "unread" badge.
+  useEffect(() => {
+    markOrdersSeenNow(restaurantId);
+  }, [restaurantId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

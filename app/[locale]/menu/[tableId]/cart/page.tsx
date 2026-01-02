@@ -100,6 +100,13 @@ export default function CartPage() {
   // Keep cart item names in-sync with the selected locale (for display + order payload).
   useEffect(() => {
     let cancelled = false;
+
+    function isMenuTypeTag(
+      value: string
+    ): value is "food" | "dessert" | "drink" {
+      return value === "food" || value === "dessert" || value === "drink";
+    }
+
     async function loadNames() {
       try {
         if (!restaurantId || items.length === 0) {
@@ -147,8 +154,7 @@ export default function CartPage() {
               : null;
           const mt =
             tagsObj && typeof tagsObj.menuType === "string" ? String(tagsObj.menuType) : "";
-          tagMenuTypeMap[id] =
-            mt === "food" || mt === "dessert" || mt === "drink" ? (mt as any) : undefined;
+          tagMenuTypeMap[id] = isMenuTypeTag(mt) ? mt : undefined;
         }
 
         if (!cancelled) {

@@ -26,8 +26,17 @@ import {
 
 import Route from "@/app/constants/Route";
 import SideBarLink from "./SideBarLink";
+import { useUnreadOrdersBadge } from "./useUnreadOrders";
 
-const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
+const RestaurantSidebar = ({
+  restaurantId,
+  restaurantName,
+}: {
+  restaurantId: string;
+  restaurantName: string;
+}) => {
+  const { unreadCount } = useUnreadOrdersBadge(restaurantId);
+
   return (
     <Sidebar collapsible="icon" variant="inset">
       {/* HEADER */}
@@ -71,6 +80,7 @@ const RestaurantSidebar = ({ restaurantName }: { restaurantName: string }) => {
                 href={Route.ORDERS}
                 label="Orders"
                 icon={<Notebook className="h-4 w-4" />}
+                badgeCount={unreadCount}
               />
 
               <SideBarLink

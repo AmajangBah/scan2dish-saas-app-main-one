@@ -7,11 +7,21 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     await requireAdmin();
 
     const supabase = await createClient();
+
+    // Best-effort refresh of the materialized view powering metrics.
+    try {
+      await supabase.rpc("refresh_admin_dashboard_metrics");
+    } catch (e) {
+      console.warn("Failed to refresh admin dashboard metrics:", e);
+    }
 
     // Get metrics from materialized view
     const { data: metrics, error: metricsError } = await supabase
@@ -58,31 +68,38 @@ export async function GET() {
       commission_balance: r.total_commission_owed - r.total_commission_paid,
     }));
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        metrics: metrics || {
-          total_restaurants: 0,
-          active_restaurants: 0,
-          disabled_restaurants: 0,
-          total_orders: 0,
-          orders_last_24h: 0,
-          orders_last_7d: 0,
-          orders_last_30d: 0,
-          total_revenue: 0,
-          revenue_last_24h: 0,
-          revenue_last_7d: 0,
-          revenue_last_30d: 0,
-          total_commission_generated: 0,
-          commission_last_30d: 0,
-          total_commission_owed: 0,
-          total_commission_paid: 0,
-          commission_outstanding: 0,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          metrics: metrics || {
+            total_restaurants: 0,
+            active_restaurants: 0,
+            disabled_restaurants: 0,
+            total_orders: 0,
+            orders_last_24h: 0,
+            orders_last_7d: 0,
+            orders_last_30d: 0,
+            total_revenue: 0,
+            revenue_last_24h: 0,
+            revenue_last_7d: 0,
+            revenue_last_30d: 0,
+            total_commission_generated: 0,
+            commission_last_30d: 0,
+            total_commission_owed: 0,
+            total_commission_paid: 0,
+            commission_outstanding: 0,
+          },
+          recent_activity: recentActivity || [],
+          overdue_restaurants: overdueWithBalance,
         },
-        recent_activity: recentActivity || [],
-        overdue_restaurants: overdueWithBalance,
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Admin dashboard fetch error:", error);
     return NextResponse.json(
@@ -90,7 +107,15 @@ export async function GET() {
         success: false,
         error: error instanceof Error ? error.message : "Failed to fetch dashboard data",
       },
-      { status: error instanceof Error && error.message.includes("Unauthorized") ? 403 : 500 }
+      {
+        status:
+          error instanceof Error && error.message.includes("Unauthorized")
+            ? 403
+            : 500,
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
     );
   }
 }

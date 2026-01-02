@@ -16,10 +16,21 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AdminDashboard({
 }) {
   await requireAdmin();
   const supabase = await createClient();
+
+  // Ensure materialized metrics are up-to-date.
+  // This is intentionally best-effort: the dashboard should still render if refresh fails.
+  try {
+    await supabase.rpc("refresh_admin_dashboard_metrics");
+  } catch (e) {
+    console.warn("Failed to refresh admin dashboard metrics:", e);
+  }
 
   // Get dashboard metrics
   const { data: metrics } = await supabase
