@@ -17,12 +17,14 @@ const uuidRegex =
 export async function generateMetadata({
   params,
 }: {
-  params: { tableId: string };
+  params: Promise<{ tableId: string }>;
 }): Promise<Metadata> {
-  const tableIdOrNumber = params.tableId;
+  const { tableId } = await params;
+  const tableIdOrNumber = tableId;
   const supabase = await createClient();
   const cookieStore = await cookies();
-  const restaurantIdCookie = cookieStore.get("s2d_restaurant_id")?.value ?? null;
+  const restaurantIdCookie =
+    cookieStore.get("s2d_restaurant_id")?.value ?? null;
 
   const tableQuery = supabase
     .from("restaurant_tables")
@@ -43,11 +45,11 @@ export async function generateMetadata({
   const { data: table } = await (uuidRegex.test(tableIdOrNumber)
     ? tableQuery.eq("id", tableIdOrNumber).maybeSingle()
     : restaurantIdCookie
-      ? tableQuery
-          .eq("restaurant_id", restaurantIdCookie)
-          .eq("table_number", tableIdOrNumber)
-          .maybeSingle()
-      : tableQuery.eq("table_number", tableIdOrNumber).maybeSingle());
+    ? tableQuery
+        .eq("restaurant_id", restaurantIdCookie)
+        .eq("table_number", tableIdOrNumber)
+        .maybeSingle()
+    : tableQuery.eq("table_number", tableIdOrNumber).maybeSingle());
 
   const restaurant = (() => {
     if (!table) return null;
@@ -61,7 +63,9 @@ export async function generateMetadata({
   const tableNumber = table?.table_number ? String(table.table_number) : "";
 
   return {
-    title: tableNumber ? `${restaurantName} — Table ${tableNumber}` : restaurantName,
+    title: tableNumber
+      ? `${restaurantName} — Table ${tableNumber}`
+      : restaurantName,
     description: `Browse the menu and order from your table.`,
   };
 }
@@ -77,7 +81,8 @@ export default async function MenuLayout({
   const supabase = await createClient();
 
   const cookieStore = await cookies();
-  const restaurantIdCookie = cookieStore.get("s2d_restaurant_id")?.value ?? null;
+  const restaurantIdCookie =
+    cookieStore.get("s2d_restaurant_id")?.value ?? null;
 
   // Get table and restaurant info
   const tableQuery = supabase
@@ -103,11 +108,11 @@ export default async function MenuLayout({
   const { data: table, error: tableError } = await (uuidRegex.test(tableId)
     ? tableQuery.eq("id", tableId).single()
     : restaurantIdCookie
-      ? tableQuery
-          .eq("restaurant_id", restaurantIdCookie)
-          .eq("table_number", tableId)
-          .single()
-      : tableQuery.eq("table_number", tableId).single());
+    ? tableQuery
+        .eq("restaurant_id", restaurantIdCookie)
+        .eq("table_number", tableId)
+        .single()
+    : tableQuery.eq("table_number", tableId).single());
 
   // Table not found or inactive
   if (tableError || !table) {
@@ -126,7 +131,8 @@ export default async function MenuLayout({
             Table unavailable
           </h1>
           <p className="text-muted-foreground">
-            This table is currently inactive. Please contact staff for assistance.
+            This table is currently inactive. Please contact staff for
+            assistance.
           </p>
         </div>
       </div>
@@ -149,8 +155,8 @@ export default async function MenuLayout({
             Menu currently unavailable
           </h1>
           <p className="text-muted-foreground mb-4">
-            We&apos;re unable to show the menu at this time. Please contact staff to
-            place your order.
+            We&apos;re unable to show the menu at this time. Please contact
+            staff to place your order.
           </p>
           {restaurant?.enforcement_reason && (
             <div className="text-sm text-muted-foreground italic mt-4 p-3 bg-muted/30 rounded-xl border">

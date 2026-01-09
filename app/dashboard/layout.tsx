@@ -3,14 +3,28 @@ import RestaurantSidebar from "./components/RestaurantSidebar";
 import RestaurantNavBar from "./components/RestaurantNavBar";
 import React, { ReactNode } from "react";
 import type { Metadata } from "next";
-import { requireRestaurantPage } from "@/lib/auth/restaurant";
+import { getRestaurantAuthContext } from "@/lib/auth/restaurant";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
-export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const ctx = await requireRestaurantPage();
+export default async function DashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  // NOTE: Middleware (proxy.ts) already validates:
+  // - User is authenticated
+  // - User is a restaurant (not admin)
+  // - Onboarding is complete
+  // We only need to fetch the restaurant data here for rendering
+  const ctx = await getRestaurantAuthContext();
+
+  // This should never be null due to middleware protection, but TypeScript requires the check
+  if (!ctx) {
+    throw new Error("Unauthorized: Restaurant context not found");
+  }
 
   return (
     <div

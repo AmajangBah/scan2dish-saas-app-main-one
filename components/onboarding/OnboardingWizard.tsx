@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import {
   getOnboardingProgress,
@@ -25,7 +25,9 @@ interface OnboardingWizardProps {
   forceOpen?: boolean;
 }
 
-export default function OnboardingWizard({ forceOpen = false }: OnboardingWizardProps) {
+export default function OnboardingWizard({
+  forceOpen = false,
+}: OnboardingWizardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -34,7 +36,12 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
   const [currentStep, setCurrentStep] = useState(1);
 
   const totalSteps = 7;
-  const locale = pathname.split("/").filter(Boolean)[0] || "en";
+  // Extract locale from pathname, or default to 'en'
+  // Check if first segment is a known locale (en, fr, es), otherwise it's a route
+  const segments = pathname.split("/").filter(Boolean);
+  const knownLocales = ["en", "fr", "es"];
+  const locale =
+    segments[0] && knownLocales.includes(segments[0]) ? segments[0] : "en";
   const stepTitles = [
     "Welcome",
     "Pricing",
@@ -52,7 +59,7 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
       setLoading(true);
       const data = await getOnboardingProgress();
       setProgress(data);
-      
+
       if (data) {
         setCurrentStep(data.current_step);
         // Show wizard if not completed and not skipped
@@ -62,7 +69,7 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
           setOpen(true);
         }
       }
-      
+
       setLoading(false);
     }
 
@@ -72,7 +79,7 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
   const handleNext = async () => {
     const nextStep = currentStep + 1;
     const stepsCompleted = progress?.steps_completed || [];
-    
+
     if (!stepsCompleted.includes(currentStep)) {
       stepsCompleted.push(currentStep);
     }
@@ -130,6 +137,9 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
         showCloseButton={false}
         className="max-w-4xl max-h-[90vh] overflow-y-auto"
       >
+        {/* Accessibility: Hidden title for screen readers */}
+        <DialogTitle className="sr-only">Restaurant Setup Wizard</DialogTitle>
+
         {/* Header with progress */}
         <div className="relative pb-4 border-b">
           <button
@@ -139,7 +149,7 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
           >
             <X size={20} />
           </button>
-          
+
           <div className="pr-8">
             <div className="flex flex-col gap-1">
               <h2 className="text-2xl font-bold">Setup your restaurant</h2>
@@ -151,7 +161,7 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
                 You can skip for now and finish later from your dashboard.
               </p>
             </div>
-            
+
             {/* Stepper */}
             <div className="mt-4 flex items-center gap-2">
               {Array.from({ length: totalSteps }).map((_, i) => {
@@ -178,9 +188,7 @@ export default function OnboardingWizard({ forceOpen = false }: OnboardingWizard
         </div>
 
         {/* Step content */}
-        <div className="py-6">
-          {renderStep()}
-        </div>
+        <div className="py-6">{renderStep()}</div>
 
         {/* Skip button at bottom */}
         {currentStep < totalSteps && (

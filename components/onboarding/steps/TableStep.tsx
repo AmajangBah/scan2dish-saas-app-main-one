@@ -12,7 +12,12 @@ interface TableStepProps {
 
 export default function TableStep({ onNext, onBack }: TableStepProps) {
   const pathname = usePathname();
-  const locale = pathname.split("/").filter(Boolean)[0] || "en";
+  // Extract locale from pathname, or default to 'en'
+  // Check if first segment is a known locale (en, fr, es), otherwise it's a route
+  const segments = pathname.split("/").filter(Boolean);
+  const knownLocales = ["en", "fr", "es"];
+  const locale =
+    segments[0] && knownLocales.includes(segments[0]) ? segments[0] : "en";
 
   return (
     <div className="space-y-8 py-4">
@@ -50,7 +55,8 @@ export default function TableStep({ onNext, onBack }: TableStepProps) {
               <div>
                 <h3 className="font-bold mb-1">Enter Table Details</h3>
                 <p className="text-sm text-gray-600">
-                  Give it a number (e.g., &quot;Table 1&quot;), capacity, and location
+                  Give it a number (e.g., &quot;Table 1&quot;), capacity, and
+                  location
                 </p>
               </div>
             </div>
@@ -80,17 +86,14 @@ export default function TableStep({ onNext, onBack }: TableStepProps) {
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-800">
-            💡 <strong>Tip:</strong> You can add tables now or skip this step and add them later from your dashboard.
+            💡 <strong>Tip:</strong> You can add tables now or skip this step
+            and add them later from your dashboard.
           </p>
         </div>
       </div>
 
       <div className="flex justify-between items-center pt-6">
-        <Button
-          onClick={onBack}
-          variant="outline"
-          className="gap-2"
-        >
+        <Button onClick={onBack} variant="outline" className="gap-2">
           <ArrowLeft size={16} />
           Back
         </Button>

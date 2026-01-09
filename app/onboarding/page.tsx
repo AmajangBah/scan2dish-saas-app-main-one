@@ -1,13 +1,12 @@
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
-import { redirect } from "next/navigation";
 
 export default async function OnboardingPage() {
-  const ctx = await requireRestaurantPage({ allowOnboardingIncomplete: true });
-
-  if (ctx.onboardingCompleted) {
-    redirect("/dashboard");
-  }
+  // Simply validate that user is authenticated restaurant user.
+  // Middleware (proxy.ts) handles the routing logic:
+  // - If onboarding is complete, middleware redirects to /dashboard
+  // - This page only renders when onboarding is incomplete
+  await requireRestaurantPage();
 
   return (
     <div className="p-6">
@@ -15,4 +14,3 @@ export default async function OnboardingPage() {
     </div>
   );
 }
-

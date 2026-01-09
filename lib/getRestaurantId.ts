@@ -22,7 +22,7 @@ export async function getRestaurantId() {
     .from("restaurants")
     .select("id")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
   return restaurant?.id || null;
 }

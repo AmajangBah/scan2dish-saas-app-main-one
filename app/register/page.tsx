@@ -65,12 +65,13 @@ const SignupPage = () => {
 
     try {
       const supabase = createBrowserSupabase();
-      // 1️⃣ Sign up user
+
+      // 1️⃣ Sign up user with metadata
+      // The database trigger will automatically create a restaurant record
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
         options: {
-          // After email confirmation, route into onboarding (dashboard is blocked until completion).
           emailRedirectTo: `${window.location.origin}/onboarding`,
           data: {
             business_name: values.businessName,
@@ -82,27 +83,16 @@ const SignupPage = () => {
       if (error) throw error;
       if (!data.user) throw new Error("User not created");
 
-      const userId = data.user.id;
-
-      // 2️⃣ Insert restaurant row (RLS safe)
-      const { error: dbError } = await supabase.from("restaurants").insert([
-        {
-          user_id: userId,
-          name: values.businessName,
-          phone: values.phone,
-          brand_color: "#C84501",
-          currency: "GMD", // Default currency
-        },
-      ]);
-
-      if (dbError) throw dbError;
-
-      // No alerts: always move to a confirmation page.
+      // 2️⃣ Triggers automatically create restaurant and onboarding_progress
+      // No need to verify - the database guarantees this happens
+      // Trust the trigger and move to confirmation page
       window.location.href = "/register/confirmation";
 
       form.reset();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Signup failed. Try again.");
+      setErrorMsg(
+        err instanceof Error ? err.message : "Signup failed. Try again."
+      );
     } finally {
       setLoading(false);
     }

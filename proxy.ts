@@ -64,7 +64,9 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
@@ -92,7 +94,9 @@ export async function proxy(request: NextRequest) {
 
         if (!error && table?.table_number) {
           const nextSegments = [...segments];
-          nextSegments[menuIdx + 1] = encodeURIComponent(String(table.table_number));
+          nextSegments[menuIdx + 1] = encodeURIComponent(
+            String(table.table_number)
+          );
 
           const url = request.nextUrl.clone();
           url.pathname = `/${nextSegments.join("/")}`;
@@ -102,20 +106,29 @@ export async function proxy(request: NextRequest) {
             path: "/",
             sameSite: "lax",
           });
-          redirectRes.cookies.set("s2d_restaurant_id", String(table.restaurant_id), {
-            path: "/",
-            sameSite: "lax",
-          });
-          redirectRes.cookies.set("s2d_table_number", String(table.table_number), {
-            path: "/",
-            sameSite: "lax",
-          });
+          redirectRes.cookies.set(
+            "s2d_restaurant_id",
+            String(table.restaurant_id),
+            {
+              path: "/",
+              sameSite: "lax",
+            }
+          );
+          redirectRes.cookies.set(
+            "s2d_table_number",
+            String(table.table_number),
+            {
+              path: "/",
+              sameSite: "lax",
+            }
+          );
           return redirectRes;
         }
       } else {
         // If the URL is already using a table number, try to set disambiguation cookies
         // (helps when table numbers are not globally unique).
-        const existingRestaurantId = request.cookies.get("s2d_restaurant_id")?.value ?? null;
+        const existingRestaurantId =
+          request.cookies.get("s2d_restaurant_id")?.value ?? null;
         if (!existingRestaurantId) {
           const { data: matches, error } = await supabase
             .from("restaurant_tables")
@@ -155,60 +168,194 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const ADMIN_SIGN_IN_PATH = "/auth/admin/sign-in";
+  const isAuthPage =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === ADMIN_SIGN_IN_PATH;
 
   async function isAdminUser(): Promise<boolean> {
     if (!user) return false;
-    const { data: adminUser } = await supabase
-      .from("admin_users")
-      .select("id, is_active")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .single();
+    try {
+      const { data: adminUser, error } = await supabase
+        .from("admin_users")
+        .select("id, is_active")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
 
-    return !!adminUser;
+      if (error) {
+        // RLS blocking (406) or other errors - user is not admin
+        console.debug(
+          "[Middleware] Admin check blocked/error (expected for non-admin):",
+          error.code,
+          error.message
+        );
+        return false;
+      }
+
+      return !!adminUser;
+    } catch (err) {
+      console.error("[Middleware] isAdminUser exception:", err);
+      return false;
+    }
+  }
+
+  // EARLY EXIT: Auth pages first (skip expensive DB queries if possible)
+  if (isAuthPage) {
+    if (!user) {
+      // Not authenticated - allow auth page to render
+      return response;
+    }
+
+    // User is authenticated - redirect away from auth pages
+    const adminUser = await isAdminUser();
+    if (adminUser) {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+
+    // Restaurant user - check onboarding status
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from("restaurants")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (restaurantError) {
+      console.error(
+        "[Middleware] Auth page: Restaurant query failed",
+        restaurantError
+      );
+    }
+
+    if (restaurant?.id) {
+      const { data: onboarding } = await supabase
+        .from("onboarding_progress")
+        .select("completed, skipped")
+        .eq("restaurant_id", restaurant.id)
+        .maybeSingle();
+
+      // If onboarding record exists and is completed/skipped, go to dashboard
+      // Otherwise go to onboarding (including if record is null - shouldn't happen due to trigger)
+      const onboardingCompleted =
+        onboarding !== null && (onboarding.completed || onboarding.skipped);
+
+      const redirectUrl = onboardingCompleted ? "/dashboard" : "/onboarding";
+      console.log("[Middleware] Auth page: Redirecting to", redirectUrl, {
+        onboarding,
+        onboardingCompleted,
+      });
+      return NextResponse.redirect(new URL(redirectUrl, request.url));
+    }
+
+    console.log(
+      "[Middleware] Auth page: No restaurant found, redirecting to /register"
+    );
+    return NextResponse.redirect(new URL("/register", request.url));
   }
 
   // Protect admin routes
-  if (request.nextUrl.pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin")) {
     if (!user) {
       const loginUrl = new URL(ADMIN_SIGN_IN_PATH, request.url);
-      loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+      loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    // Check if user is admin
     const adminUser = await isAdminUser();
-
     if (!adminUser) {
-      // Not an admin - redirect to regular dashboard
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
 
   // Protect dashboard routes
-  if (request.nextUrl.pathname.startsWith("/dashboard")) {
+  if (pathname.startsWith("/dashboard")) {
     if (!user) {
-      // Redirect to login with return URL
       const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+      loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
     }
 
-    // Hard separation: admins cannot use restaurant dashboard routes
-    if (await isAdminUser()) {
+    const adminUser = await isAdminUser();
+    if (adminUser) {
       return NextResponse.redirect(new URL("/admin", request.url));
     }
 
-    // Enforce onboarding completion before any dashboard access
+    // Check restaurant exists and onboarding status
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from("restaurants")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    // Log errors but don't block - user is authenticated
+    if (restaurantError) {
+      console.error("[Middleware] Dashboard: Restaurant query error", {
+        code: restaurantError.code,
+        message: restaurantError.message,
+        user_id: user.id,
+      });
+      // If query failed (RLS or other), allow dashboard to load
+      // The layout will handle auth verification
+      return response;
+    }
+
+    // If no restaurant record exists at all, redirect to registration
+    if (!restaurant?.id) {
+      console.warn("[Middleware] Dashboard: No restaurant found for user", {
+        user_id: user.id,
+      });
+      return NextResponse.redirect(new URL("/register", request.url));
+    }
+
+    // Check onboarding status
+    const { data: onboarding, error: onboardingError } = await supabase
+      .from("onboarding_progress")
+      .select("completed, skipped")
+      .eq("restaurant_id", restaurant.id)
+      .maybeSingle();
+
+    if (onboardingError) {
+      console.error(
+        "[Middleware] Dashboard: Onboarding query error",
+        onboardingError.code,
+        onboardingError.message
+      );
+      // If query failed, assume onboarding not complete to be safe
+      if (pathname !== "/onboarding") {
+        return NextResponse.redirect(new URL("/onboarding", request.url));
+      }
+    }
+
+    // Onboarding is complete only if record exists AND is marked complete/skipped
+    const onboardingCompleted =
+      onboarding !== null && (onboarding.completed || onboarding.skipped);
+
+    if (!onboardingCompleted && pathname !== "/onboarding") {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
+    }
+  }
+
+  // Protect onboarding route
+  if (pathname.startsWith("/onboarding")) {
+    if (!user) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const adminUser = await isAdminUser();
+    if (adminUser) {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+
     const { data: restaurant } = await supabase
       .from("restaurants")
       .select("id")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (!restaurant?.id) {
-      // No restaurant record - treat as unauthenticated for restaurant UX
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.redirect(new URL("/register", request.url));
     }
 
     const { data: onboarding } = await supabase
@@ -217,29 +364,9 @@ export async function proxy(request: NextRequest) {
       .eq("restaurant_id", restaurant.id)
       .maybeSingle();
 
-    const onboardingCompleted = !!(onboarding?.completed || onboarding?.skipped);
-    if (!onboardingCompleted && request.nextUrl.pathname !== "/onboarding") {
-      const url = new URL("/onboarding", request.url);
-      url.searchParams.set("redirect", request.nextUrl.pathname);
-      return NextResponse.redirect(url);
-    }
-  }
-
-  // Redirect authenticated users away from auth pages
-  if (
-    (request.nextUrl.pathname === "/login" ||
-      request.nextUrl.pathname === "/register" ||
-      request.nextUrl.pathname === ADMIN_SIGN_IN_PATH) &&
-    user
-  ) {
-    // Check if admin
-    const adminUser = await isAdminUser();
-
-    if (adminUser) {
-      return NextResponse.redirect(new URL("/admin", request.url));
-    }
-
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    // If onboarding is complete, user should go to dashboard
+    // (unless they're still on the page navigating, so be lenient)
+    // Don't redirect automatically - let the page handle it
   }
 
   return response;
@@ -253,4 +380,3 @@ export const config = {
     "/",
   ],
 };
-

@@ -109,7 +109,8 @@ export async function updateOnboardingProgress(
     console.error("Update onboarding progress error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update progress",
+      error:
+        error instanceof Error ? error.message : "Failed to update progress",
     };
   }
 }
@@ -129,7 +130,7 @@ export async function completeOnboarding(): Promise<OnboardingActionResult> {
     const { data, error } = await supabase
       .from("onboarding_progress")
       .update({
-        current_step: 8,
+        current_step: 7,
         completed: true,
         steps_completed: [1, 2, 3, 4, 5, 6, 7],
       })
@@ -149,7 +150,10 @@ export async function completeOnboarding(): Promise<OnboardingActionResult> {
     console.error("Complete onboarding error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to complete onboarding",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to complete onboarding",
     };
   }
 }
@@ -188,7 +192,8 @@ export async function skipOnboarding(): Promise<OnboardingActionResult> {
     console.error("Skip onboarding error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to skip onboarding",
+      error:
+        error instanceof Error ? error.message : "Failed to skip onboarding",
     };
   }
 }
@@ -229,7 +234,8 @@ export async function resetOnboarding(): Promise<OnboardingActionResult> {
     console.error("Reset onboarding error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to reset onboarding",
+      error:
+        error instanceof Error ? error.message : "Failed to reset onboarding",
     };
   }
 }

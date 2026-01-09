@@ -12,7 +12,12 @@ interface MenuStepProps {
 
 export default function MenuStep({ onNext, onBack }: MenuStepProps) {
   const pathname = usePathname();
-  const locale = pathname.split("/").filter(Boolean)[0] || "en";
+  // Extract locale from pathname, or default to 'en'
+  // Check if first segment is a known locale (en, fr, es), otherwise it's a route
+  const segments = pathname.split("/").filter(Boolean);
+  const knownLocales = ["en", "fr", "es"];
+  const locale =
+    segments[0] && knownLocales.includes(segments[0]) ? segments[0] : "en";
 
   return (
     <div className="space-y-8 py-4">
@@ -62,7 +67,8 @@ export default function MenuStep({ onNext, onBack }: MenuStepProps) {
               <div>
                 <h3 className="font-bold mb-1">Categories & Tags</h3>
                 <p className="text-sm text-gray-600">
-                  Organize with categories (Starters, Mains, Drinks, Desserts) and add tags (Spicy, Vegetarian, etc.)
+                  Organize with categories (Starters, Mains, Drinks, Desserts)
+                  and add tags (Spicy, Vegetarian, etc.)
                 </p>
               </div>
             </div>
@@ -74,7 +80,8 @@ export default function MenuStep({ onNext, onBack }: MenuStepProps) {
               <div>
                 <h3 className="font-bold mb-1">Multi-Language Support</h3>
                 <p className="text-sm text-gray-600">
-                  Your menu will be automatically translated to English, French, and Spanish for customers
+                  Your menu will be automatically translated to English, French,
+                  and Spanish for customers
                 </p>
               </div>
             </div>
@@ -92,17 +99,14 @@ export default function MenuStep({ onNext, onBack }: MenuStepProps) {
 
         <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
           <p className="text-sm text-yellow-800">
-            💡 <strong>Pro Tip:</strong> Add at least 3-5 items to give customers a good selection. You can always add more later!
+            💡 <strong>Pro Tip:</strong> Add at least 3-5 items to give
+            customers a good selection. You can always add more later!
           </p>
         </div>
       </div>
 
       <div className="flex justify-between items-center pt-6">
-        <Button
-          onClick={onBack}
-          variant="outline"
-          className="gap-2"
-        >
+        <Button onClick={onBack} variant="outline" className="gap-2">
           <ArrowLeft size={16} />
           Back
         </Button>

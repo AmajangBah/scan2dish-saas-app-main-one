@@ -18,33 +18,60 @@ export default function RegisterConfirmationPage() {
 
   return (
     <div className="max-w-lg mx-auto py-12 px-6">
-      <h1 className="text-3xl font-bold">Account created</h1>
+      <h1 className="text-3xl font-bold">Account created!</h1>
       <p className="text-gray-600 mt-3">
-        Next step: complete restaurant setup before you can access the dashboard.
+        Your restaurant account has been successfully created with a unique
+        record in our system.
       </p>
 
       {hasSession === false && (
-        <div className="mt-6 rounded-lg border p-4 bg-orange-50 border-orange-200 text-orange-900">
-          Please check your email and click the confirmation link to activate your
-          account.
+        <div className="mt-6 rounded-lg border p-4 bg-blue-50 border-blue-200 text-blue-900">
+          <strong>Next step:</strong> Check your email and click the
+          confirmation link to activate your account. Once confirmed, you can
+          log in and complete your restaurant setup.
         </div>
       )}
 
-      <div className="mt-8 flex gap-3">
-        <Link
-          href="/onboarding"
-          className="inline-flex items-center justify-center rounded-xl bg-[#C84501] px-5 py-3 text-white hover:bg-orange-700"
-        >
-          Continue setup
-        </Link>
-        <Link
-          href="/"
-          className="inline-flex items-center justify-center rounded-xl border px-5 py-3 hover:bg-gray-50"
-        >
-          Back to home
-        </Link>
+      {hasSession === true && (
+        <div className="mt-6 rounded-lg border p-4 bg-green-50 border-green-200 text-green-900">
+          <strong>You're all set!</strong> Your account is active. Click
+          "Continue Setup" to configure your restaurant.
+        </div>
+      )}
+
+      <div className="mt-8 flex gap-3 flex-col sm:flex-row">
+        {hasSession === true ? (
+          <>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center rounded-xl bg-[#C84501] px-5 py-3 text-white hover:bg-orange-700"
+            >
+              Go to Dashboard
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center rounded-xl border px-5 py-3 hover:bg-gray-50"
+            >
+              Back to home
+            </Link>
+          </>
+        ) : (
+          <>
+            <button
+              disabled
+              className="inline-flex items-center justify-center rounded-xl bg-gray-300 px-5 py-3 text-gray-600 cursor-not-allowed"
+            >
+              Continue setup (confirm email first)
+            </button>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center rounded-xl border px-5 py-3 hover:bg-gray-50"
+            >
+              Back to home
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );
 }
-

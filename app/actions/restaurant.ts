@@ -3,7 +3,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireRestaurant } from "@/lib/auth/restaurant";
+import { requireRestaurantPage } from "@/lib/auth/restaurant";
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -11,9 +11,19 @@ import { requireRestaurant } from "@/lib/auth/restaurant";
 
 const UpdateBusinessProfileSchema = z.object({
   name: z.string().min(1, "Restaurant name is required").max(100),
-  phone: z.string().min(8, "Phone must be at least 8 digits").max(20).optional().nullable(),
-  brand_color: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format").optional(),
-  currency: z.enum(['USD', 'EUR', 'GBP', 'GMD', 'XOF', 'NGN', 'GHS', 'ZAR', 'KES']).optional(),
+  phone: z
+    .string()
+    .min(8, "Phone must be at least 8 digits")
+    .max(20)
+    .optional()
+    .nullable(),
+  brand_color: z
+    .string()
+    .regex(/^#[0-9A-F]{6}$/i, "Invalid color format")
+    .optional(),
+  currency: z
+    .enum(["USD", "EUR", "GBP", "GMD", "XOF", "NGN", "GHS", "ZAR", "KES"])
+    .optional(),
 });
 
 const UpdateBrandingSchema = z.object({
@@ -24,7 +34,9 @@ const UpdateBrandingSchema = z.object({
 // TYPES
 // ============================================================================
 
-export type UpdateBusinessProfileInput = z.infer<typeof UpdateBusinessProfileSchema>;
+export type UpdateBusinessProfileInput = z.infer<
+  typeof UpdateBusinessProfileSchema
+>;
 export type UpdateBrandingInput = z.infer<typeof UpdateBrandingSchema>;
 
 export interface RestaurantActionResult {
@@ -45,7 +57,10 @@ export async function updateBusinessProfile(
 ): Promise<RestaurantActionResult> {
   try {
     const validated = UpdateBusinessProfileSchema.parse(input);
-    const ctx = await requireRestaurant();
+    const ctx = await requireRestaurantPage();
+    if (!ctx) {
+      return { success: false, error: "Unauthorized" };
+    }
     const restaurant_id = ctx.restaurant.id;
 
     const supabase = await createServerSupabase();
@@ -91,7 +106,8 @@ export async function updateBusinessProfile(
     console.error("Update business profile error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update profile",
+      error:
+        error instanceof Error ? error.message : "Failed to update profile",
     };
   }
 }
@@ -104,7 +120,10 @@ export async function updateBranding(
 ): Promise<RestaurantActionResult> {
   try {
     const validated = UpdateBrandingSchema.parse(input);
-    const ctx = await requireRestaurant();
+    const ctx = await requireRestaurantPage();
+    if (!ctx) {
+      return { success: false, error: "Unauthorized" };
+    }
     const restaurant_id = ctx.restaurant.id;
 
     const supabase = await createServerSupabase();
@@ -131,7 +150,8 @@ export async function updateBranding(
     console.error("Update branding error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update branding",
+      error:
+        error instanceof Error ? error.message : "Failed to update branding",
     };
   }
 }
@@ -141,7 +161,10 @@ export async function updateBranding(
  */
 export async function getRestaurantProfile(): Promise<RestaurantActionResult> {
   try {
-    const ctx = await requireRestaurant();
+    const ctx = await requireRestaurantPage();
+    if (!ctx) {
+      return { success: false, error: "Unauthorized" };
+    }
     const restaurant_id = ctx.restaurant.id;
     const supabase = await createServerSupabase();
     const {

@@ -34,7 +34,7 @@ const isAdminUserId = cache(async (userId: string): Promise<boolean> => {
     .select("id, is_active")
     .eq("user_id", userId)
     .eq("is_active", true)
-    .single();
+    .maybeSingle();
 
   return !error && !!data;
 });
@@ -51,9 +51,11 @@ export const getRestaurantAuthContext = cache(
 
     const { data: restaurant, error: restaurantError } = await supabase
       .from("restaurants")
-      .select("id, user_id, name, phone, brand_color, currency, created_at, updated_at")
+      .select(
+        "id, user_id, name, phone, brand_color, currency, created_at, updated_at"
+      )
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (restaurantError || !restaurant) return null;
 
@@ -63,7 +65,10 @@ export const getRestaurantAuthContext = cache(
       .eq("restaurant_id", restaurant.id)
       .maybeSingle();
 
-    const onboardingCompleted = !!(onboarding?.completed || onboarding?.skipped);
+    // CRITICAL: Match proxy.ts logic - if record doesn't exist (null), treat as complete
+    // This prevents redirect loops between proxy and layout checks
+    const onboardingCompleted =
+      onboarding === null || !!(onboarding?.completed || onboarding?.skipped);
 
     return {
       userId: user.id,
@@ -94,9 +99,10 @@ export async function requireRestaurantPage(options?: {
     redirect("/login");
   }
 
-  if (!options?.allowOnboardingIncomplete && !ctx.onboardingCompleted) {
-    redirect("/onboarding");
-  }
+  // NOTE: Onboarding checks are now handled by middleware (proxy.ts).
+  // This allows only the middleware to manage all auth routing,
+  // preventing redirect loops from multiple auth checks.
+  // This function only validates that a restaurant user is authenticated.
 
   return ctx;
 }
@@ -114,4 +120,3 @@ export async function requireRestaurant(): Promise<RestaurantAuthContext> {
   }
   return ctx;
 }
-
