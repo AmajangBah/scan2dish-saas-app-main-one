@@ -9,7 +9,15 @@ import MenuModal from "./components/MenuModal";
 import MenuListItem from "./components/MenuListItem";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Grid, List, Plus, UtensilsCrossed, EyeOff, CheckCircle2, SearchX } from "lucide-react";
+import {
+  Grid,
+  List,
+  Plus,
+  UtensilsCrossed,
+  EyeOff,
+  CheckCircle2,
+  SearchX,
+} from "lucide-react";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {
   createMenuItem,
@@ -23,10 +31,12 @@ export default function MenuClient({
   initialMenuItems,
   currency,
   restaurantId,
+  availableCategories: initialAvailableCategories = [],
 }: {
   initialMenuItems: MenuItem[];
   currency: string;
   restaurantId: string;
+  availableCategories?: string[];
 }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
@@ -40,19 +50,20 @@ export default function MenuClient({
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const categories = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(initialAvailableCategories);
     for (const it of menuItems) {
       const c = String(it.category ?? "").trim();
       if (c) set.add(c);
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [menuItems]);
+  }, [menuItems, initialAvailableCategories]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return menuItems.filter((item) => {
       const matchesCategory =
-        selectedCategory === "All" || String(item.category) === selectedCategory;
+        selectedCategory === "All" ||
+        String(item.category) === selectedCategory;
       const matchesText =
         !q ||
         item.name.toLowerCase().includes(q) ||
@@ -85,9 +96,7 @@ export default function MenuClient({
 
     // Optimistic update
     setMenuItems((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, available: !i.available } : i
-      )
+      prev.map((i) => (i.id === id ? { ...i, available: !i.available } : i))
     );
 
     startTransition(async () => {
@@ -109,7 +118,8 @@ export default function MenuClient({
   };
 
   const deleteTarget = useMemo(
-    () => (deleteTargetId ? menuItems.find((i) => i.id === deleteTargetId) : null),
+    () =>
+      deleteTargetId ? menuItems.find((i) => i.id === deleteTargetId) : null,
     [deleteTargetId, menuItems]
   );
 
@@ -207,7 +217,9 @@ export default function MenuClient({
             <UtensilsCrossed className="h-4 w-4" />
             Menu
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">Menu management</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Menu management
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Add items, update prices, and hide sold-out dishes in seconds.
           </p>
@@ -230,7 +242,10 @@ export default function MenuClient({
             <List className="h-4 w-4 mr-2" />
             List
           </Button>
-          <Button onClick={handleAdd} className="bg-primary text-primary-foreground">
+          <Button
+            onClick={handleAdd}
+            className="bg-primary text-primary-foreground"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add item
           </Button>
@@ -247,7 +262,9 @@ export default function MenuClient({
         </Card>
         <Card className="rounded-2xl shadow-sm">
           <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground">Visible to customers</div>
+            <div className="text-xs text-muted-foreground">
+              Visible to customers
+            </div>
             <div className="mt-1 flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-emerald-600" />
               <div className="text-2xl font-semibold">{stats.available}</div>
@@ -256,7 +273,9 @@ export default function MenuClient({
         </Card>
         <Card className="rounded-2xl shadow-sm">
           <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground">Hidden / unavailable</div>
+            <div className="text-xs text-muted-foreground">
+              Hidden / unavailable
+            </div>
             <div className="mt-1 flex items-center gap-2">
               <EyeOff className="h-5 w-5 text-muted-foreground" />
               <div className="text-2xl font-semibold">{stats.hidden}</div>
@@ -266,7 +285,9 @@ export default function MenuClient({
         <Card className="rounded-2xl shadow-sm">
           <CardContent className="p-4">
             <div className="text-xs text-muted-foreground">Categories used</div>
-            <div className="text-2xl font-semibold mt-1">{stats.categoriesUsed}</div>
+            <div className="text-2xl font-semibold mt-1">
+              {stats.categoriesUsed}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -299,8 +320,14 @@ export default function MenuClient({
             className="max-w-xl"
           />
           <div className="text-sm text-muted-foreground">
-            Showing <span className="font-medium text-foreground">{filtered.length}</span> of{" "}
-            <span className="font-medium text-foreground">{menuItems.length}</span>
+            Showing{" "}
+            <span className="font-medium text-foreground">
+              {filtered.length}
+            </span>{" "}
+            of{" "}
+            <span className="font-medium text-foreground">
+              {menuItems.length}
+            </span>
           </div>
         </div>
 
@@ -319,9 +346,12 @@ export default function MenuClient({
               <div className="mx-auto h-11 w-11 rounded-xl border bg-muted/30 grid place-items-center">
                 <SearchX className="h-5 w-5 text-muted-foreground" />
               </div>
-              <div className="text-lg font-semibold">No items match your filters</div>
+              <div className="text-lg font-semibold">
+                No items match your filters
+              </div>
               <p className="text-sm text-muted-foreground">
-                Try clearing the search, switching categories, or add a new menu item.
+                Try clearing the search, switching categories, or add a new menu
+                item.
               </p>
               <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
                 <Button onClick={handleAdd}>
@@ -384,7 +414,9 @@ export default function MenuClient({
         onOpenChange={(o) => {
           if (!o) setDeleteTargetId(null);
         }}
-        title={deleteTarget ? `Delete “${deleteTarget.name}”?` : "Delete menu item?"}
+        title={
+          deleteTarget ? `Delete “${deleteTarget.name}”?` : "Delete menu item?"
+        }
         description="This permanently removes the item from your menu. Customers will no longer see it."
         confirmLabel="Delete item"
         onConfirm={confirmDelete}

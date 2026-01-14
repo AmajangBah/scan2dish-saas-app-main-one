@@ -6,16 +6,34 @@ import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils/currency";
 import { useCart } from "../context/CartContext";
 import { useMenuRestaurant } from "../context/MenuRestaurantContext";
+import type { Locale } from "@/i18n";
+
+const translations: Record<Locale, Record<string, string>> = {
+  en: {
+    "customer.yourOrder": "Your Order",
+    "customer.cart": "View Cart",
+  },
+  fr: {
+    "customer.yourOrder": "Votre commande",
+    "customer.cart": "Voir le panier",
+  },
+  es: {
+    "customer.yourOrder": "Tu pedido",
+    "customer.cart": "Ver carrito",
+  },
+};
 
 export default function CartBar() {
   const params = useParams();
-  const locale = typeof params.locale === "string" ? params.locale : null;
+  const locale = (
+    typeof params.locale === "string" ? params.locale : "en"
+  ) as Locale;
   const { items, subtotal } = useCart();
   const { currency, tableSlug } = useMenuRestaurant();
 
   const itemCount = items.reduce((s, it) => s + it.qty, 0);
   if (!tableSlug || itemCount <= 0) return null;
-  const base = locale ? `/${locale}` : "";
+  const base = `/${locale}`;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 pb-safe">
@@ -23,7 +41,9 @@ export default function CartBar() {
         <div className="rounded-2xl border bg-card/95 backdrop-blur shadow-lg">
           <div className="p-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-xs text-muted-foreground">In your cart</div>
+              <div className="text-xs text-muted-foreground">
+                {translations[locale]["customer.yourOrder"] || "Your Order"}
+              </div>
               <div className="font-semibold truncate">
                 {itemCount} {itemCount === 1 ? "item" : "items"} •{" "}
                 {formatPrice(subtotal, currency)}
@@ -34,7 +54,9 @@ export default function CartBar() {
               asChild
               className="shrink-0 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
             >
-              <Link href={`${base}/menu/${tableSlug}/cart`}>View cart</Link>
+              <Link href={`${base}/menu/${tableSlug}/cart`}>
+                {translations[locale]["customer.cart"] || "View Cart"}
+              </Link>
             </Button>
           </div>
         </div>
@@ -42,4 +64,3 @@ export default function CartBar() {
     </div>
   );
 }
-

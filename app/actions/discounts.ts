@@ -50,6 +50,39 @@ export async function createDiscount(
 
     const supabase = await createServerSupabase();
 
+    // Validate that category_id exists if apply_to is "category"
+    if (validated.apply_to === "category" && validated.category_id) {
+      const { count, error: countError } = await supabase
+        .from("menu_items")
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", restaurant_id)
+        .eq("category", validated.category_id);
+
+      if (countError || (count ?? 0) === 0) {
+        return {
+          success: false,
+          error: `Category "${validated.category_id}" not found in your menu`,
+        };
+      }
+    }
+
+    // Validate that item_id exists if apply_to is "item"
+    if (validated.apply_to === "item" && validated.item_id) {
+      const { data: item, error: itemError } = await supabase
+        .from("menu_items")
+        .select("id")
+        .eq("id", validated.item_id)
+        .eq("restaurant_id", restaurant_id)
+        .single();
+
+      if (itemError || !item) {
+        return {
+          success: false,
+          error: "Menu item not found in your restaurant",
+        };
+      }
+    }
+
     const { data, error } = await supabase
       .from("discounts")
       .insert({
@@ -78,7 +111,8 @@ export async function createDiscount(
     console.error("Create discount error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to create discount",
+      error:
+        error instanceof Error ? error.message : "Failed to create discount",
     };
   }
 }
@@ -114,7 +148,8 @@ export async function updateDiscount(
     console.error("Update discount error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update discount",
+      error:
+        error instanceof Error ? error.message : "Failed to update discount",
     };
   }
 }
@@ -122,7 +157,9 @@ export async function updateDiscount(
 /**
  * Delete a discount
  */
-export async function deleteDiscount(id: string): Promise<DiscountActionResult> {
+export async function deleteDiscount(
+  id: string
+): Promise<DiscountActionResult> {
   try {
     const ctx = await requireRestaurant();
     const restaurant_id = ctx.restaurant.id;
@@ -147,7 +184,8 @@ export async function deleteDiscount(id: string): Promise<DiscountActionResult> 
     console.error("Delete discount error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to delete discount",
+      error:
+        error instanceof Error ? error.message : "Failed to delete discount",
     };
   }
 }
@@ -183,7 +221,8 @@ export async function toggleDiscountActive(
     console.error("Toggle discount error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to toggle discount",
+      error:
+        error instanceof Error ? error.message : "Failed to toggle discount",
     };
   }
 }

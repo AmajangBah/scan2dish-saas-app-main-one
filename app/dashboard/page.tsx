@@ -7,6 +7,9 @@ import { ActivityItem } from "@/types/activity";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
 import LiveOrdersWidget, { type LiveOrderSummary } from "./LiveOrdersWidget";
+// import NotificationSettingsWrapper from "./components/NotificationSettingsWrapper";
+
+export const dynamic = "force-dynamic";
 import { formatPrice } from "@/lib/utils/currency";
 
 export default async function Dashboard() {
@@ -165,62 +168,69 @@ export default async function Dashboard() {
         </p>
       </div>
 
-      {/* Bento layout */}
-      <div className="grid gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardCard
-            heading="Total Orders"
-            figure={totalOrders || 0}
-            accent="orange"
-            icon={<ShoppingBag />}
-          />
-          <DashboardCard
-            heading="Revenue"
-            figureText={formatPrice(revenue, currency)}
-            accent="green"
-            icon={<DollarSign />}
-          />
-          <DashboardCard
-            heading="Active Tables"
-            figure={activeTables || 0}
-            accent="blue"
-            icon={<Utensils />}
-          />
-          <DashboardCard
-            heading="Pending Orders"
-            figure={pendingOrders || 0}
-            accent="red"
-            icon={<Timer />}
-          />
-        </div>
-
-        <div className="lg:col-span-4 grid gap-4">
+      {/* Main Grid Layout */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Live Orders - Top Priority */}
+        <div className="lg:col-span-8">
           <LiveOrdersWidget
             restaurantId={restaurant_id}
             currency={currency}
             initialOrders={initialLiveOrders}
           />
-          <Link href={Route.TABLES} className="block">
-            <DashboardCard heading="Add a table" isAddCard />
-          </Link>
-          <Link href={Route.MENU} className="block">
-            <DashboardCard heading="Add a menu item" isAddCard />
-          </Link>
         </div>
+      </div>
 
-        <div className="lg:col-span-12">
-          {activityData.length > 0 ? (
-            <ActivityFeed activities={activityData} />
-          ) : (
-            <div className="rounded-xl border bg-card p-6 text-center">
-              <div className="text-base font-semibold">No orders yet</div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Once customers start scanning table QR codes, you’ll see
-                activity here.
-              </p>
-            </div>
-          )}
-        </div>
+      {/* Stats Grid - 2x2 */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <DashboardCard
+          heading="Total Orders"
+          figure={totalOrders || 0}
+          accent="orange"
+          icon={<ShoppingBag />}
+        />
+        <DashboardCard
+          heading="Revenue"
+          figureText={formatPrice(revenue, currency)}
+          accent="green"
+          icon={<DollarSign />}
+        />
+        <DashboardCard
+          heading="Active Tables"
+          figure={activeTables || 0}
+          accent="blue"
+          icon={<Utensils />}
+        />
+        <DashboardCard
+          heading="Pending Orders"
+          figure={pendingOrders || 0}
+          accent="red"
+          icon={<Timer />}
+        />
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link href={Route.TABLES} className="block">
+          <DashboardCard heading="Manage Tables" isAddCard />
+        </Link>
+        <Link href={Route.MENU} className="block">
+          <DashboardCard heading="Manage Menu" isAddCard />
+        </Link>
+      </div>
+
+      {/* Activity Feed */}
+      <div>
+        {activityData.length > 0 ? (
+          <ActivityFeed activities={activityData} />
+        ) : (
+          <div className="rounded-xl border bg-card p-6 text-center">
+            <div className="text-base font-semibold">No orders yet</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Once customers start scanning table QR codes, you&apos;ll see
+              activity here.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -27,12 +27,24 @@ export interface TableActionResult {
 /**
  * Create a new table
  */
-export async function createTable(input: CreateTableInput): Promise<TableActionResult> {
+export async function createTable(
+  input: CreateTableInput
+): Promise<TableActionResult> {
   try {
     const validated = CreateTableSchema.parse(input);
-    const ctx = await requireRestaurant();
-    const restaurant_id = ctx.restaurant.id;
 
+    let ctx;
+    try {
+      ctx = await requireRestaurant();
+    } catch (authError) {
+      console.error("[Table] Auth check failed:", authError);
+      return {
+        success: false,
+        error: "Authentication failed. Please sign in again.",
+      };
+    }
+
+    const restaurant_id = ctx.restaurant.id;
     const supabase = await createServerSupabase();
 
     const { data, error } = await supabase
@@ -50,15 +62,25 @@ export async function createTable(input: CreateTableInput): Promise<TableActionR
       .single();
 
     if (error) {
-      console.error("Failed to create table:", error);
-      return { success: false, error: error.message };
+      console.error("[Table] Database error:", error);
+      // Check if it's an RLS error
+      if (error.code === "42501" || error.code === "PGRST301") {
+        return {
+          success: false,
+          error: "Permission denied. Please verify your access.",
+        };
+      }
+      return {
+        success: false,
+        error: error.message || "Failed to create table",
+      };
     }
 
     revalidatePath("/dashboard/tables");
 
     return { success: true, id: data.id };
   } catch (error) {
-    console.error("Create table error:", error);
+    console.error("[Table] Unexpected error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to create table",
@@ -167,7 +189,10 @@ export async function toggleTableActive(
     console.error("Toggle active status error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update active status",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update active status",
     };
   }
 }

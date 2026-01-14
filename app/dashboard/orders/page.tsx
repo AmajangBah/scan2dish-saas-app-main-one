@@ -3,6 +3,8 @@ import { requireRestaurantPage } from "@/lib/auth/restaurant";
 import OrdersClient from "./OrdersClient";
 import { Order } from "./types";
 
+export const dynamic = "force-dynamic";
+
 export default async function OrdersPage() {
   const ctx = await requireRestaurantPage();
   const restaurant_id = ctx.restaurant.id;
@@ -14,7 +16,8 @@ export default async function OrdersPage() {
   // Fetch orders with table information
   const { data: orders, error } = await supabase
     .from("orders")
-    .select(`
+    .select(
+      `
       id,
       status,
       total,
@@ -23,7 +26,8 @@ export default async function OrdersPage() {
       notes,
       created_at,
       restaurant_tables!inner(table_number)
-    `)
+    `
+    )
     .eq("restaurant_id", restaurant_id)
     .order("created_at", { ascending: false });
 
@@ -54,32 +58,42 @@ export default async function OrdersPage() {
       | undefined;
   };
 
-  const mappedOrders: Order[] = ((orders as unknown as OrderRow[]) || []).map((o) => {
-    const items = Array.isArray(o.items) ? o.items : [];
-    const orderItems = items.map((item: {name?: string; quantity?: number; price?: string | number}) => ({
-      name: item.name || "Unknown Item",
-      qty: item.quantity || 1,
-      price: parseFloat(String(item.price || 0)),
-    }));
+  const mappedOrders: Order[] = ((orders as unknown as OrderRow[]) || []).map(
+    (o) => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      const orderItems = items.map(
+        (item: {
+          name?: string;
+          quantity?: number;
+          price?: string | number;
+        }) => ({
+          name: item.name || "Unknown Item",
+          qty: item.quantity || 1,
+          price: parseFloat(String(item.price || 0)),
+        })
+      );
 
-    const rt = o.restaurant_tables;
-    const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
+      const rt = o.restaurant_tables;
+      const tableNumber = Array.isArray(rt)
+        ? rt[0]?.table_number
+        : rt?.table_number;
 
-    return {
-      id: o.id,
-      table: tableNumber || "Unknown",
-      status: o.status as "pending" | "preparing" | "completed",
-      total: Number(o.total || 0).toFixed(2),
-      time: new Date(o.created_at).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      createdAt: String(o.created_at),
-      items: orderItems,
-      customerName: o.customer_name ? String(o.customer_name) : null,
-      notes: o.notes ? String(o.notes) : null,
-    };
-  });
+      return {
+        id: o.id,
+        table: tableNumber || "Unknown",
+        status: o.status as "pending" | "preparing" | "completed",
+        total: Number(o.total || 0).toFixed(2),
+        time: new Date(o.created_at).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        createdAt: String(o.created_at),
+        items: orderItems,
+        customerName: o.customer_name ? String(o.customer_name) : null,
+        notes: o.notes ? String(o.notes) : null,
+      };
+    }
+  );
 
   return (
     <OrdersClient

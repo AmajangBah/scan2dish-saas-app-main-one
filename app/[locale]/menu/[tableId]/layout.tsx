@@ -116,6 +116,12 @@ export default async function MenuLayout({
 
   // Table not found or inactive
   if (tableError || !table) {
+    console.error("[Menu Layout] Table lookup failed", {
+      tableId,
+      restaurantIdCookie,
+      isUUID: uuidRegex.test(tableId),
+      error: tableError?.message,
+    });
     notFound();
   }
 

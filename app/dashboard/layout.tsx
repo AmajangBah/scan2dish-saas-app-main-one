@@ -4,10 +4,13 @@ import RestaurantNavBar from "./components/RestaurantNavBar";
 import React, { ReactNode } from "react";
 import type { Metadata } from "next";
 import { getRestaurantAuthContext } from "@/lib/auth/restaurant";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({
   children,
@@ -23,7 +26,10 @@ export default async function DashboardLayout({
 
   // This should never be null due to middleware protection, but TypeScript requires the check
   if (!ctx) {
-    throw new Error("Unauthorized: Restaurant context not found");
+    // Mirror admin behavior: redirect to login if auth context missing.
+    // Middleware should normally prevent this, but be explicit here to avoid
+    // inconsistent error pages or runtime exceptions in production.
+    redirect("/login");
   }
 
   return (

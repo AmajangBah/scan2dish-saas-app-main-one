@@ -13,16 +13,18 @@ import { cancelOrder } from "@/app/actions/orderCancel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Switch } from "@/components/ui/switch";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LayoutGrid, Table as TableIcon } from "lucide-react";
 import { markOrdersSeenNow } from "../components/useUnreadOrders";
 
-type OrderItemRow = { name?: string; quantity?: number; price?: string | number };
+type OrderItemRow = {
+  name?: string;
+  quantity?: number;
+  price?: string | number;
+};
 type RestaurantTableJoin =
   | { table_number?: string }
   | { table_number?: string }[]
@@ -66,12 +68,11 @@ export default function OrdersClient({
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   // "New order" highlighting (visual even if sound is muted)
-  const [newOrderSince, setNewOrderSince] = useState<Record<string, number>>({});
+  const [newOrderSince, setNewOrderSince] = useState<Record<string, number>>(
+    {}
+  );
 
-  // Sound settings (autoplay-safe: user must enable)
-  const [soundEnabled, setSoundEnabled] = useState(false);
-  const [volume, setVolume] = useState(0.6);
-  const audioRef = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null);
+  // Use new notification sound hook for reliable, instant notifications
   const notifiedIdsRef = useRef<Set<string>>(new Set());
   const supabaseRef = useRef<ReturnType<typeof createBrowserSupabase> | null>(
     null
@@ -92,8 +93,7 @@ export default function OrdersClient({
       if (statusFilter !== "all" && o.status !== statusFilter) return false;
       if (!q) return true;
       return (
-        o.table.toLowerCase().includes(q) ||
-        o.id.toLowerCase().includes(q)
+        o.table.toLowerCase().includes(q) || o.id.toLowerCase().includes(q)
       );
     });
   }, [orders, search, statusFilter]);
@@ -126,7 +126,9 @@ export default function OrdersClient({
     setSavingOrderId(id);
 
     const prev = orders;
-    const next = prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o));
+    const next = prev.map((o) =>
+      o.id === id ? { ...o, status: newStatus } : o
+    );
     setOrders(next);
 
     // Keep modal in sync if it's open
@@ -155,52 +157,6 @@ export default function OrdersClient({
     return `s2d_${key}_${restaurantId}`;
   }
 
-  async function ensureAudioReady() {
-    try {
-      if (!audioRef.current) {
-        const w = window as Window & { webkitAudioContext?: typeof AudioContext };
-        const AudioCtx = window.AudioContext ?? w.webkitAudioContext;
-        if (!AudioCtx) return false;
-        const ctx = new AudioCtx();
-        const gain = ctx.createGain();
-        gain.gain.value = volume;
-        gain.connect(ctx.destination);
-        audioRef.current = { ctx, gain };
-      }
-      if (audioRef.current.ctx.state !== "running") {
-        await audioRef.current.ctx.resume();
-      }
-      audioRef.current.gain.gain.value = volume;
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  function playNewOrderSound() {
-    if (!soundEnabled) return;
-    const audio = audioRef.current;
-    if (!audio || audio.ctx.state !== "running") return;
-
-    // A short, clear two-tone chime (non-annoying)
-    const now = audio.ctx.currentTime;
-    const g = audio.gain;
-
-    const o1 = audio.ctx.createOscillator();
-    o1.type = "sine";
-    o1.frequency.value = 880;
-    o1.connect(g);
-    o1.start(now);
-    o1.stop(now + 0.08);
-
-    const o2 = audio.ctx.createOscillator();
-    o2.type = "sine";
-    o2.frequency.value = 660;
-    o2.connect(g);
-    o2.start(now + 0.1);
-    o2.stop(now + 0.22);
-  }
-
   function markOrderAsNew(orderId: string) {
     setNewOrderSince((prev) => {
       if (prev[orderId]) return prev;
@@ -214,15 +170,17 @@ export default function OrdersClient({
     // Persist a small rolling window so refreshes don't re-trigger
     try {
       const key = getStorageKey("notified_order_ids");
-      const existing = JSON.parse(window.localStorage.getItem(key) || "[]") as string[];
-      const next = [orderId, ...existing.filter((x) => x !== orderId)].slice(0, 150);
+      const existing = JSON.parse(
+        window.localStorage.getItem(key) || "[]"
+      ) as string[];
+      const next = [orderId, ...existing.filter((x) => x !== orderId)].slice(
+        0,
+        150
+      );
       window.localStorage.setItem(key, JSON.stringify(next));
     } catch {
       // ignore
     }
-
-    markOrderAsNew(orderId);
-    playNewOrderSound();
   }
 
   function upsertOrder(nextOrder: Order) {
@@ -251,7 +209,9 @@ export default function OrdersClient({
 
   function formatOrderRow(row: OrderRow): Order {
     const rt = row.restaurant_tables;
-    const tableNumber = Array.isArray(rt) ? rt[0]?.table_number : rt?.table_number;
+    const tableNumber = Array.isArray(rt)
+      ? rt[0]?.table_number
+      : rt?.table_number;
     const createdAt = String(row.created_at);
     const time = new Date(createdAt).toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -332,16 +292,9 @@ export default function OrdersClient({
     });
   }
 
-  // Load persisted settings on mount
+  // Load notified IDs on mount (notification hook handles sound settings)
   useEffect(() => {
     try {
-      const enabled = window.localStorage.getItem(getStorageKey("sound_enabled"));
-      const storedVol = window.localStorage.getItem(getStorageKey("sound_volume"));
-      setSoundEnabled(enabled === "true");
-      if (storedVol) {
-        const n = Number(storedVol);
-        if (!Number.isNaN(n)) setVolume(Math.min(1, Math.max(0, n)));
-      }
       const storedNotified = JSON.parse(
         window.localStorage.getItem(getStorageKey("notified_order_ids")) || "[]"
       ) as string[];
@@ -351,19 +304,6 @@ export default function OrdersClient({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId]);
-
-  // Keep audio gain in sync
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.gain.gain.value = volume;
-    }
-    try {
-      window.localStorage.setItem(getStorageKey("sound_volume"), String(volume));
-    } catch {
-      // ignore
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [volume, restaurantId]);
 
   // Live subscription + polling fallback
   useEffect(() => {
@@ -421,8 +361,13 @@ export default function OrdersClient({
           const newTotalRaw = p.new.total;
           const newTotal =
             newTotalRaw != null ? Number(newTotalRaw).toFixed(2) : undefined;
-          const createdAt = p.new.created_at ? String(p.new.created_at) : existing.createdAt;
-          const time = new Date(createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+          const createdAt = p.new.created_at
+            ? String(p.new.created_at)
+            : existing.createdAt;
+          const time = new Date(createdAt).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
 
           upsertOrder({
             ...existing,
@@ -435,7 +380,8 @@ export default function OrdersClient({
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") setLiveStatus("live");
-        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") setLiveStatus("reconnecting");
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+          setLiveStatus("reconnecting");
         else if (status === "CLOSED") setLiveStatus("offline");
       });
 
@@ -538,48 +484,26 @@ export default function OrdersClient({
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <LayoutGrid className="h-4 w-4" />
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Sound</span>
-                <Switch
-                  checked={soundEnabled}
-                  onCheckedChange={async (checked) => {
-                    if (checked) {
-                      const ok = await ensureAudioReady();
-                      if (!ok) {
-                        toast.error("Sound blocked by browser. Tap again after interacting.");
-                        setSoundEnabled(false);
-                        return;
-                      }
-                    }
-                    setSoundEnabled(checked);
-                    try {
-                      window.localStorage.setItem(
-                        getStorageKey("sound_enabled"),
-                        String(checked)
-                      );
-                    } catch {
-                      // ignore
-                    }
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">
-                  {soundEnabled ? "On" : "Off"}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Volume</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={volume}
-                  onChange={(e) => setVolume(Number(e.target.value))}
-                  className="w-32"
-                  disabled={!soundEnabled}
-                  aria-label="Sound volume"
-                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={viewMode === "cards" ? "default" : "outline"}
+                  onClick={() => setViewMode("cards")}
+                >
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  Cards
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={viewMode === "table" ? "default" : "outline"}
+                  onClick={() => setViewMode("table")}
+                >
+                  <TableIcon className="h-4 w-4 mr-2" />
+                  Table
+                </Button>
               </div>
             </div>
           </div>
@@ -616,34 +540,32 @@ export default function OrdersClient({
                   Table
                 </Button>
               </div>
-            <div className="flex flex-wrap gap-2">
-              {statusTabs.map((tab) => (
-                <Button
-                  key={tab.id}
-                  type="button"
-                  variant={statusFilter === tab.id ? "default" : "outline"}
-                  size="sm"
-                  className={cn(
-                    "rounded-full",
-                    statusFilter !== tab.id && tab.toneClass
-                  )}
-                  onClick={() => {
-                    setStatusFilter(tab.id);
-                    setCurrentPage(1);
-                  }}
-                >
-                  {tab.label}
-                </Button>
-              ))}
-            </div>
+              <div className="flex flex-wrap gap-2">
+                {statusTabs.map((tab) => (
+                  <Button
+                    key={tab.id}
+                    type="button"
+                    variant={statusFilter === tab.id ? "default" : "outline"}
+                    size="sm"
+                    className={cn(
+                      "rounded-full",
+                      statusFilter !== tab.id && tab.toneClass
+                    )}
+                    onClick={() => {
+                      setStatusFilter(tab.id);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    {tab.label}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
 
           {(error || savingOrderId) && (
             <div className="flex flex-col gap-1">
-              {error && (
-                <div className="text-sm text-red-600">{error}</div>
-              )}
+              {error && <div className="text-sm text-red-600">{error}</div>}
               {savingOrderId && (
                 <div className="text-xs text-muted-foreground">
                   Saving status…
@@ -673,7 +595,9 @@ export default function OrdersClient({
                 order={order}
                 currency={currency}
                 saving={savingOrderId === order.id}
-                isNew={Boolean(newOrderSince[order.id]) && order.status === "pending"}
+                isNew={
+                  Boolean(newOrderSince[order.id]) && order.status === "pending"
+                }
                 onView={handleView}
                 onStatusChange={handleStatusChange}
               />
@@ -757,10 +681,13 @@ export default function OrdersClient({
           setConfirmCancelOpen(false);
           await handleStatusChange(o.id, "cancelled");
         }}
-        confirmDisabled={!selectedOrder || savingOrderId === selectedOrder?.id || selectedOrder?.status === "completed" || selectedOrder?.status === "cancelled"}
+        confirmDisabled={
+          !selectedOrder ||
+          savingOrderId === selectedOrder?.id ||
+          selectedOrder?.status === "completed" ||
+          selectedOrder?.status === "cancelled"
+        }
       />
     </div>
   );
 }
-
-

@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useMenuRestaurant } from "../context/MenuRestaurantContext";
 
 export default function QuantitySelector({
   value,
@@ -9,13 +11,25 @@ export default function QuantitySelector({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const { restaurantId } = useMenuRestaurant();
+
+  const handleDecrease = () => {
+    const newValue = Math.max(1, value - 1);
+    onChange(newValue);
+  };
+
+  const handleIncrease = () => {
+    const newValue = value + 1;
+    onChange(newValue);
+  };
+
   return (
     <div className="flex items-center gap-2">
       <Button
         type="button"
         variant="outline"
         size="icon-sm"
-        onClick={() => onChange(Math.max(1, value - 1))}
+        onClick={handleDecrease}
       >
         −
       </Button>
@@ -26,7 +40,7 @@ export default function QuantitySelector({
         type="button"
         variant="outline"
         size="icon-sm"
-        onClick={() => onChange(value + 1)}
+        onClick={handleIncrease}
       >
         +
       </Button>

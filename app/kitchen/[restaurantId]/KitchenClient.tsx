@@ -12,6 +12,7 @@ import {
 } from "@/app/actions/kitchen";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { playKitchenNotification } from "@/lib/services/kitchenAudioService";
 
 function storageKey(restaurantId: string, key: string) {
   return `s2d_kitchen_${restaurantId}_${key}`;
@@ -27,83 +28,6 @@ function formatAge(minutesAgo: number) {
   return `${minutesAgo} min`;
 }
 
-function useKitchenChime(restaurantId: string) {
-  const [enabled, setEnabled] = useState(() => {
-    try {
-      const e = window.localStorage.getItem(storageKey(restaurantId, "sound_enabled"));
-      return e == null ? true : e === "true";
-    } catch {
-      return true;
-    }
-  });
-  const [volume, setVolume] = useState(() => {
-    try {
-      const v = window.localStorage.getItem(storageKey(restaurantId, "sound_volume"));
-      const n = v == null ? 0.6 : Number(v);
-      if (Number.isNaN(n)) return 0.6;
-      return Math.min(1, Math.max(0, n));
-    } catch {
-      return 0.6;
-    }
-  });
-  const audioRef = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(storageKey(restaurantId, "sound_enabled"), String(enabled));
-      window.localStorage.setItem(storageKey(restaurantId, "sound_volume"), String(volume));
-    } catch {
-      // ignore
-    }
-  }, [enabled, volume, restaurantId]);
-
-  async function ensureAudioReady() {
-    try {
-      if (!audioRef.current) {
-        const w = window as Window & { webkitAudioContext?: typeof AudioContext };
-        const AudioCtx = window.AudioContext ?? w.webkitAudioContext;
-        if (!AudioCtx) return false;
-        const ctx = new AudioCtx();
-        const gain = ctx.createGain();
-        gain.gain.value = volume;
-        gain.connect(ctx.destination);
-        audioRef.current = { ctx, gain };
-      }
-      if (audioRef.current.ctx.state !== "running") {
-        await audioRef.current.ctx.resume();
-      }
-      audioRef.current.gain.gain.value = volume;
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  function play() {
-    if (!enabled) return;
-    const audio = audioRef.current;
-    if (!audio || audio.ctx.state !== "running") return;
-    const now = audio.ctx.currentTime;
-    const g = audio.gain;
-
-    const o1 = audio.ctx.createOscillator();
-    o1.type = "sine";
-    o1.frequency.value = 880;
-    o1.connect(g);
-    o1.start(now);
-    o1.stop(now + 0.08);
-
-    const o2 = audio.ctx.createOscillator();
-    o2.type = "sine";
-    o2.frequency.value = 660;
-    o2.connect(g);
-    o2.start(now + 0.1);
-    o2.stop(now + 0.22);
-  }
-
-  return { enabled, setEnabled, volume, setVolume, ensureAudioReady, play };
-}
-
 export default function KitchenClient({
   restaurantId,
   restaurantName,
@@ -115,19 +39,23 @@ export default function KitchenClient({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [liveStatus, setLiveStatus] = useState<"live" | "reconnecting">("live");
-  const [highlightSince, setHighlightSince] = useState<Record<string, number>>({});
+  const [highlightSince, setHighlightSince] = useState<Record<string, number>>(
+    {}
+  );
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [lowStock, setLowStock] = useState<KitchenLowStockIngredient[]>([]);
   const [lowStockOpen, setLowStockOpen] = useState(false);
 
-  const chime = useKitchenChime(restaurantId);
+  // Track notified order IDs to prevent duplicate notifications
   const notifiedIdsRef = useRef<Set<string>>(new Set());
   const ordersRef = useRef<KitchenOrder[]>([]);
 
   useEffect(() => {
     try {
       const stored = JSON.parse(
-        window.localStorage.getItem(storageKey(restaurantId, "notified_order_ids")) || "[]"
+        window.localStorage.getItem(
+          storageKey(restaurantId, "notified_order_ids")
+        ) || "[]"
       ) as string[];
       notifiedIdsRef.current = new Set(stored);
     } catch {
@@ -144,14 +72,24 @@ export default function KitchenClient({
     notifiedIdsRef.current.add(orderId);
     try {
       const key = storageKey(restaurantId, "notified_order_ids");
-      const existing = JSON.parse(window.localStorage.getItem(key) || "[]") as string[];
-      const next = [orderId, ...existing.filter((x) => x !== orderId)].slice(0, 250);
+      const existing = JSON.parse(
+        window.localStorage.getItem(key) || "[]"
+      ) as string[];
+      const next = [orderId, ...existing.filter((x) => x !== orderId)].slice(
+        0,
+        250
+      );
       window.localStorage.setItem(key, JSON.stringify(next));
     } catch {
       // ignore
     }
-    setHighlightSince((prev) => (prev[orderId] ? prev : { ...prev, [orderId]: nowMs() }));
-    chime.play();
+    setHighlightSince((prev) =>
+      prev[orderId] ? prev : { ...prev, [orderId]: nowMs() }
+    );
+    // Event-driven trigger: play notification immediately when new order arrives
+    playKitchenNotification().catch((error) => {
+      console.error("[Kitchen] Failed to play notification:", error);
+    });
   }
 
   async function refreshOnce({ allowChime }: { allowChime: boolean }) {
@@ -226,7 +164,9 @@ export default function KitchenClient({
   const columns = useMemo(() => {
     const pending = orders.filter((o) => o.status === "pending");
     const preparing = orders.filter((o) => o.status === "preparing");
-    const completed = orders.filter((o) => o.status === "completed").slice(0, 30);
+    const completed = orders
+      .filter((o) => o.status === "completed")
+      .slice(0, 30);
     return { pending, preparing, completed };
   }, [orders]);
 
@@ -262,7 +202,9 @@ export default function KitchenClient({
               <span
                 className={cn(
                   "inline-block h-2.5 w-2.5 rounded-full",
-                  liveStatus === "live" ? "bg-emerald-400" : "bg-amber-400 animate-pulse"
+                  liveStatus === "live"
+                    ? "bg-emerald-400"
+                    : "bg-amber-400 animate-pulse"
                 )}
               />
               {liveStatus === "live" ? "Live" : "Reconnecting…"}
@@ -271,21 +213,8 @@ export default function KitchenClient({
             <Button
               type="button"
               variant="outline"
-              className="border-neutral-700 text-white hover:bg-neutral-900"
-              onClick={async () => {
-                const ok = await chime.ensureAudioReady();
-                if (!ok) setError("Sound blocked by browser. Tap again after interacting.");
-                chime.setEnabled((v) => !v);
-              }}
-            >
-              Sound: {chime.enabled ? "On" : "Off"}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
               className={cn(
-                "border-neutral-700 text-white hover:bg-neutral-900",
+                "border-neutral-700 text-white bg-transparent hover:bg-neutral-900 hover:text-green-400",
                 lowStock.length > 0 && "border-amber-500/60"
               )}
               onClick={() => setLowStockOpen(true)}
@@ -296,7 +225,7 @@ export default function KitchenClient({
             <Button
               type="button"
               variant="outline"
-              className="border-neutral-700 text-white hover:bg-neutral-900"
+              className="border-neutral-700 text-white bg-transparent hover:bg-neutral-900  hover:text-green-400"
               onClick={async () => {
                 await kitchenLogout(restaurantId);
                 window.location.reload();
@@ -314,7 +243,10 @@ export default function KitchenClient({
           <div className="mb-4 rounded-xl border border-amber-700/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
             <div className="font-semibold">Low stock warning</div>
             <div className="text-amber-200/80">
-              {lowStock.slice(0, 3).map((i) => i.name).join(", ")}
+              {lowStock
+                .slice(0, 3)
+                .map((i) => i.name)
+                .join(", ")}
               {lowStock.length > 3 ? ` +${lowStock.length - 3} more` : ""}
             </div>
           </div>
@@ -375,7 +307,7 @@ export default function KitchenClient({
       {/* Low stock overlay (minimal) */}
       {lowStockOpen && (
         <div
-          className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4"
+          className="fixed inset-0 z-60 bg-black/70 flex items-center justify-center p-4"
           onClick={() => setLowStockOpen(false)}
         >
           <div
@@ -392,7 +324,7 @@ export default function KitchenClient({
               <Button
                 type="button"
                 variant="outline"
-                className="border-neutral-700 text-white hover:bg-neutral-900"
+                className="border-neutral-700 text-white bg-transparent hover:bg-white"
                 onClick={() => setLowStockOpen(false)}
               >
                 Close
@@ -447,11 +379,20 @@ function KitchenColumn({
   secondaryLabel: string;
 }) {
   const headerTone =
-    tone === "new" ? "bg-red-600" : tone === "preparing" ? "bg-amber-500" : "bg-emerald-500";
+    tone === "new"
+      ? "bg-red-600"
+      : tone === "preparing"
+      ? "bg-amber-500"
+      : "bg-emerald-500";
 
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-950 overflow-hidden">
-      <div className={cn("px-4 py-3 flex items-center justify-between", headerTone)}>
+      <div
+        className={cn(
+          "px-4 py-3 flex items-center justify-between",
+          headerTone
+        )}
+      >
         <div className="text-lg font-extrabold tracking-wide">{title}</div>
         <div className="text-sm font-semibold bg-black/25 px-3 py-1 rounded-full">
           {count}
@@ -469,14 +410,20 @@ function KitchenColumn({
               key={o.id}
               className={cn(
                 "rounded-2xl border border-neutral-800 bg-black p-4",
-                highlightSince[o.id] && tone === "new" && "ring-2 ring-red-500/50"
+                highlightSince[o.id] &&
+                  tone === "new" &&
+                  "ring-2 ring-red-500/50"
               )}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-2xl font-extrabold">Table {o.table}</div>
                   <div className="text-sm text-neutral-400 mt-1">
-                    {formatAge(o.minutesAgo)} • {new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                    {formatAge(o.minutesAgo)} •{" "}
+                    {new Date(o.createdAt).toLocaleTimeString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                 </div>
                 {highlightSince[o.id] && tone === "new" && (
@@ -491,7 +438,9 @@ function KitchenColumn({
                   <div className="text-xs tracking-wide text-neutral-400 uppercase">
                     Notes
                   </div>
-                  <div className="text-sm mt-1 whitespace-pre-wrap">{o.notes}</div>
+                  <div className="text-sm mt-1 whitespace-pre-wrap">
+                    {o.notes}
+                  </div>
                 </div>
               )}
 
@@ -523,7 +472,7 @@ function KitchenColumn({
                   variant="outline"
                   onClick={() => onSecondary(o.id)}
                   disabled={savingOrderId === o.id}
-                  className="h-12 text-base font-bold border-neutral-700 text-white hover:bg-neutral-900"
+                  className="h-12 text-base font-bold border-neutral-700 bg-transparent text-white hover:bg-green-400"
                 >
                   {secondaryLabel}
                 </Button>
@@ -535,4 +484,3 @@ function KitchenColumn({
     </div>
   );
 }
-

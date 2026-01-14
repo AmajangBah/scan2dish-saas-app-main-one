@@ -6,13 +6,18 @@ import es from "../messages/es.json";
 
 import { defaultLocale, locales, type Locale } from "../i18n";
 
+const messages = {
+  en,
+  fr,
+  es,
+} as const;
+
 export default getRequestConfig(async ({ locale }) => {
   const resolvedLocale = (locale ?? defaultLocale) as Locale;
   if (!locales.includes(resolvedLocale)) notFound();
 
   return {
     locale: resolvedLocale,
-    messages: { en, fr, es }[resolvedLocale],
+    messages: messages[resolvedLocale],
   };
 });
-

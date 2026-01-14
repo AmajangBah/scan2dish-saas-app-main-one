@@ -7,17 +7,22 @@ import { useCart } from "../context/CartContext";
 import { Button } from "@/components/ui/button";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useMenuRestaurant } from "../context/MenuRestaurantContext";
+import type { Locale } from "@/i18n";
 
-export default function TopHeader({
-  title,
-}: {
-  title: string;
-}) {
+const translations: Record<Locale, Record<string, string>> = {
+  en: { "customer.cart": "Cart" },
+  fr: { "customer.cart": "Panier" },
+  es: { "customer.cart": "Carrito" },
+};
+
+export default function TopHeader({ title }: { title: string }) {
   const params = useParams();
-  const locale = typeof params.locale === "string" ? params.locale : null;
+  const locale = (
+    typeof params.locale === "string" ? params.locale : "en"
+  ) as Locale;
   const { items } = useCart();
   const { tableNumber, tableSlug } = useMenuRestaurant();
-  const base = locale ? `/${locale}` : "";
+  const base = `/${locale}`;
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -38,14 +43,19 @@ export default function TopHeader({
 
           <Button asChild variant="ghost" size="icon" className="relative">
             <Link
-              href={tableSlug ? `${base}/menu/${tableSlug}/cart` : `${base}/menu`}
-              aria-label="Open cart"
+              href={
+                tableSlug ? `${base}/menu/${tableSlug}/cart` : `${base}/menu`
+              }
+              aria-label={translations[locale]["customer.cart"] || "Cart"}
             >
               <ShoppingCart className="h-5 w-5" />
               {items.length > 0 && (
                 <span
                   className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full text-[11px] font-semibold text-white bg-[var(--menu-brand)] flex items-center justify-center"
-                  aria-label={`${items.reduce((s, i) => s + i.qty, 0)} items in cart`}
+                  aria-label={`${items.reduce(
+                    (s, i) => s + i.qty,
+                    0
+                  )} items in cart`}
                 >
                   {items.reduce((s, i) => s + i.qty, 0)}
                 </span>

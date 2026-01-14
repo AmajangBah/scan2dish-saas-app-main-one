@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import QuantitySelector from "./QuantitySelector";
 import { useCart } from "../context/CartContext";
@@ -10,7 +15,48 @@ import { formatPrice } from "@/lib/utils/currency";
 import { toast } from "sonner";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
-import { classifyMenuType, supabaseCategoryOrForMenuType } from "../utils/menuType";
+import {
+  classifyMenuType,
+  supabaseCategoryOrForMenuType,
+} from "../utils/menuType";
+import type { Locale } from "@/i18n";
+import { locales } from "@/i18n";
+
+const translations: Record<Locale, Record<string, string>> = {
+  en: {
+    pairsWellWith: "Pairs well with",
+    findingMatches: "Finding matches…",
+    oneTapAdd: "One-tap add",
+    noRecommendations: "No recommendations available right now.",
+    done: "Done",
+    addToCart: "Add to cart",
+    addedToCart: "Added to cart",
+    add: "Add",
+    total: "Total",
+  },
+  fr: {
+    pairsWellWith: "Accompagnements suggérés",
+    findingMatches: "Recherche en cours…",
+    oneTapAdd: "Ajouter d'un clic",
+    noRecommendations: "Aucune recommandation disponible.",
+    done: "Terminé",
+    addToCart: "Ajouter au panier",
+    addedToCart: "Ajouté au panier",
+    add: "Ajouter",
+    total: "Total",
+  },
+  es: {
+    pairsWellWith: "Acompañamientos sugeridos",
+    findingMatches: "Buscando coincidencias…",
+    oneTapAdd: "Añadir con un toque",
+    noRecommendations: "No hay recomendaciones disponibles.",
+    done: "Hecho",
+    addToCart: "Añadir al carrito",
+    addedToCart: "Añadido al carrito",
+    add: "Añadir",
+    total: "Total",
+  },
+};
 
 export type MenuProduct = {
   id: string;
@@ -33,7 +79,11 @@ function pickTranslatedText({
   translations: unknown;
 }) {
   if (!locale || locale === "en") return base;
-  if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+  if (
+    !translations ||
+    typeof translations !== "object" ||
+    Array.isArray(translations)
+  ) {
     return base;
   }
   const v = (translations as Record<string, unknown>)[locale];
@@ -58,7 +108,12 @@ export default function MenuItemDialog({
   const [recommendations, setRecommendations] = useState<MenuProduct[]>([]);
 
   const params = useParams();
-  const locale = typeof params.locale === "string" ? params.locale : null;
+  const rawLocale = typeof params.locale === "string" ? params.locale : null;
+  const locale = (
+    rawLocale && (locales as readonly string[]).includes(rawLocale)
+      ? rawLocale
+      : "en"
+  ) as Locale;
   const { restaurantId } = useMenuRestaurant();
 
   const lineTotal = useMemo(() => product.price * qty, [product.price, qty]);
@@ -75,7 +130,9 @@ export default function MenuItemDialog({
       // - Food/Dessert → recommend Drinks
       // - Drink → recommend Desserts
       const tagsObj =
-        product.tags && typeof product.tags === "object" && !Array.isArray(product.tags)
+        product.tags &&
+        typeof product.tags === "object" &&
+        !Array.isArray(product.tags)
           ? (product.tags as Record<string, unknown>)
           : null;
 
@@ -114,7 +171,9 @@ export default function MenuItemDialog({
 
         const mapped =
           data?.map((row) => {
-            const images = Array.isArray((row as unknown as { images?: unknown }).images)
+            const images = Array.isArray(
+              (row as unknown as { images?: unknown }).images
+            )
               ? ((row as unknown as { images?: unknown }).images as unknown[])
               : [];
             const firstImage = images[0];
@@ -122,16 +181,19 @@ export default function MenuItemDialog({
             const name = pickTranslatedText({
               locale,
               base: String((row as unknown as { name?: unknown }).name ?? ""),
-              translations: (row as unknown as { name_translations?: unknown }).name_translations,
+              translations: (row as unknown as { name_translations?: unknown })
+                .name_translations,
             });
-            const descRaw = (row as unknown as { description?: unknown }).description;
+            const descRaw = (row as unknown as { description?: unknown })
+              .description;
             const desc =
               typeof descRaw === "string" && descRaw.trim()
                 ? pickTranslatedText({
                     locale,
                     base: descRaw,
-                    translations: (row as unknown as { description_translations?: unknown })
-                      .description_translations,
+                    translations: (
+                      row as unknown as { description_translations?: unknown }
+                    ).description_translations,
                   })
                 : undefined;
 
@@ -141,7 +203,8 @@ export default function MenuItemDialog({
               desc,
               price: Number((row as unknown as { price?: unknown }).price ?? 0),
               image:
-                typeof firstImage === "string" && !firstImage.startsWith("blob:")
+                typeof firstImage === "string" &&
+                !firstImage.startsWith("blob:")
                   ? firstImage
                   : undefined,
               categoryLabel: (() => {
@@ -149,7 +212,8 @@ export default function MenuItemDialog({
                 return c ? String(c) : undefined;
               })(),
               outOfStock: Boolean(
-                (row as unknown as { inventory_out_of_stock?: unknown }).inventory_out_of_stock
+                (row as unknown as { inventory_out_of_stock?: unknown })
+                  .inventory_out_of_stock
               ),
             } satisfies MenuProduct;
           }) ?? [];
@@ -157,12 +221,21 @@ export default function MenuItemDialog({
         // If a protein is set (e.g. chicken), boost matching drink names/categories.
         const proteinBoostKeywords =
           protein === "chicken"
-            ? ["lemon", "ginger", "cola", "juice", "iced", "tea", "soda", "lime"]
+            ? [
+                "lemon",
+                "ginger",
+                "cola",
+                "juice",
+                "iced",
+                "tea",
+                "soda",
+                "lime",
+              ]
             : protein === "fish" || protein === "shrimp"
-              ? ["lemon", "lime", "sparkling", "water", "soda"]
-              : protein === "beef" || protein === "lamb" || protein === "goat"
-                ? ["cola", "ginger", "malt", "sparkling", "water", "soda"]
-                : [];
+            ? ["lemon", "lime", "sparkling", "water", "soda"]
+            : protein === "beef" || protein === "lamb" || protein === "goat"
+            ? ["cola", "ginger", "malt", "sparkling", "water", "soda"]
+            : [];
 
         const ranked = mapped
           .filter((r) => r.id)
@@ -190,7 +263,14 @@ export default function MenuItemDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, restaurantId, locale, product.id, product.categoryLabel, product.tags]);
+  }, [
+    open,
+    restaurantId,
+    locale,
+    product.id,
+    product.categoryLabel,
+    product.tags,
+  ]);
 
   return (
     <Dialog
@@ -206,7 +286,9 @@ export default function MenuItemDialog({
       <DialogContent className="p-0 overflow-hidden sm:max-w-lg">
         <div className="flex flex-col">
           <div className="aspect-[16/9] bg-muted">
-            {product.image && !product.image.startsWith("blob:") && !imgBroken ? (
+            {product.image &&
+            !product.image.startsWith("blob:") &&
+            !imgBroken ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={product.image}
@@ -221,16 +303,22 @@ export default function MenuItemDialog({
 
           <div className="p-5">
             <DialogHeader>
-              <DialogTitle className="text-lg leading-tight">{product.name}</DialogTitle>
+              <DialogTitle className="text-lg leading-tight">
+                {product.name}
+              </DialogTitle>
             </DialogHeader>
 
             {product.desc && (
-              <p className="mt-2 text-sm text-muted-foreground">{product.desc}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {product.desc}
+              </p>
             )}
 
             <div className="mt-4 flex items-center justify-between">
               <div className="text-sm text-muted-foreground">Price</div>
-              <div className="font-semibold">{formatPrice(product.price, currency)}</div>
+              <div className="font-semibold">
+                {formatPrice(product.price, currency)}
+              </div>
             </div>
 
             <div className="mt-4 flex items-center justify-between">
@@ -241,16 +329,22 @@ export default function MenuItemDialog({
             {/* Recommendations */}
             <div className="mt-5 rounded-2xl border bg-muted/10 p-4">
               <div className="flex items-center justify-between gap-3">
-                <div className="text-sm font-semibold">Pairs well with</div>
+                <div className="text-sm font-semibold">
+                  {translations[locale]["pairsWellWith"] || "Pairs well with"}
+                </div>
                 <div className="text-xs text-muted-foreground">
-                  {recsLoading ? "Finding matches…" : "One-tap add"}
+                  {recsLoading
+                    ? translations[locale]["findingMatches"] ||
+                      "Finding matches…"
+                    : translations[locale]["oneTapAdd"] || "One-tap add"}
                 </div>
               </div>
 
               <div className="mt-3 space-y-2">
                 {!recsLoading && recommendations.length === 0 && (
                   <div className="text-xs text-muted-foreground">
-                    No recommendations available right now.
+                    {translations[locale]["noRecommendations"] ||
+                      "No recommendations available right now."}
                   </div>
                 )}
 
@@ -260,7 +354,9 @@ export default function MenuItemDialog({
                     className="flex items-center justify-between gap-3 rounded-xl border bg-background/60 px-3 py-2"
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{r.name}</div>
+                      <div className="text-sm font-medium truncate">
+                        {r.name}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {formatPrice(r.price, currency)}
                       </div>
@@ -272,14 +368,21 @@ export default function MenuItemDialog({
                       onClick={() => {
                         if (r.outOfStock) return;
                         add(
-                          { id: r.id, name: r.name, price: r.price, image: r.image },
+                          {
+                            id: r.id,
+                            name: r.name,
+                            price: r.price,
+                            image: r.image,
+                          },
                           1
                         );
-                        toast.success("Added to cart");
+                        toast.success(
+                          translations[locale]["addedToCart"] || "Added to cart"
+                        );
                       }}
                       className="shrink-0 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
                     >
-                      Add
+                      {translations[locale]["add"] || "Add"}
                     </Button>
                   </div>
                 ))}
@@ -288,7 +391,9 @@ export default function MenuItemDialog({
 
             <div className="mt-5 flex items-center justify-between border-t pt-4">
               <div className="min-w-0">
-                <div className="text-xs text-muted-foreground">Total</div>
+                <div className="text-xs text-muted-foreground">
+                  {translations[locale]["total"] || "Total"}
+                </div>
                 <div className="font-semibold truncate">
                   {formatPrice(lineTotal, currency)}
                 </div>
@@ -300,7 +405,7 @@ export default function MenuItemDialog({
                   variant="outline"
                   onClick={() => onOpenChange(false)}
                 >
-                  Done
+                  {translations[locale]["done"] || "Done"}
                 </Button>
                 <Button
                   onClick={() => {
@@ -313,7 +418,9 @@ export default function MenuItemDialog({
                       },
                       qty
                     );
-                    toast.success("Added to cart");
+                    toast.success(
+                      translations[locale]["addedToCart"] || "Added to cart"
+                    );
                     setAddedPulse(true);
                     // Keep the modal open so users can add more without losing context.
                     setQty(1);
@@ -335,4 +442,3 @@ export default function MenuItemDialog({
     </Dialog>
   );
 }
-

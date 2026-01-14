@@ -10,6 +10,47 @@ import QuantitySelector from "../../components/QuantitySelector";
 import { useCart } from "../../context/CartContext";
 import { useMenuRestaurant } from "../../context/MenuRestaurantContext";
 import { formatPrice } from "@/lib/utils/currency";
+import { toast } from "sonner";
+import type { Locale } from "@/i18n";
+
+const translations: Record<Locale, Record<string, string>> = {
+  en: {
+    backToMenu: "Back to menu",
+    loading: "Loading…",
+    price: "Price",
+    quantity: "Quantity",
+    total: "Total",
+    addToCart: "Add to cart",
+    addedToCart: "Added to cart",
+    itemNotFound: "Item not found",
+    invalidItem: "Invalid item",
+    missingRestaurant: "Missing restaurant context",
+  },
+  fr: {
+    backToMenu: "Retour au menu",
+    loading: "Chargement…",
+    price: "Prix",
+    quantity: "Quantité",
+    total: "Total",
+    addToCart: "Ajouter au panier",
+    addedToCart: "Ajouté au panier",
+    itemNotFound: "Article introuvable",
+    invalidItem: "Article invalide",
+    missingRestaurant: "Contexte restaurant manquant",
+  },
+  es: {
+    backToMenu: "Volver al menú",
+    loading: "Cargando…",
+    price: "Precio",
+    quantity: "Cantidad",
+    total: "Total",
+    addToCart: "Añadir al carrito",
+    addedToCart: "Añadido al carrito",
+    itemNotFound: "Artículo no encontrado",
+    invalidItem: "Artículo inválido",
+    missingRestaurant: "Contexto del restaurante faltante",
+  },
+};
 
 function pickTranslatedText({
   locale,
@@ -21,7 +62,11 @@ function pickTranslatedText({
   translations: unknown;
 }) {
   if (!locale || locale === "en") return base;
-  if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+  if (
+    !translations ||
+    typeof translations !== "object" ||
+    Array.isArray(translations)
+  ) {
     return base;
   }
   const v = (translations as Record<string, unknown>)[locale];
@@ -42,7 +87,9 @@ type MenuItem = {
 export default function MenuItemPage() {
   const params = useParams();
   const itemId = typeof params.itemId === "string" ? params.itemId : null;
-  const locale = typeof params.locale === "string" ? params.locale : null;
+  const locale = (
+    typeof params.locale === "string" ? params.locale : "en"
+  ) as Locale;
   const { add } = useCart();
   const { currency, restaurantId, tableSlug } = useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
@@ -108,7 +155,12 @@ export default function MenuItemPage() {
         if (e || !data) throw new Error("Item not found");
         if (!cancelled) setItem(data as unknown as MenuItem);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load item");
+        if (!cancelled)
+          setError(
+            e instanceof Error
+              ? e.message
+              : translations[locale]["itemNotFound"] || "Failed to load item"
+          );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -124,14 +176,20 @@ export default function MenuItemPage() {
     <div className="px-4 pt-6 pb-10 bg-background min-h-dvh">
       <div className="max-w-xl mx-auto space-y-4">
         <Button asChild variant="outline" className="rounded-xl">
-          <Link href={tableSlug ? `${base}/menu/${tableSlug}/browse` : `${base}/menu`}>
-            Back to menu
+          <Link
+            href={
+              tableSlug ? `${base}/menu/${tableSlug}/browse` : `${base}/menu`
+            }
+          >
+            {translations[locale]["backToMenu"] || "Back to menu"}
           </Link>
         </Button>
 
         {loading && (
           <Card className="p-6 rounded-2xl">
-            <div className="text-sm text-muted-foreground">Loading…</div>
+            <div className="text-sm text-muted-foreground">
+              {translations[locale]["loading"] || "Loading…"}
+            </div>
           </Card>
         )}
 
@@ -169,17 +227,25 @@ export default function MenuItemPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">Price</div>
-                <div className="font-semibold">{formatPrice(item.price, currency)}</div>
+                <div className="text-sm text-muted-foreground">
+                  {translations[locale]["price"] || "Price"}
+                </div>
+                <div className="font-semibold">
+                  {formatPrice(item.price, currency)}
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">Quantity</div>
+                <div className="text-sm text-muted-foreground">
+                  {translations[locale]["quantity"] || "Quantity"}
+                </div>
                 <QuantitySelector value={qty} onChange={setQty} />
               </div>
 
               <div className="pt-2 border-t flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">Total</div>
+                <div className="text-sm text-muted-foreground">
+                  {translations[locale]["total"] || "Total"}
+                </div>
                 <div className="font-semibold">
                   {formatPrice(item.price * qty, currency)}
                 </div>
@@ -187,11 +253,17 @@ export default function MenuItemPage() {
 
               <Button
                 className="w-full bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
-                onClick={() =>
-                  add({ id: item.id, name: displayName, price: item.price }, qty)
-                }
+                onClick={() => {
+                  add(
+                    { id: item.id, name: displayName, price: item.price },
+                    qty
+                  );
+                  toast.success(
+                    translations[locale]["addedToCart"] || "Added to cart"
+                  );
+                }}
               >
-                Add to cart
+                {translations[locale]["addToCart"] || "Add to cart"}
               </Button>
             </div>
           </Card>

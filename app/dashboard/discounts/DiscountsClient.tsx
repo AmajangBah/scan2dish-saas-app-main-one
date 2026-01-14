@@ -48,6 +48,14 @@ export default function DiscountsClient({
     is_active: true,
   });
 
+  // Debug: Log received props
+  console.log("DiscountsClient received:", {
+    categoriesCount: availableCategories.length,
+    categories: availableCategories,
+    itemsCount: availableItems.length,
+    items: availableItems,
+  });
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -99,7 +107,9 @@ export default function DiscountsClient({
       if (!result.success) {
         // Rollback on error
         setDiscounts((prev) =>
-          prev.map((d) => (d.id === id ? { ...d, is_active: currentStatus } : d))
+          prev.map((d) =>
+            d.id === id ? { ...d, is_active: currentStatus } : d
+          )
         );
         setError(result.error || "Failed to toggle discount");
         toast.error(result.error || "Failed to toggle discount");
@@ -154,7 +164,8 @@ export default function DiscountsClient({
           <div className="text-6xl mb-4">🎉</div>
           <h2 className="text-2xl font-bold mb-2">No Discounts Yet</h2>
           <p className="text-gray-600 mb-6">
-            Create your first discount to attract more customers and boost sales!
+            Create your first discount to attract more customers and boost
+            sales!
           </p>
           <Button
             onClick={() => setCreateOpen(true)}
@@ -190,8 +201,8 @@ export default function DiscountsClient({
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      discount_type:
-                        e.target.value as CreateDiscountInput["discount_type"],
+                      discount_type: e.target
+                        .value as CreateDiscountInput["discount_type"],
                     })
                   }
                 >
@@ -235,7 +246,8 @@ export default function DiscountsClient({
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      apply_to: e.target.value as CreateDiscountInput["apply_to"],
+                      apply_to: e.target
+                        .value as CreateDiscountInput["apply_to"],
                     })
                   }
                 >
@@ -324,7 +336,10 @@ export default function DiscountsClient({
                 <div className="text-2xl font-bold text-[#C84501]">
                   {discount.discount_type === "percentage"
                     ? `${discount.discount_value}%`
-                    : formatPrice(Number(discount.discount_value || 0), currency)}{" "}
+                    : formatPrice(
+                        Number(discount.discount_value || 0),
+                        currency
+                      )}{" "}
                   OFF
                 </div>
                 <div className="text-sm text-gray-600 mt-1">
@@ -430,9 +445,7 @@ export default function DiscountsClient({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">
-                Apply To
-              </label>
+              <label className="block text-sm font-medium mb-2">Apply To</label>
               <select
                 className="w-full p-2 border rounded-lg"
                 value={formData.apply_to}
@@ -440,8 +453,12 @@ export default function DiscountsClient({
                   setFormData({
                     ...formData,
                     apply_to: e.target.value as "all" | "category" | "item",
-                    category_id: e.target.value === "category" ? formData.category_id : null,
-                    item_id: e.target.value === "item" ? formData.item_id : null,
+                    category_id:
+                      e.target.value === "category"
+                        ? formData.category_id
+                        : null,
+                    item_id:
+                      e.target.value === "item" ? formData.item_id : null,
                   })
                 }
               >
@@ -460,7 +477,10 @@ export default function DiscountsClient({
                   className="w-full p-2 border rounded-lg"
                   value={formData.category_id || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, category_id: e.target.value || null })
+                    setFormData({
+                      ...formData,
+                      category_id: e.target.value || null,
+                    })
                   }
                   required
                 >
@@ -490,7 +510,10 @@ export default function DiscountsClient({
                   className="w-full p-2 border rounded-lg"
                   value={formData.item_id || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, item_id: e.target.value || null })
+                    setFormData({
+                      ...formData,
+                      item_id: e.target.value || null,
+                    })
                   }
                   required
                 >

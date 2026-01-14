@@ -97,7 +97,9 @@ const AdjustSchema = z.object({
   note: z.string().max(200).optional().nullable(),
 });
 
-export async function adjustIngredientStock(input: z.infer<typeof AdjustSchema>) {
+export async function adjustIngredientStock(
+  input: z.infer<typeof AdjustSchema>
+) {
   try {
     const validated = AdjustSchema.parse(input);
     const ctx = await requireRestaurant();
@@ -111,10 +113,12 @@ export async function adjustIngredientStock(input: z.infer<typeof AdjustSchema>)
       .eq("restaurant_id", ctx.restaurant.id)
       .single();
 
-    if (ingErr || !ingredient) return { success: false, error: "Ingredient not found" };
+    if (ingErr || !ingredient)
+      return { success: false, error: "Ingredient not found" };
 
     const nextQty = Number(ingredient.current_quantity) + validated.delta;
-    if (nextQty < 0) return { success: false, error: "Quantity cannot go below 0" };
+    if (nextQty < 0)
+      return { success: false, error: "Quantity cannot go below 0" };
 
     const { error: updErr } = await supabase
       .from("ingredients")
@@ -124,13 +128,15 @@ export async function adjustIngredientStock(input: z.infer<typeof AdjustSchema>)
 
     if (updErr) return { success: false, error: updErr.message };
 
-    const { error: txErr } = await supabase.from("inventory_transactions").insert({
-      restaurant_id: ctx.restaurant.id,
-      ingredient_id: validated.ingredient_id,
-      delta: validated.delta,
-      reason: validated.reason,
-      note: validated.note ?? null,
-    });
+    const { error: txErr } = await supabase
+      .from("inventory_transactions")
+      .insert({
+        restaurant_id: ctx.restaurant.id,
+        ingredient_id: validated.ingredient_id,
+        delta: validated.delta,
+        reason: validated.reason,
+        note: validated.note ?? null,
+      });
 
     if (txErr) return { success: false, error: txErr.message };
 
@@ -151,7 +157,9 @@ const UpsertRecipeSchema = z.object({
   rows: z.array(RecipeRowSchema),
 });
 
-export async function upsertMenuItemRecipe(input: z.infer<typeof UpsertRecipeSchema>) {
+export async function upsertMenuItemRecipe(
+  input: z.infer<typeof UpsertRecipeSchema>
+) {
   try {
     const validated = UpsertRecipeSchema.parse(input);
     const ctx = await requireRestaurant();
@@ -166,6 +174,25 @@ export async function upsertMenuItemRecipe(input: z.infer<typeof UpsertRecipeSch
       .single();
     if (miErr || !mi) return { success: false, error: "Menu item not found" };
 
+    // Validate all ingredient IDs exist and belong to this restaurant
+    if (validated.rows.length > 0) {
+      for (const row of validated.rows) {
+        const { data: ingredient, error: ingErr } = await supabase
+          .from("ingredients")
+          .select("id")
+          .eq("id", row.ingredient_id)
+          .eq("restaurant_id", ctx.restaurant.id)
+          .single();
+
+        if (ingErr || !ingredient) {
+          return {
+            success: false,
+            error: `Ingredient not found or doesn't belong to your restaurant`,
+          };
+        }
+      }
+    }
+
     // Replace recipe rows (simple + safe)
     const { error: delErr } = await supabase
       .from("menu_item_ingredients")
@@ -176,14 +203,16 @@ export async function upsertMenuItemRecipe(input: z.infer<typeof UpsertRecipeSch
     if (delErr) return { success: false, error: delErr.message };
 
     if (validated.rows.length > 0) {
-      const { error: insErr } = await supabase.from("menu_item_ingredients").insert(
-        validated.rows.map((r) => ({
-          restaurant_id: ctx.restaurant.id,
-          menu_item_id: validated.menu_item_id,
-          ingredient_id: r.ingredient_id,
-          quantity_per_item: r.quantity_per_item,
-        }))
-      );
+      const { error: insErr } = await supabase
+        .from("menu_item_ingredients")
+        .insert(
+          validated.rows.map((r) => ({
+            restaurant_id: ctx.restaurant.id,
+            menu_item_id: validated.menu_item_id,
+            ingredient_id: r.ingredient_id,
+            quantity_per_item: r.quantity_per_item,
+          }))
+        );
       if (insErr) return { success: false, error: insErr.message };
     }
 
@@ -194,4 +223,3 @@ export async function upsertMenuItemRecipe(input: z.infer<typeof UpsertRecipeSch
     return { success: false, error: e instanceof Error ? e.message : "Failed" };
   }
 }
-

@@ -3,6 +3,8 @@ import TablesClient from "./TablesClient";
 import { Table, TableStatus } from "./types";
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
 
+export const dynamic = "force-dynamic";
+
 export default async function TablesPage() {
   const ctx = await requireRestaurantPage();
   const restaurant_id = ctx.restaurant.id;

@@ -2,6 +2,8 @@ import { requireRestaurantPage } from "@/lib/auth/restaurant";
 import { createServerSupabase } from "@/lib/supabase/server";
 import InventoryClient from "./InventoryClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function InventoryPage() {
   const ctx = await requireRestaurantPage();
   const supabase = await createServerSupabase();
@@ -9,7 +11,9 @@ export default async function InventoryPage() {
 
   const { data: ingredients } = await supabase
     .from("ingredients")
-    .select("id, name, unit, current_quantity, min_threshold, cost_per_unit, created_at")
+    .select(
+      "id, name, unit, current_quantity, min_threshold, cost_per_unit, created_at"
+    )
     .eq("restaurant_id", restaurantId)
     .order("name", { ascending: true });
 
@@ -68,4 +72,3 @@ export default async function InventoryPage() {
     />
   );
 }
-

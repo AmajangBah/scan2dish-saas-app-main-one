@@ -7,6 +7,8 @@ import {
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
 import AnalyticsClient from "./AnalyticsClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function AnalyticsPage() {
   const ctx = await requireRestaurantPage();
   const currency = ctx.restaurant.currency || "GMD";

@@ -1,0 +1,655 @@
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+import createMiddleware from "next-intl/middleware";
+import { defaultLocale, locales } from "./i18n";
+
+// Create i18n middleware
+const intlMiddleware = createMiddleware({
+  locales,
+  defaultLocale,
+  // App routes are nested under /[locale]/..., so keep prefixes consistent.
+  localePrefix: "always",
+});
+
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isLocaleSegment(seg: string | undefined) {
+  return !!seg && (locales as readonly string[]).includes(seg);
+}
+
+/**
+ * Helper to copy auth cookies from source response to target response.
+ * Critical for maintaining session across redirects.
+ */
+function copyCookies(source: NextResponse, target: NextResponse): NextResponse {
+  // Copy all cookies from source to target
+  // This ensures Supabase session refresh isn't lost when we redirect
+  source.cookies.getAll().forEach((cookie) => {
+    target.cookies.set(cookie.name, cookie.value, cookie);
+  });
+  return target;
+}
+
+/**
+ * Next.js Proxy (formerly middleware) to:
+ * 1. Handle internationalization (i18n) for customer menu routes
+ * 2. Protect authenticated routes (dashboard/admin)
+ * 3. Refresh Supabase session
+ * 4. Clean customer menu URLs by redirecting UUID table IDs -> table numbers
+ */
+export async function proxy(request: NextRequest) {
+  /**
+   * Only run i18n routing for translated, customer-facing menu routes.
+   * Dashboards + home must remain stable and non-localized.
+   */
+  const pathname = request.nextUrl.pathname;
+  const localePrefixRegex = new RegExp(`^/(${locales.join("|")})(/|$)`);
+  const isMenuRoute =
+    pathname === "/menu" ||
+    pathname.startsWith("/menu/") ||
+    (localePrefixRegex.test(pathname) &&
+      pathname.split("/").filter(Boolean)[1] === "menu");
+
+  const intlResponse = isMenuRoute ? intlMiddleware(request) : null;
+
+  // If i18n middleware wants to redirect/rewrite, let it.
+  if (
+    intlResponse &&
+    (intlResponse.headers.get("x-middleware-rewrite") ||
+      intlResponse.headers.get("location"))
+  ) {
+    return intlResponse;
+  }
+
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  // Track cookies set by Supabase so we can apply them to response later
+  const supabaseCookies: Array<{ name: string; value: string; options?: any }> =
+    [];
+  let setAllWasCalled = false;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error("[Proxy] Missing Supabase environment variables");
+    return response;
+  }
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        const cookies = request.cookies.getAll();
+        const hasAuthToken = cookies.some((c) => c.name.includes("auth-token"));
+        console.log(
+          `[Proxy] getAll() called - ${cookies.length} cookies, hasAuthToken: ${hasAuthToken}`
+        );
+
+        // FIX: ALWAYS decode cookies that have been base64-encoded by the browser
+        // Supabase tokens MUST be raw JWTs, NOT base64-prefixed or JSON-encoded
+        const decoded = cookies.map((cookie) => {
+          if (cookie.value && cookie.value.startsWith("base64-")) {
+            try {
+              // Step 1: Decode the base64
+              const decodedStr = Buffer.from(
+                cookie.value.substring(7),
+                "base64"
+              ).toString("utf-8");
+
+              // Step 2: Check if it's JSON (session object) or JWT
+              if (decodedStr.startsWith("{")) {
+                // It's a JSON session object - extract just the access_token
+                try {
+                  const sessionObj = JSON.parse(decodedStr);
+                  if (sessionObj.access_token) {
+                    console.log(
+                      `[Proxy] ✅ EXTRACTED access_token from session object: ${cookie.name} (length: ${sessionObj.access_token.length})`
+                    );
+                    return { ...cookie, value: sessionObj.access_token };
+                  } else {
+                    console.log(
+                      `[Proxy] ⚠️  Session object missing access_token: ${cookie.name}`
+                    );
+                    return cookie;
+                  }
+                } catch (parseErr) {
+                  console.error(
+                    `[Proxy] ❌ Failed to parse session JSON for ${cookie.name}:`,
+                    (parseErr as Error).message
+                  );
+                  return cookie;
+                }
+              } else {
+                // It's already a JWT
+                console.log(
+                  `[Proxy] ✅ DECODED JWT: ${
+                    cookie.name
+                  } (${cookie.value.substring(
+                    0,
+                    20
+                  )}... → ${decodedStr.substring(0, 20)}...)`
+                );
+                return { ...cookie, value: decodedStr };
+              }
+            } catch (e) {
+              console.error(
+                `[Proxy] ❌ Failed to decode ${cookie.name}:`,
+                (e as Error).message
+              );
+              return cookie;
+            }
+          }
+          return cookie;
+        });
+
+        // Log final result
+        const decodedCount = decoded.filter(
+          (c) => !c.value.startsWith("base64-")
+        ).length;
+        console.log(
+          `[Proxy] Returning ${decodedCount} decoded cookies to Supabase`
+        );
+        return decoded;
+      },
+      setAll(cookiesToSet) {
+        console.log(
+          "[Proxy] setAll() called with",
+          cookiesToSet.length,
+          "cookies"
+        );
+        setAllWasCalled = true;
+        cookiesToSet.forEach(({ name, value, options }) => {
+          // FIX: Remove base64- prefix if present (cookie corruption issue)
+          let cleanValue = value;
+          if (value && value.startsWith("base64-")) {
+            try {
+              cleanValue = Buffer.from(value.substring(7), "base64").toString(
+                "utf-8"
+              );
+              console.log(`[Proxy] Cleaned base64-prefixed value for ${name}`);
+            } catch (e) {
+              console.log(
+                `[Proxy] Failed to clean ${name}:`,
+                (e as Error).message
+              );
+              cleanValue = value;
+            }
+          }
+
+          console.log(
+            `  - ${name}=${cleanValue.substring(0, 30)}... | options:`,
+            JSON.stringify(options)
+          );
+
+          // DEBUG: If maxAge is 0, Supabase is deleting - this means validation failed
+          if (options?.maxAge === 0 && name.includes("auth-token")) {
+            console.log(
+              `[Proxy] ⚠️  WARNING: Supabase is DELETING ${name} (maxAge:0)`
+            );
+            console.log(`[Proxy]    This means the token failed validation`);
+          }
+
+          request.cookies.set(name, cleanValue);
+          // CRITICAL: Force httpOnly:true on auth tokens for security
+          // Supabase sometimes sets httpOnly:false which breaks session persistence
+          if (name.includes("auth-token")) {
+            options = options || {};
+            options.httpOnly = true;
+            console.log(`[Proxy] FORCED httpOnly:true on ${name}`);
+          }
+          // Track these cookies to set on response later with full options
+          supabaseCookies.push({ name, value: cleanValue, options });
+        });
+        // DON'T recreate response here! That causes multiple overwrites.
+        // Just update request cookies. The response will be created once at the end
+        // of middleware with all accumulated cookies.
+      },
+    },
+  });
+
+  // --- Menu URL cleanup: /menu/<uuid>/... -> /menu/<table_number>/...
+  if (isMenuRoute) {
+    const segments = pathname.split("/").filter(Boolean);
+    const hasLocale = isLocaleSegment(segments[0]);
+    const menuIdx = hasLocale ? 1 : 0;
+
+    if (segments[menuIdx] === "menu" && segments.length > menuIdx + 1) {
+      const tableSeg = segments[menuIdx + 1];
+      if (uuidRegex.test(tableSeg)) {
+        const { data: table, error } = await supabase
+          .from("restaurant_tables")
+          .select("id, restaurant_id, table_number, is_active")
+          .eq("id", tableSeg)
+          .eq("is_active", true)
+          .single();
+
+        if (!error && table?.table_number) {
+          const nextSegments = [...segments];
+          nextSegments[menuIdx + 1] = encodeURIComponent(
+            String(table.table_number)
+          );
+
+          const url = request.nextUrl.clone();
+          url.pathname = `/${nextSegments.join("/")}`;
+
+          const redirectRes = NextResponse.redirect(url);
+          redirectRes.cookies.set("s2d_table_id", String(table.id), {
+            path: "/",
+            sameSite: "lax",
+          });
+          redirectRes.cookies.set(
+            "s2d_restaurant_id",
+            String(table.restaurant_id),
+            {
+              path: "/",
+              sameSite: "lax",
+            }
+          );
+          redirectRes.cookies.set(
+            "s2d_table_number",
+            String(table.table_number),
+            {
+              path: "/",
+              sameSite: "lax",
+            }
+          );
+          return redirectRes;
+        }
+      } else {
+        // If the URL is already using a table number, try to set disambiguation cookies
+        // (helps when table numbers are not globally unique).
+        const existingRestaurantId =
+          request.cookies.get("s2d_restaurant_id")?.value ?? null;
+        if (!existingRestaurantId) {
+          const { data: matches, error } = await supabase
+            .from("restaurant_tables")
+            .select("id, restaurant_id, table_number")
+            .eq("table_number", tableSeg)
+            .eq("is_active", true)
+            .limit(2);
+
+          // Only set cookies if it uniquely identifies a single active table.
+          if (!error && Array.isArray(matches) && matches.length === 1) {
+            const t = matches[0] as unknown as {
+              id: string;
+              restaurant_id: string;
+              table_number: string;
+            };
+            response.cookies.set("s2d_table_id", String(t.id), {
+              path: "/",
+              sameSite: "lax",
+            });
+            response.cookies.set("s2d_restaurant_id", String(t.restaurant_id), {
+              path: "/",
+              sameSite: "lax",
+            });
+            response.cookies.set("s2d_table_number", String(t.table_number), {
+              path: "/",
+              sameSite: "lax",
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Refresh session if expired
+  let user: any = null;
+  try {
+    const allCookies = request.cookies.getAll();
+    console.log(
+      "[Proxy] Incoming cookies:",
+      allCookies
+        .map((c) => `${c.name}=${c.value.substring(0, 20)}...`)
+        .join("; ")
+    );
+
+    // Debug: Log the actual token content
+    const token0 = allCookies.find((c) =>
+      c.name.includes("auth-token.0")
+    )?.value;
+    if (token0) {
+      console.log(
+        `[Proxy] Token.0 length: ${
+          token0.length
+        }, starts with: ${token0.substring(0, 50)}`
+      );
+      try {
+        // Supabase tokens are JWT-like, try to decode
+        const parts = token0.split(".");
+        if (parts.length >= 2) {
+          const payload = JSON.parse(
+            Buffer.from(parts[1], "base64").toString()
+          );
+          console.log(
+            `[Proxy] Token payload exp: ${
+              payload.exp
+                ? new Date(payload.exp * 1000).toISOString()
+                : "NO EXP"
+            }`
+          );
+        }
+      } catch (e) {
+        console.log(`[Proxy] Could not decode token:`, (e as Error).message);
+      }
+    }
+
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    user = authUser;
+    console.log(
+      "[Proxy] Session check: user =",
+      user ? `${user.id} (${user.email})` : "null"
+    );
+
+    // CRITICAL DEBUG: If user was just invalidated by setAll() call, log it
+    if (!user && setAllWasCalled) {
+      console.log(
+        "[Proxy] ⚠️  CRITICAL: Supabase invalidated session during this request"
+      );
+    }
+  } catch (err) {
+    console.error("[Proxy] Session refresh error:", err);
+    // Continue anyway - let routes handle auth verification
+  }
+
+  const ADMIN_SIGN_IN_PATH = "/auth/admin/sign-in";
+  const isAuthPage =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === ADMIN_SIGN_IN_PATH;
+
+  async function isAdminUser(): Promise<boolean> {
+    if (!user) return false;
+    try {
+      const { data: adminUser, error } = await supabase
+        .from("admin_users")
+        .select("id, is_active")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) {
+        // RLS blocking (406) or other errors - user is not admin
+        console.debug(
+          "[Proxy] Admin check blocked/error (expected for non-admin):",
+          error.code,
+          error.message
+        );
+        return false;
+      }
+
+      return !!adminUser;
+    } catch (err) {
+      console.error("[Proxy] isAdminUser exception:", err);
+      return false;
+    }
+  }
+
+  // EARLY EXIT: Auth pages first (skip expensive DB queries if possible)
+  if (isAuthPage) {
+    if (!user) {
+      // Not authenticated - allow auth page to render
+      return response;
+    }
+
+    // User is authenticated - redirect away from auth pages
+    const adminUser = await isAdminUser();
+    if (adminUser) {
+      return copyCookies(
+        response,
+        NextResponse.redirect(new URL("/admin", request.url))
+      );
+    }
+
+    // Restaurant user - check onboarding status
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from("restaurants")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (restaurantError) {
+      console.error(
+        "[Proxy] Auth page: Restaurant query failed",
+        restaurantError
+      );
+    }
+
+    if (restaurant?.id) {
+      const { data: onboarding } = await supabase
+        .from("onboarding_progress")
+        .select("completed, skipped")
+        .eq("restaurant_id", restaurant.id)
+        .maybeSingle();
+
+      // If onboarding record exists and is completed/skipped, go to dashboard
+      // Otherwise go to onboarding (including if record is null - shouldn't happen due to trigger)
+      const onboardingCompleted =
+        onboarding !== null && (onboarding.completed || onboarding.skipped);
+
+      const redirectUrl = onboardingCompleted ? "/dashboard" : "/onboarding";
+      console.log("[Proxy] Auth page: Redirecting to", redirectUrl, {
+        onboarding,
+        onboardingCompleted,
+      });
+      return copyCookies(
+        response,
+        NextResponse.redirect(new URL(redirectUrl, request.url))
+      );
+    }
+
+    console.log(
+      "[Proxy] Auth page: No restaurant found, redirecting to /register"
+    );
+    return copyCookies(
+      response,
+      NextResponse.redirect(new URL("/register", request.url))
+    );
+  }
+
+  // Protect admin routes
+  if (pathname.startsWith("/admin")) {
+    if (!user) {
+      const loginUrl = new URL(ADMIN_SIGN_IN_PATH, request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return copyCookies(response, NextResponse.redirect(loginUrl));
+    }
+
+    const adminUser = await isAdminUser();
+    if (!adminUser) {
+      return copyCookies(
+        response,
+        NextResponse.redirect(new URL("/dashboard", request.url))
+      );
+    }
+  }
+
+  // Protect dashboard routes
+  if (pathname.startsWith("/dashboard")) {
+    console.log(
+      "[Proxy] Dashboard route check:",
+      pathname,
+      "user =",
+      user ? "authenticated" : "null"
+    );
+    if (!user) {
+      console.warn(
+        "[Proxy] CRITICAL: User lost for dashboard route, redirecting to login"
+      );
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return copyCookies(response, NextResponse.redirect(loginUrl));
+    }
+
+    const adminUser = await isAdminUser();
+    if (adminUser) {
+      return copyCookies(
+        response,
+        NextResponse.redirect(new URL("/admin", request.url))
+      );
+    }
+
+    // Check restaurant exists and onboarding status
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from("restaurants")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    // Log errors but don't block - user is authenticated
+    if (restaurantError) {
+      console.error("[Proxy] Dashboard: Restaurant query error", {
+        code: restaurantError.code,
+        message: restaurantError.message,
+        user_id: user.id,
+      });
+      // If query failed (RLS or other), allow dashboard to load
+      // The layout will handle auth verification
+      return response;
+    }
+
+    // If no restaurant record exists at all, redirect to registration
+    if (!restaurant?.id) {
+      console.warn("[Proxy] Dashboard: No restaurant found for user", {
+        user_id: user.id,
+      });
+      return copyCookies(
+        response,
+        NextResponse.redirect(new URL("/register", request.url))
+      );
+    }
+
+    // Check onboarding status
+    const { data: onboarding, error: onboardingError } = await supabase
+      .from("onboarding_progress")
+      .select("completed, skipped")
+      .eq("restaurant_id", restaurant.id)
+      .maybeSingle();
+
+    if (onboardingError) {
+      console.error(
+        "[Proxy] Dashboard: Onboarding query error",
+        onboardingError.code,
+        onboardingError.message
+      );
+      // If query failed, assume onboarding not complete to be safe
+      if (pathname !== "/onboarding") {
+        return copyCookies(
+          response,
+          NextResponse.redirect(new URL("/onboarding", request.url))
+        );
+      }
+    }
+
+    // Onboarding is complete only if record exists AND is marked complete/skipped
+    const onboardingCompleted =
+      onboarding !== null && (onboarding.completed || onboarding.skipped);
+
+    if (!onboardingCompleted && pathname !== "/onboarding") {
+      return copyCookies(
+        response,
+        NextResponse.redirect(new URL("/onboarding", request.url))
+      );
+    }
+  }
+
+  // Protect onboarding route
+  if (pathname.startsWith("/onboarding")) {
+    if (!user) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return copyCookies(response, NextResponse.redirect(loginUrl));
+    }
+
+    const adminUser = await isAdminUser();
+    if (adminUser) {
+      return copyCookies(
+        response,
+        NextResponse.redirect(new URL("/admin", request.url))
+      );
+    }
+
+    const { data: restaurant } = await supabase
+      .from("restaurants")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!restaurant?.id) {
+      return copyCookies(
+        response,
+        NextResponse.redirect(new URL("/register", request.url))
+      );
+    }
+
+    const { data: onboarding } = await supabase
+      .from("onboarding_progress")
+      .select("completed, skipped")
+      .eq("restaurant_id", restaurant.id)
+      .maybeSingle();
+
+    // If onboarding is complete, user should go to dashboard
+    // (unless they're still on the page navigating, so be lenient)
+    // Don't redirect automatically - let the page handle it
+  }
+
+  // CRITICAL: Apply all Supabase cookies to response with their proper options.
+  // This ensures auth session cookies are sent to browser with correct settings.
+  console.log(
+    `[Proxy] Applying ${supabaseCookies.length} Supabase cookies to response`
+  );
+  supabaseCookies.forEach(({ name, value, options }) => {
+    console.log(`[Proxy] Setting cookie: ${name}`);
+    response.cookies.set(name, value, options);
+  });
+
+  // CRITICAL FIX: If the request had auth tokens but setAll() wasn't called,
+  // ensure they're returned in the response so browser doesn't delete them.
+  // BUT: If setAll() WAS called, respect Supabase's decision (e.g., to delete with maxAge:0)
+  const incomingCookies = request.cookies.getAll();
+  const hasIncomingAuthTokens = incomingCookies.some((c) =>
+    c.name.includes("auth-token")
+  );
+  const hasResponseAuthTokens = supabaseCookies.some((c) =>
+    c.name.includes("auth-token")
+  );
+
+  if (hasIncomingAuthTokens && !hasResponseAuthTokens && !setAllWasCalled) {
+    console.log(
+      "[Proxy] Auth tokens in request but setAll() not called - preserving them"
+    );
+    incomingCookies.forEach(({ name, value }) => {
+      if (name.includes("auth-token") && !response.cookies.has(name)) {
+        console.log(`[Proxy] Preserving auth token in response: ${name}`);
+        response.cookies.set(name, value, {
+          path: "/",
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 60 * 24 * 365, // 1 year
+        });
+      }
+    });
+  }
+
+  // Log final response cookies before sending to client
+  console.log("[Proxy] Response ready with cookies applied");
+
+  return response;
+}
+
+export const config = {
+  matcher: [
+    // Enable i18n routing on all paths except static files
+    "/((?!api|_next|_vercel|.*\\..*).*)",
+    // Also match root
+    "/",
+  ],
+};

@@ -13,14 +13,20 @@ const MenuItemSchema = z.object({
     .record(z.string(), z.string())
     .default({})
     .refine(
-      (obj) => Object.keys(obj).every((k) => (locales as readonly string[]).includes(k)),
+      (obj) =>
+        Object.keys(obj).every((k) =>
+          (locales as readonly string[]).includes(k)
+        ),
       "Invalid locale key in name translations"
     ),
   descriptionTranslations: z
     .record(z.string(), z.string())
     .default({})
     .refine(
-      (obj) => Object.keys(obj).every((k) => (locales as readonly string[]).includes(k)),
+      (obj) =>
+        Object.keys(obj).every((k) =>
+          (locales as readonly string[]).includes(k)
+        ),
       "Invalid locale key in description translations"
     ),
   price: z.number().positive("Price must be positive"),
@@ -48,10 +54,14 @@ const MenuItemSchema = z.object({
         .optional(),
     })
     .default({ spicy: false, vegetarian: false, glutenFree: false }),
-  variants: z.array(z.object({
-    label: z.string(),
-    price: z.number(),
-  })).default([]),
+  variants: z
+    .array(
+      z.object({
+        label: z.string(),
+        price: z.number(),
+      })
+    )
+    .default([]),
 });
 
 export type MenuItemInput = z.infer<typeof MenuItemSchema>;
@@ -65,12 +75,24 @@ export interface MenuActionResult {
 /**
  * Create a new menu item
  */
-export async function createMenuItem(input: MenuItemInput): Promise<MenuActionResult> {
+export async function createMenuItem(
+  input: MenuItemInput
+): Promise<MenuActionResult> {
   try {
     const validated = MenuItemSchema.parse(input);
-    const ctx = await requireRestaurant();
-    const restaurant_id = ctx.restaurant.id;
 
+    let ctx;
+    try {
+      ctx = await requireRestaurant();
+    } catch (authError) {
+      console.error("[Menu] Auth check failed:", authError);
+      return {
+        success: false,
+        error: "Authentication failed. Please sign in again.",
+      };
+    }
+
+    const restaurant_id = ctx.restaurant.id;
     const supabase = await createServerSupabase();
 
     const { data, error } = await supabase
@@ -92,8 +114,18 @@ export async function createMenuItem(input: MenuItemInput): Promise<MenuActionRe
       .single();
 
     if (error) {
-      console.error("Failed to create menu item:", error);
-      return { success: false, error: error.message };
+      console.error("[Menu] Database error:", error);
+      // Check if it's an RLS error
+      if (error.code === "42501" || error.code === "PGRST301") {
+        return {
+          success: false,
+          error: "Permission denied. Please verify your access.",
+        };
+      }
+      return {
+        success: false,
+        error: error.message || "Failed to create menu item",
+      };
     }
 
     revalidatePath("/dashboard/menu");
@@ -101,10 +133,11 @@ export async function createMenuItem(input: MenuItemInput): Promise<MenuActionRe
 
     return { success: true, id: data.id };
   } catch (error) {
-    console.error("Create menu item error:", error);
+    console.error("[Menu] Unexpected error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to create menu item",
+      error:
+        error instanceof Error ? error.message : "Failed to create menu item",
     };
   }
 }
@@ -126,7 +159,8 @@ export async function updateMenuItem(
     // Build update object with only provided fields
     const updateData: Partial<MenuItemInput> = {};
     if (validated.name !== undefined) updateData.name = validated.name;
-    if (validated.description !== undefined) updateData.description = validated.description;
+    if (validated.description !== undefined)
+      updateData.description = validated.description;
     if (validated.nameTranslations !== undefined) {
       updateData.nameTranslations = validated.nameTranslations;
     }
@@ -134,11 +168,14 @@ export async function updateMenuItem(
       updateData.descriptionTranslations = validated.descriptionTranslations;
     }
     if (validated.price !== undefined) updateData.price = validated.price;
-    if (validated.category !== undefined) updateData.category = validated.category;
+    if (validated.category !== undefined)
+      updateData.category = validated.category;
     if (validated.images !== undefined) updateData.images = validated.images;
-    if (validated.available !== undefined) updateData.available = validated.available;
+    if (validated.available !== undefined)
+      updateData.available = validated.available;
     if (validated.tags !== undefined) updateData.tags = validated.tags;
-    if (validated.variants !== undefined) updateData.variants = validated.variants;
+    if (validated.variants !== undefined)
+      updateData.variants = validated.variants;
 
     const { error } = await supabase
       .from("menu_items")
@@ -153,12 +190,22 @@ export async function updateMenuItem(
         ...(updateData.descriptionTranslations !== undefined
           ? { description_translations: updateData.descriptionTranslations }
           : null),
-        ...(updateData.price !== undefined ? { price: updateData.price } : null),
-        ...(updateData.category !== undefined ? { category: updateData.category } : null),
-        ...(updateData.images !== undefined ? { images: updateData.images } : null),
-        ...(updateData.available !== undefined ? { available: updateData.available } : null),
+        ...(updateData.price !== undefined
+          ? { price: updateData.price }
+          : null),
+        ...(updateData.category !== undefined
+          ? { category: updateData.category }
+          : null),
+        ...(updateData.images !== undefined
+          ? { images: updateData.images }
+          : null),
+        ...(updateData.available !== undefined
+          ? { available: updateData.available }
+          : null),
         ...(updateData.tags !== undefined ? { tags: updateData.tags } : null),
-        ...(updateData.variants !== undefined ? { variants: updateData.variants } : null),
+        ...(updateData.variants !== undefined
+          ? { variants: updateData.variants }
+          : null),
       })
       .eq("id", id)
       .eq("restaurant_id", restaurant_id);
@@ -176,7 +223,8 @@ export async function updateMenuItem(
     console.error("Update menu item error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update menu item",
+      error:
+        error instanceof Error ? error.message : "Failed to update menu item",
     };
   }
 }
@@ -210,7 +258,8 @@ export async function deleteMenuItem(id: string): Promise<MenuActionResult> {
     console.error("Delete menu item error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to delete menu item",
+      error:
+        error instanceof Error ? error.message : "Failed to delete menu item",
     };
   }
 }
@@ -247,7 +296,10 @@ export async function toggleMenuItemAvailability(
     console.error("Toggle availability error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to update availability",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to update availability",
     };
   }
 }

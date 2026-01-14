@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
+import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 
 interface SideBarLinkProps {
   href: string;
@@ -22,10 +19,23 @@ const SideBarLink = ({ href, label, icon, badgeCount }: SideBarLinkProps) => {
       ? pathname === "/dashboard"
       : pathname === href || pathname.startsWith(`${href}/`);
 
+  const handleLogout = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // For logout, use full page reload to ensure session is properly cleared
+    // before middleware evaluates the request. This prevents redirect loops.
+    if (href === "/logout") {
+      e.preventDefault();
+      window.location.href = href;
+    }
+  };
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={active} tooltip={label}>
-        <Link href={href} aria-current={active ? "page" : undefined}>
+        <Link
+          href={href}
+          aria-current={active ? "page" : undefined}
+          onClick={handleLogout}
+        >
           {icon}
           <span className="flex-1 min-w-0">{label}</span>
           {typeof badgeCount === "number" && badgeCount > 0 && (

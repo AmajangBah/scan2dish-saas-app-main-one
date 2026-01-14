@@ -19,6 +19,88 @@ import {
 } from "@/components/ui/accordion";
 import { previewOrderPricing } from "@/app/actions/orderPricing";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import type { Locale } from "@/i18n";
+
+const translations: Record<Locale, Record<string, string>> = {
+  en: {
+    checkout: "Checkout",
+    back: "Back",
+    emptyCart: "Your cart is empty",
+    addItemsBefore: "Add items before sending an order.",
+    browseMenu: "Browse menu",
+    orderSummary: "Order summary",
+    items: "items",
+    editCart: "Edit cart",
+    yourName: "Your name (optional)",
+    nameExample: "e.g., Awa",
+    notes: "Notes (optional)",
+    notesExample: "Allergies, preferences, etc.",
+    noPeanuts: "No peanuts",
+    glutenFree: "Gluten-free",
+    noSpice: "No spice",
+    extraSpicy: "Extra spicy",
+    noOnions: "No onions",
+    noDairy: "No dairy",
+    total: "Total",
+    discountApplied: "Discount applied:",
+    editBefore: "You can edit your cart before sending.",
+    sending: "Sending…",
+    sendToKitchen: "Send order to kitchen",
+    updatingTotals: "Updating totals…",
+  },
+  fr: {
+    checkout: "Paiement",
+    back: "Retour",
+    emptyCart: "Votre panier est vide",
+    addItemsBefore: "Ajoutez des articles avant d'envoyer votre commande.",
+    browseMenu: "Parcourir le menu",
+    orderSummary: "Récapitulatif de la commande",
+    items: "articles",
+    editCart: "Modifier le panier",
+    yourName: "Votre nom (optionnel)",
+    nameExample: "ex. Awa",
+    notes: "Remarques (optionnel)",
+    notesExample: "Allergies, préférences, etc.",
+    noPeanuts: "Sans arachides",
+    glutenFree: "Sans gluten",
+    noSpice: "Pas d'épices",
+    extraSpicy: "Très épicé",
+    noOnions: "Sans oignons",
+    noDairy: "Sans produits laitiers",
+    total: "Total",
+    discountApplied: "Réduction appliquée:",
+    editBefore: "Vous pouvez modifier votre panier avant d'envoyer.",
+    sending: "Envoi en cours…",
+    sendToKitchen: "Envoyer la commande à la cuisine",
+    updatingTotals: "Mise à jour des totaux…",
+  },
+  es: {
+    checkout: "Pago",
+    back: "Atrás",
+    emptyCart: "Su carrito está vacío",
+    addItemsBefore: "Añada artículos antes de hacer un pedido.",
+    browseMenu: "Explorar menú",
+    orderSummary: "Resumen del pedido",
+    items: "artículos",
+    editCart: "Editar carrito",
+    yourName: "Su nombre (opcional)",
+    nameExample: "ej. Awa",
+    notes: "Notas (opcional)",
+    notesExample: "Alergias, preferencias, etc.",
+    noPeanuts: "Sin cacahuetes",
+    glutenFree: "Sin gluten",
+    noSpice: "Sin especias",
+    extraSpicy: "Muy picante",
+    noOnions: "Sin cebollas",
+    noDairy: "Sin productos lácteos",
+    total: "Total",
+    discountApplied: "Descuento aplicado:",
+    editBefore: "Puede editar su carrito antes de enviar.",
+    sending: "Enviando…",
+    sendToKitchen: "Enviar pedido a la cocina",
+    updatingTotals: "Actualizando totales…",
+  },
+};
 
 function pickTranslatedText({
   locale,
@@ -30,7 +112,11 @@ function pickTranslatedText({
   translations: unknown;
 }) {
   if (!locale || locale === "en") return base;
-  if (!translations || typeof translations !== "object" || Array.isArray(translations)) {
+  if (
+    !translations ||
+    typeof translations !== "object" ||
+    Array.isArray(translations)
+  ) {
     return base;
   }
   const v = (translations as Record<string, unknown>)[locale];
@@ -39,11 +125,19 @@ function pickTranslatedText({
 
 export default function CheckoutPage() {
   const params = useParams();
-  const locale = typeof params.locale === "string" ? params.locale : null;
+  const locale = (
+    typeof params.locale === "string" ? params.locale : "en"
+  ) as Locale;
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
-  const { currency, restaurantName, tableNumber, restaurantId, tableId, tableSlug } =
-    useMenuRestaurant();
+  const {
+    currency,
+    restaurantName,
+    tableNumber,
+    restaurantId,
+    tableId,
+    tableSlug,
+  } = useMenuRestaurant();
   const base = locale ? `/${locale}` : "";
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -57,9 +151,9 @@ export default function CheckoutPage() {
   } | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
 
-  const [displayNameById, setDisplayNameById] = useState<Record<string, string>>(
-    {}
-  );
+  const [displayNameById, setDisplayNameById] = useState<
+    Record<string, string>
+  >({});
 
   const pricingInput = useMemo(() => {
     if (!tableId) return null;
@@ -85,7 +179,12 @@ export default function CheckoutPage() {
 
       const res = await previewOrderPricing(pricingInput);
       if (cancelled) return;
-      if (res.success) setPricing({ subtotal: res.subtotal, discount: res.discount, total: res.total });
+      if (res.success)
+        setPricing({
+          subtotal: res.subtotal,
+          discount: res.discount,
+          total: res.total,
+        });
       else setPricing(null);
       setPricingLoading(false);
     }
@@ -119,13 +218,17 @@ export default function CheckoutPage() {
 
         const map: Record<string, string> = {};
         for (const row of data ?? []) {
-          const baseName = String((row as unknown as { name?: unknown }).name ?? "");
+          const baseName = String(
+            (row as unknown as { name?: unknown }).name ?? ""
+          );
           if (!baseName) continue;
-          map[String((row as unknown as { id?: unknown }).id)] = pickTranslatedText({
-            locale,
-            base: baseName,
-            translations: (row as unknown as { name_translations?: unknown }).name_translations,
-          });
+          map[String((row as unknown as { id?: unknown }).id)] =
+            pickTranslatedText({
+              locale,
+              base: baseName,
+              translations: (row as unknown as { name_translations?: unknown })
+                .name_translations,
+            });
         }
 
         if (!cancelled) setDisplayNameById(map);
@@ -164,7 +267,7 @@ export default function CheckoutPage() {
 
     try {
       const { createOrder } = await import("@/app/actions/orders");
-      
+
       const result = await createOrder({
         table_id: tableId,
         items: items.map((item) => ({
@@ -180,7 +283,9 @@ export default function CheckoutPage() {
 
       if (result.success && result.orderId) {
         clear();
-        router.push(`${base}/menu/${tableSlug}/order/${result.orderId}?success=1`);
+        router.push(
+          `${base}/menu/${tableSlug}/order/${result.orderId}?success=1`
+        );
       } else {
         setError(result.error || "Failed to place order");
       }
@@ -197,29 +302,38 @@ export default function CheckoutPage() {
       <div className="max-w-xl mx-auto">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="min-w-0">
-            <h2 className="text-2xl font-semibold tracking-tight">Checkout</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              {translations[locale]["checkout"] || "Checkout"}
+            </h2>
             <p className="text-sm text-muted-foreground mt-1">
               {restaurantName} • Table {tableNumber}
             </p>
           </div>
           {tableSlug && (
             <Button asChild variant="outline" className="shrink-0">
-              <Link href={`${base}/menu/${tableSlug}/cart`}>Back</Link>
+              <Link href={`${base}/menu/${tableSlug}/cart`}>
+                {translations[locale]["back"] || "Back"}
+              </Link>
             </Button>
           )}
         </div>
 
         {items.length === 0 && tableSlug && (
           <Card className="p-6 rounded-2xl">
-            <div className="text-base font-semibold">Your cart is empty</div>
+            <div className="text-base font-semibold">
+              {translations[locale]["emptyCart"] || "Your cart is empty"}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Add items before sending an order.
+              {translations[locale]["addItemsBefore"] ||
+                "Add items before sending an order."}
             </p>
             <Button
               asChild
               className="mt-4 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
             >
-              <Link href={`${base}/menu/${tableSlug}/browse`}>Browse menu</Link>
+              <Link href={`${base}/menu/${tableSlug}/browse`}>
+                {translations[locale]["browseMenu"] || "Browse menu"}
+              </Link>
             </Button>
           </Card>
         )}
@@ -229,7 +343,9 @@ export default function CheckoutPage() {
             <Accordion type="single" collapsible defaultValue="summary">
               <AccordionItem value="summary">
                 <AccordionTrigger className="text-sm">
-                  Order summary ({items.reduce((s, it) => s + it.qty, 0)} items)
+                  {translations[locale]["orderSummary"] || "Order summary"} (
+                  {items.reduce((s, it) => s + it.qty, 0)}{" "}
+                  {translations[locale]["items"] || "items"})
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-2">
@@ -245,8 +361,15 @@ export default function CheckoutPage() {
                     ))}
                     {tableSlug && (
                       <div className="pt-2">
-                        <Button asChild variant="outline" size="sm" className="rounded-full">
-                          <Link href={`${base}/menu/${tableSlug}/cart`}>Edit cart</Link>
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                        >
+                          <Link href={`${base}/menu/${tableSlug}/cart`}>
+                            {translations[locale]["editCart"] || "Edit cart"}
+                          </Link>
                         </Button>
                       </div>
                     )}
@@ -257,10 +380,10 @@ export default function CheckoutPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Your name (optional)
+                {translations[locale]["yourName"] || "Your name (optional)"}
               </label>
               <Input
-                placeholder="e.g., Awa"
+                placeholder={translations[locale]["nameExample"] || "e.g., Awa"}
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
               />
@@ -268,31 +391,52 @@ export default function CheckoutPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Notes (optional)
+                {translations[locale]["notes"] || "Notes (optional)"}
               </label>
               <Textarea
-                placeholder="Allergies, preferences, etc."
+                placeholder={
+                  translations[locale]["notesExample"] ||
+                  "Allergies, preferences, etc."
+                }
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
               <div className="mt-2 flex flex-wrap gap-2">
                 {[
-                  "No peanuts",
-                  "Gluten-free",
-                  "No spice",
-                  "Extra spicy",
-                  "No onions",
-                  "No dairy",
+                  {
+                    key: "noPeanuts",
+                    label: translations[locale]["noPeanuts"] || "No peanuts",
+                  },
+                  {
+                    key: "glutenFree",
+                    label: translations[locale]["glutenFree"] || "Gluten-free",
+                  },
+                  {
+                    key: "noSpice",
+                    label: translations[locale]["noSpice"] || "No spice",
+                  },
+                  {
+                    key: "extraSpicy",
+                    label: translations[locale]["extraSpicy"] || "Extra spicy",
+                  },
+                  {
+                    key: "noOnions",
+                    label: translations[locale]["noOnions"] || "No onions",
+                  },
+                  {
+                    key: "noDairy",
+                    label: translations[locale]["noDairy"] || "No dairy",
+                  },
                 ].map((chip) => (
                   <Button
-                    key={chip}
+                    key={chip.key}
                     type="button"
                     variant="secondary"
                     size="sm"
                     className="rounded-full"
-                    onClick={() => appendNote(chip)}
+                    onClick={() => appendNote(chip.label)}
                   >
-                    {chip}
+                    {chip.label}
                   </Button>
                 ))}
               </div>
@@ -300,22 +444,31 @@ export default function CheckoutPage() {
 
             <div className="flex justify-between items-center pt-2 border-t">
               <div>
-                <div className="text-sm text-muted-foreground">Total</div>
+                <div className="text-sm text-muted-foreground">
+                  {translations[locale]["total"] || "Total"}
+                </div>
                 <div className="text-xl font-semibold">
-                  {formatPrice(pricingLoading ? subtotal : (pricing?.total ?? subtotal), currency)}
+                  {formatPrice(
+                    pricingLoading ? subtotal : pricing?.total ?? subtotal,
+                    currency
+                  )}
                 </div>
                 {(pricing?.discount ?? 0) > 0 && (
                   <div className="text-xs text-emerald-700 mt-1">
-                    Discount applied: −{formatPrice(pricing?.discount ?? 0, currency)}
+                    {translations[locale]["discountApplied"] ||
+                      "Discount applied:"}{" "}
+                    −{formatPrice(pricing?.discount ?? 0, currency)}
                   </div>
                 )}
                 {pricingLoading && (
                   <div className="text-xs text-muted-foreground mt-1">
-                    Updating totals…
+                    {translations[locale]["updatingTotals"] ||
+                      "Updating totals…"}
                   </div>
                 )}
                 <div className="text-xs text-muted-foreground mt-1">
-                  You can edit your cart before sending.
+                  {translations[locale]["editBefore"] ||
+                    "You can edit your cart before sending."}
                 </div>
               </div>
 
@@ -328,7 +481,10 @@ export default function CheckoutPage() {
                   disabled={isPlacingOrder || items.length === 0}
                   className="bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
                 >
-                  {isPlacingOrder ? "Sending…" : "Send order to kitchen"}
+                  {isPlacingOrder
+                    ? translations[locale]["sending"] || "Sending…"
+                    : translations[locale]["sendToKitchen"] ||
+                      "Send order to kitchen"}
                 </Button>
               </div>
             </div>

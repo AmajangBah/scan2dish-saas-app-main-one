@@ -3,6 +3,8 @@ import { requireRestaurantPage } from "@/lib/auth/restaurant";
 import MenuClient from "./MenuClient";
 import { MenuItem } from "./types";
 
+export const dynamic = "force-dynamic";
+
 export default async function MenuPage() {
   const ctx = await requireRestaurantPage();
   const restaurant_id = ctx.restaurant.id;
@@ -27,13 +29,23 @@ export default async function MenuPage() {
     );
   }
 
+  // Extract available categories from existing menu items
+  const availableCategories = Array.from(
+    new Set(
+      (menuItems || [])
+        .map((m) => (m.category ? String(m.category) : ""))
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
   // Map database items to UI MenuItem type
   const mappedItems: MenuItem[] = (menuItems || []).map((item) => ({
     id: item.id,
     name: item.name,
     description: item.description || "",
     nameTranslations:
-      typeof item.name_translations === "object" && item.name_translations !== null
+      typeof item.name_translations === "object" &&
+      item.name_translations !== null
         ? item.name_translations
         : {},
     descriptionTranslations:
@@ -61,6 +73,7 @@ export default async function MenuPage() {
       initialMenuItems={mappedItems}
       currency={currency}
       restaurantId={restaurant_id}
+      availableCategories={availableCategories}
     />
   );
 }

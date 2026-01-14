@@ -1,7 +1,12 @@
 "use client";
 
-import { useLocale } from "next-intl";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useTransition } from "react";
+import {
+  useRouter,
+  usePathname,
+  useSearchParams,
+  useParams,
+} from "next/navigation";
 import { locales, localeNames, localeFlags, type Locale } from "@/i18n";
 import {
   Select,
@@ -20,32 +25,49 @@ export default function LanguageSwitcher({
 }: {
   triggerClassName?: string;
 }) {
-  const locale = useLocale();
+  const params = useParams();
+  const locale = typeof params.locale === "string" ? params.locale : "en";
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   const handleChange = (newLocale: string) => {
-    // App Router uses a required /[locale]/... segment, so always keep a locale prefix.
-    // This also avoids “falling out” of the localized tree and losing next-intl context.
-    const pathnameWithoutLocale = pathname.startsWith(`/${locale}`)
-      ? pathname.slice(`/${locale}`.length) || "/"
-      : pathname || "/";
+    // usePathname from next/navigation returns the full path including locale
+    // e.g., "/fr/menu/zora" or "/en/menu/zora"
+    // We need to remove the current locale prefix and replace it with the new one
+
+    const segments = pathname.split("/").filter(Boolean); // ["fr", "menu", "zora"]
+
+    // Check if the first segment is a known locale and remove it
+    let pathWithoutLocale = pathname;
+    if (segments.length > 0 && locales.includes(segments[0] as Locale)) {
+      // Remove the locale segment from the start
+      pathWithoutLocale = "/" + segments.slice(1).join("/");
+    }
 
     const qs = searchParams?.toString();
-    const next = `/${newLocale}${pathnameWithoutLocale}${qs ? `?${qs}` : ""}`;
-    router.push(next);
+    const next = `/${newLocale}${pathWithoutLocale}${qs ? `?${qs}` : ""}`;
+
+    // Use startTransition to manage the async state update
+    startTransition(() => {
+      router.push(next);
+      router.refresh();
+    });
   };
 
   return (
     <Select value={locale} onValueChange={handleChange}>
-      <SelectTrigger className={triggerClassName || "w-[140px]"}>
-        <SelectValue>
-          <span className="flex items-center gap-2">
-            <span>{localeFlags[locale as Locale]}</span>
-            <span>{localeNames[locale as Locale]}</span>
+      <SelectTrigger
+        suppressHydrationWarning
+        className={triggerClassName || "w-[140px]"}
+      >
+        <div className="flex items-center gap-2">
+          <span>{localeFlags[locale as Locale]}</span>
+          <span className="hidden sm:inline">
+            {localeNames[locale as Locale]}
           </span>
-        </SelectValue>
+        </div>
       </SelectTrigger>
       <SelectContent>
         {locales.map((loc) => (

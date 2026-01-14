@@ -4,6 +4,79 @@ import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/utils/currency";
 import OrderSuccessSplash from "../../../components/OrderSuccessSplash";
 import EstimatedTime from "./EstimatedTime";
+import type { Locale } from "@/i18n";
+
+const translations: Record<Locale, Record<string, string>> = {
+  en: {
+    orderTracking: "Order Tracking",
+    item: "item",
+    items: "items",
+    orderReceived: "Order Received",
+    beingPrepared: "Being Prepared",
+    ready: "Ready",
+    orderReceived_msg: "Order received!",
+    inTheQueue: "Your order is in the queue.",
+    beingPrepared_msg: "Being prepared!",
+    foodBeingCooked: "Your food is being cooked.",
+    orderReady: "Order ready!",
+    readyToServe: "Your order is ready to be served.",
+    orderCancelled: "Order cancelled",
+    contactStaff: "Please contact staff.",
+    estimatedTime: "Estimated time",
+    yourOrder: "Your order",
+    noItems: "No items.",
+    subtotal: "Subtotal",
+    discount: "Discount",
+    total: "Total",
+    backToMenu: "Back to menu",
+  },
+  fr: {
+    orderTracking: "Suivi de commande",
+    item: "article",
+    items: "articles",
+    orderReceived: "Commande reçue",
+    beingPrepared: "En préparation",
+    ready: "Prêt",
+    orderReceived_msg: "Commande reçue!",
+    inTheQueue: "Votre commande est en attente.",
+    beingPrepared_msg: "En préparation!",
+    foodBeingCooked: "Votre nourriture est en cours de préparation.",
+    orderReady: "Commande prête!",
+    readyToServe: "Votre commande est prête à être servie.",
+    orderCancelled: "Commande annulée",
+    contactStaff: "Veuillez contacter le personnel.",
+    estimatedTime: "Temps estimé",
+    yourOrder: "Votre commande",
+    noItems: "Aucun article.",
+    subtotal: "Sous-total",
+    discount: "Réduction",
+    total: "Total",
+    backToMenu: "Retour au menu",
+  },
+  es: {
+    orderTracking: "Rastreo de pedido",
+    item: "artículo",
+    items: "artículos",
+    orderReceived: "Pedido recibido",
+    beingPrepared: "En preparación",
+    ready: "Listo",
+    orderReceived_msg: "¡Pedido recibido!",
+    inTheQueue: "Su pedido está en espera.",
+    beingPrepared_msg: "¡En preparación!",
+    foodBeingCooked: "Su comida se está preparando.",
+    orderReady: "¡Pedido listo!",
+    readyToServe: "Su pedido está listo para servir.",
+    orderCancelled: "Pedido cancelado",
+    contactStaff: "Póngase en contacto con el personal.",
+    estimatedTime: "Tiempo estimado",
+    yourOrder: "Su pedido",
+    noItems: "Sin artículos.",
+    subtotal: "Subtotal",
+    discount: "Descuento",
+    total: "Total",
+    backToMenu: "Volver al menú",
+  },
+};
 
 /**
  * Next.js 15 / 16:
@@ -64,20 +137,22 @@ export default async function OrderTracker({
     | "completed"
     | "cancelled";
 
+  const localeStr = locale as Locale;
+
   const steps = [
     {
       id: 1,
-      label: "Order Received",
+      label: translations[localeStr]["orderReceived"] || "Order Received",
       done: ["pending", "preparing", "completed"].includes(status),
     },
     {
       id: 2,
-      label: "Being Prepared",
+      label: translations[localeStr]["beingPrepared"] || "Being Prepared",
       done: ["preparing", "completed"].includes(status),
     },
     {
       id: 3,
-      label: "Ready",
+      label: translations[localeStr]["ready"] || "Ready",
       done: status === "completed",
     },
   ];
@@ -115,19 +190,26 @@ export default async function OrderTracker({
     notFound();
   }
 
-  const trackHref = `/${locale}/menu/${encodeURIComponent(String(tableNumber ?? tableId))}/order/${orderId}`;
+  const trackHref = `/${locale}/menu/${encodeURIComponent(
+    String(tableNumber ?? tableId)
+  )}/order/${orderId}`;
 
   return (
     <div className="min-h-dvh bg-background px-4 pt-6 pb-10">
-      {success && <OrderSuccessSplash trackHref={trackHref} />}
+      {success && (
+        <OrderSuccessSplash trackHref={trackHref} locale={localeStr} />
+      )}
 
       <div className="mx-auto max-w-xl">
         <h2 className="mb-2 text-center text-2xl font-semibold tracking-tight">
-          Order Tracking
+          {translations[localeStr]["orderTracking"] || "Order Tracking"}
         </h2>
 
         <p className="mb-6 text-center text-sm text-muted-foreground">
-          Table {tableNumber} • {itemCount} {itemCount === 1 ? "item" : "items"}
+          Table {tableNumber} • {itemCount}{" "}
+          {itemCount === 1
+            ? translations[localeStr]["item"] || "item"
+            : translations[localeStr]["items"] || "items"}
         </p>
 
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
@@ -160,45 +242,77 @@ export default async function OrderTracker({
           <div className="mb-6 text-center">
             {status === "pending" && (
               <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-blue-700">
-                <p className="font-semibold">Order received!</p>
-                <p className="text-sm">Your order is in the queue.</p>
+                <p className="font-semibold">
+                  {translations[localeStr]["orderReceived_msg"] ||
+                    "Order received!"}
+                </p>
+                <p className="text-sm">
+                  {translations[localeStr]["inTheQueue"] ||
+                    "Your order is in the queue."}
+                </p>
               </div>
             )}
             {status === "preparing" && (
               <div className="rounded-xl border border-primary/15 bg-primary/10 px-4 py-3 text-primary">
-                <p className="font-semibold">Being prepared!</p>
-                <p className="text-sm">Your food is being cooked.</p>
+                <p className="font-semibold">
+                  {translations[localeStr]["beingPrepared_msg"] ||
+                    "Being prepared!"}
+                </p>
+                <p className="text-sm">
+                  {translations[localeStr]["foodBeingCooked"] ||
+                    "Your food is being cooked."}
+                </p>
               </div>
             )}
             {status === "completed" && (
               <div className="rounded-xl border border-green-100 bg-green-50 px-4 py-3 text-green-700">
-                <p className="font-semibold">Order ready!</p>
-                <p className="text-sm">Your order is ready to be served.</p>
+                <p className="font-semibold">
+                  {translations[localeStr]["orderReady"] || "Order ready!"}
+                </p>
+                <p className="text-sm">
+                  {translations[localeStr]["readyToServe"] ||
+                    "Your order is ready to be served."}
+                </p>
               </div>
             )}
             {status === "cancelled" && (
               <div className="rounded-xl border border-destructive/15 bg-destructive/10 px-4 py-3 text-destructive">
-                <p className="font-semibold">Order cancelled</p>
-                <p className="text-sm">Please contact staff.</p>
+                <p className="font-semibold">
+                  {translations[localeStr]["orderCancelled"] ||
+                    "Order cancelled"}
+                </p>
+                <p className="text-sm">
+                  {translations[localeStr]["contactStaff"] ||
+                    "Please contact staff."}
+                </p>
               </div>
             )}
           </div>
 
           {/* ETA */}
           <div className="mb-6 text-center">
-            <p className="text-sm text-muted-foreground">Estimated time</p>
+            <p className="text-sm text-muted-foreground">
+              {translations[localeStr]["estimatedTime"] || "Estimated time"}
+            </p>
             <p className="mt-1 text-2xl font-semibold">
-              <EstimatedTime status={status} createdAt={String(order.created_at)} />
+              <EstimatedTime
+                status={status}
+                createdAt={String(order.created_at)}
+              />
             </p>
           </div>
 
           {/* Items */}
           <div className="mb-4 border-t pt-4">
-            <p className="mb-2 text-sm font-semibold">Your order</p>
+            <p className="mb-2 text-sm font-semibold">
+              {translations[localeStr]["yourOrder"] || "Your order"}
+            </p>
 
             <div className="space-y-1">
               {items.length === 0 && (
-                <p className="text-sm text-muted-foreground">No items.</p>
+                <p className="text-sm text-muted-foreground">
+                  {translations[localeStr]["noItems"] || "No items."}
+                </p>
               )}
 
               {items.map(
@@ -240,19 +354,23 @@ export default async function OrderTracker({
               return (
                 <div className="mt-2 space-y-1 border-t pt-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="text-muted-foreground">
+                      {translations[localeStr]["subtotal"] || "Subtotal"}
+                    </span>
                     <span>{formatPrice(itemsSubtotal, currencyCode)}</span>
                   </div>
 
                   {discount > 0 && (
                     <div className="flex justify-between text-emerald-700">
-                      <span>Discount</span>
+                      <span>
+                        {translations[localeStr]["discount"] || "Discount"}
+                      </span>
                       <span>−{formatPrice(discount, currencyCode)}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between font-bold">
-                    <span>Total</span>
+                    <span>{translations[localeStr]["total"] || "Total"}</span>
                     <span>{formatPrice(orderTotal, currencyCode)}</span>
                   </div>
                 </div>
@@ -261,10 +379,12 @@ export default async function OrderTracker({
           </div>
 
           <Link
-            href={`/${locale}/menu/${encodeURIComponent(String(tableNumber ?? tableId))}/browse`}
+            href={`/${locale}/menu/${encodeURIComponent(
+              String(tableNumber ?? tableId)
+            )}/browse`}
             className="mt-4 block bg-[var(--menu-brand)] hover:bg-[var(--menu-brand)]/90 text-white text-center py-3 rounded-xl font-medium"
           >
-            Back to menu
+            {translations[localeStr]["backToMenu"] || "Back to menu"}
           </Link>
         </div>
       </div>

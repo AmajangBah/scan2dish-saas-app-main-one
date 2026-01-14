@@ -8,6 +8,26 @@ import { useState } from "react";
 import MenuItemDialog from "./MenuItemDialog";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useParams } from "next/navigation";
+import type { Locale } from "@/i18n";
+
+const translations: Record<Locale, Record<string, string>> = {
+  en: {
+    outOfStock: "Out of stock",
+    add: "Add",
+    addedToCart: "Added to cart",
+  },
+  fr: {
+    outOfStock: "Rupture de stock",
+    add: "Ajouter",
+    addedToCart: "Ajouté au panier",
+  },
+  es: {
+    outOfStock: "Agotado",
+    add: "Añadir",
+    addedToCart: "Añadido al carrito",
+  },
+};
 
 export default function ProductCard({
   product,
@@ -21,8 +41,13 @@ export default function ProductCard({
     categoryLabel?: string;
     tags?: unknown;
     outOfStock?: boolean;
+    discountBadge?: string;
   };
 }) {
+  const params = useParams();
+  const locale = (
+    typeof params.locale === "string" ? params.locale : "en"
+  ) as Locale;
   const { add } = useCart();
   const { currency } = useMenuRestaurant();
   const [open, setOpen] = useState(false);
@@ -31,13 +56,20 @@ export default function ProductCard({
 
   return (
     <>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            if (product.outOfStock) return;
+            setOpen(true);
+          }
+        }}
         onClick={() => {
           if (product.outOfStock) return;
           setOpen(true);
         }}
-        className={`w-full text-left flex gap-4 items-start p-4 bg-card/90 backdrop-blur rounded-2xl border shadow-sm transition-colors active:scale-[0.99] ${
+        className={`w-full text-left flex gap-4 items-start p-4 bg-card/90 backdrop-blur rounded-2xl border shadow-sm transition-colors active:scale-[0.99] cursor-pointer ${
           product.outOfStock
             ? "opacity-70 cursor-not-allowed"
             : "hover:bg-muted/30"
@@ -63,11 +95,18 @@ export default function ProductCard({
             <h3 className="font-semibold text-base sm:text-lg leading-tight truncate">
               {product.name}
             </h3>
-            {product.outOfStock && (
-              <span className="shrink-0 text-[11px] font-semibold px-2 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/15">
-                Out of stock
-              </span>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {product.discountBadge && (
+                <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {product.discountBadge}
+                </span>
+              )}
+              {product.outOfStock && (
+                <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive/15">
+                  {translations[locale]["outOfStock"] || "Out of stock"}
+                </span>
+              )}
+            </div>
           </div>
           {product.desc && (
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
@@ -94,16 +133,18 @@ export default function ProductCard({
                   },
                   1
                 );
-                toast.success("Added to cart");
+                toast.success(
+                  translations[locale]["addedToCart"] || "Added to cart"
+                );
               }}
               className="bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add
+              {translations[locale]["add"] || "Add"}
             </Button>
           </div>
         </div>
-      </button>
+      </div>
 
       <MenuItemDialog product={product} open={open} onOpenChange={setOpen} />
     </>

@@ -49,23 +49,22 @@ export default function AdminSignInClient({ redirect }: { redirect?: string }) {
 
       // Client-side precheck to prevent restaurant users from using the admin sign-in.
       // Server-side enforcement is still done in middleware + route guards.
+      // Use maybeSingle() instead of single() to gracefully handle cases where
+      // a restaurant user attempts to use the admin sign-in.
       const { data: adminUser } = await supabase
         .from("admin_users")
         .select("id, is_active")
         .eq("user_id", data.user.id)
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
 
       if (!adminUser) {
         await supabase.auth.signOut();
         throw new Error("Not an admin account. Please sign in at /login.");
       }
 
-      if (redirect && redirect.startsWith("/admin")) {
-        window.location.href = redirect;
-        return;
-      }
-
+      // Sign-in successful. Redirect to admin dashboard.
+      // The middleware will enforce admin-only access.
       window.location.href = "/admin";
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
@@ -148,4 +147,3 @@ export default function AdminSignInClient({ redirect }: { redirect?: string }) {
     </div>
   );
 }
-
