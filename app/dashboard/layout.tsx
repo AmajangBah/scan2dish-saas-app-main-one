@@ -17,19 +17,15 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  // NOTE: Middleware (proxy.ts) already validates:
-  // - User is authenticated
-  // - User is a restaurant (not admin)
-  // - Onboarding is complete
-  // We only need to fetch the restaurant data here for rendering
   const ctx = await getRestaurantAuthContext();
 
-  // This should never be null due to middleware protection, but TypeScript requires the check
   if (!ctx) {
-    // Mirror admin behavior: redirect to login if auth context missing.
-    // Middleware should normally prevent this, but be explicit here to avoid
-    // inconsistent error pages or runtime exceptions in production.
     redirect("/login");
+  }
+
+  // Enforce onboarding completion
+  if (!ctx.onboardingCompleted) {
+    redirect("/onboarding");
   }
 
   return (

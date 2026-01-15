@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import {
@@ -27,6 +28,7 @@ type AdminLoginValues = z.infer<typeof AdminLoginSchema>;
 export default function AdminSignInClient({ redirect }: { redirect?: string }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const router = useRouter();
 
   const form = useForm<AdminLoginValues>({
     resolver: zodResolver(AdminLoginSchema),
@@ -47,10 +49,6 @@ export default function AdminSignInClient({ redirect }: { redirect?: string }) {
       if (error) throw error;
       if (!data.user) throw new Error("Login failed");
 
-      // Client-side precheck to prevent restaurant users from using the admin sign-in.
-      // Server-side enforcement is still done in middleware + route guards.
-      // Use maybeSingle() instead of single() to gracefully handle cases where
-      // a restaurant user attempts to use the admin sign-in.
       const { data: adminUser } = await supabase
         .from("admin_users")
         .select("id, is_active")
@@ -63,9 +61,8 @@ export default function AdminSignInClient({ redirect }: { redirect?: string }) {
         throw new Error("Not an admin account. Please sign in at /login.");
       }
 
-      // Sign-in successful. Redirect to admin dashboard.
-      // The middleware will enforce admin-only access.
-      window.location.href = "/admin";
+      // Use router.replace() to redirect to admin dashboard
+      router.replace(redirect || "/admin");
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
     } finally {

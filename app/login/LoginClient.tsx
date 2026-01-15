@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   Form,
@@ -31,6 +32,7 @@ type LoginValues = z.infer<typeof LoginSchema>;
 export default function LoginClient({ redirectTo }: { redirectTo: string }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const router = useRouter();
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(LoginSchema),
@@ -54,8 +56,6 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
       if (error) throw error;
 
       // Prevent admins from using restaurant sign-in (hard separation).
-      // Use maybeSingle() instead of single() to gracefully handle the case
-      // where a restaurant user has no admin_users row.
       const { data: adminUser } = await supabase
         .from("admin_users")
         .select("id, is_active")
@@ -68,9 +68,9 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
         throw new Error("Admin accounts must sign in at /auth/admin/sign-in.");
       }
 
-      // Sign-in successful. Redirect to dashboard for restaurant users.
-      // The middleware will handle any onboarding redirects if needed.
-      window.location.href = "/dashboard";
+      // Sign-in successful. Use router.replace() to avoid back button returning to login.
+      // Layout will handle redirect to onboarding if needed.
+      router.replace(redirectTo || Route.DASHBOARD);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
     } finally {

@@ -7,7 +7,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import {
   LayoutDashboard,
   Store,
@@ -104,7 +105,31 @@ export default async function AdminLayout({
           <form
             action={async () => {
               "use server";
-              const supabase = await createClient();
+              const cookieStore = await cookies();
+              const supabase = createServerClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                {
+                  cookies: {
+                    getAll() {
+                      return cookieStore.getAll();
+                    },
+                    setAll(cookiesToSet) {
+                      try {
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                          cookieStore.set(
+                            name,
+                            value,
+                            options as CookieOptions
+                          );
+                        });
+                      } catch {
+                        // Ignore errors
+                      }
+                    },
+                  },
+                }
+              );
               await supabase.auth.signOut();
               redirect("/auth/admin/sign-in");
             }}

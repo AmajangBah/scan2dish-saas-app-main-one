@@ -3,6 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 import {
@@ -48,6 +49,7 @@ export type SignupValues = z.infer<typeof SignupFormSchema>;
 const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const router = useRouter();
 
   const form = useForm<SignupValues>({
     resolver: zodResolver(SignupFormSchema),
@@ -67,8 +69,6 @@ const SignupPage = () => {
     try {
       const supabase = createBrowserSupabase();
 
-      // 1️⃣ Sign up user with metadata
-      // The database trigger will automatically create a restaurant record
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
@@ -84,12 +84,8 @@ const SignupPage = () => {
       if (error) throw error;
       if (!data.user) throw new Error("User not created");
 
-      // 2️⃣ Triggers automatically create restaurant and onboarding_progress
-      // No need to verify - the database guarantees this happens
-      // Trust the trigger and move to confirmation page
-      window.location.href = "/register/confirmation";
-
-      form.reset();
+      // Redirect to confirmation page using router.replace()
+      router.replace("/register/confirmation");
     } catch (err: unknown) {
       setErrorMsg(
         err instanceof Error ? err.message : "Signup failed. Try again."
