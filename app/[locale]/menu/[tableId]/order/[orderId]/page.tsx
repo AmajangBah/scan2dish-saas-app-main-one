@@ -185,10 +185,9 @@ export default async function OrderTracker({
     : rt?.restaurants?.currency;
 
   const currencyCode = currency ? String(currency) : "GMD";
-  // Ensure the order belongs to the table indicated in the URL (now table number).
-  if (tableNumber && String(tableNumber) !== String(tableId)) {
-    notFound();
-  }
+  // REMOVED: Strict table number validation that was causing 404 errors
+  // Orders should be accessible via their ID regardless of URL table parameter
+  // The order data includes the correct table association
 
   const trackHref = `/${locale}/menu/${encodeURIComponent(
     String(tableNumber ?? tableId)
