@@ -188,7 +188,7 @@ export default async function MenuLayout({
         restaurantId: String(restaurant?.id ?? ""),
         restaurantName: restaurant?.name ?? "",
         tableId: String(table.id),
-        tableSlug: String(table.table_number ?? ""),
+        tableSlug: String(table.id),
         tableNumber: String(table.table_number ?? ""),
         currency: String(currency),
         brandColor: String(brandColor),

@@ -6,12 +6,12 @@ export type MenuRestaurantContextValue = {
   restaurantId: string;
   restaurantName: string;
   /**
-   * Internal table UUID (used for pricing + order placement).
+   * Internal table UUID (used for pricing + order placement + routing).
    */
   tableId: string;
   /**
-   * URL-safe identifier for customer routes (table number).
-   * Example: "12"
+   * URL-safe identifier for customer routes (table UUID).
+   * Should always be the table ID, never the table number.
    */
   tableSlug: string;
   tableNumber: string;
@@ -19,9 +19,9 @@ export type MenuRestaurantContextValue = {
   brandColor: string;
 };
 
-const MenuRestaurantContext = createContext<MenuRestaurantContextValue | undefined>(
-  undefined
-);
+const MenuRestaurantContext = createContext<
+  MenuRestaurantContextValue | undefined
+>(undefined);
 
 export function MenuRestaurantProvider({
   value,
@@ -56,8 +56,9 @@ export function MenuRestaurantProvider({
 export function useMenuRestaurant() {
   const ctx = useContext(MenuRestaurantContext);
   if (!ctx) {
-    throw new Error("useMenuRestaurant must be used within MenuRestaurantProvider");
+    throw new Error(
+      "useMenuRestaurant must be used within MenuRestaurantProvider"
+    );
   }
   return ctx;
 }
-

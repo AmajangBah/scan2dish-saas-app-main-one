@@ -189,9 +189,7 @@ export default async function OrderTracker({
   // Orders should be accessible via their ID regardless of URL table parameter
   // The order data includes the correct table association
 
-  const trackHref = `/${locale}/menu/${encodeURIComponent(
-    String(tableNumber ?? tableId)
-  )}/order/${orderId}`;
+  const trackHref = `/${locale}/menu/${String(tableId)}/order/${orderId}`;
 
   return (
     <div className="min-h-dvh bg-background px-4 pt-6 pb-10">
@@ -378,9 +376,7 @@ export default async function OrderTracker({
           </div>
 
           <Link
-            href={`/${locale}/menu/${encodeURIComponent(
-              String(tableNumber ?? tableId)
-            )}/browse`}
+            href={`/${locale}/menu/${String(tableId)}/browse`}
             className="mt-4 block bg-[var(--menu-brand)] hover:bg-[var(--menu-brand)]/90 text-white text-center py-3 rounded-xl font-medium"
           >
             {translations[localeStr]["backToMenu"] || "Back to menu"}
