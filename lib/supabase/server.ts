@@ -8,6 +8,14 @@ import { cookies } from "next/headers";
  * - Does NOT decode/encode cookies
  * - Does NOT force httpOnly, sameSite, or maxAge options
  * - Let Supabase manage all cookie operations
+ *
+ * IMPORTANT: Always `await` the cookies() call before accessing them.
+ * This is critical for Vercel Edge Runtime cookie persistence.
+ *
+ * SESSION DURATION: Supabase controls session expiry via JWT tokens.
+ * To extend session lifetime, configure in Supabase Dashboard:
+ * Settings > Authentication > JWT Expiration (default 1 hour)
+ * The refresh token automatically extends the session on each request.
  */
 export async function createServerSupabase() {
   const cookieStore = await cookies();
@@ -36,8 +44,8 @@ export async function createServerSupabase() {
             cookieStore.set(name, value, options as CookieOptions);
           });
         } catch {
-          // Ignore errors in middleware context (handled by middleware.ts)
-          // This is safe as middleware.ts uses createMiddlewareClient instead
+          // Ignore errors - cookies() is async and cookies may not be settable
+          // This is safe as middleware.ts handles cookie persistence
         }
       },
     },
@@ -46,8 +54,9 @@ export async function createServerSupabase() {
 
 /**
  * Backwards-compatible alias used throughout the codebase.
+ * MUST be awaited: `const supabase = await createClient();`
  * (Some files import `createClient` from "@/lib/supabase/server".)
  */
-export function createClient() {
+export async function createClient() {
   return createServerSupabase();
 }

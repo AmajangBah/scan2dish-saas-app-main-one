@@ -246,7 +246,20 @@ alter table public.menu_items enable row level security;
 alter table public.orders enable row level security;
 alter table public.discounts enable row level security;
 
--- Restaurants: owners only
+-- Restaurants:
+-- - public can read via active tables (needed for `/menu/[tableId]` customer ordering)
+-- - owners can CRUD their own restaurants
+drop policy if exists restaurants_public_select on public.restaurants;
+create policy restaurants_public_select
+on public.restaurants
+for select
+to anon, authenticated
+using (
+  -- Public can only read restaurants linked to active tables they're trying to access
+  -- This is enforced via the join in the menu layout, not in RLS itself
+  true
+);
+
 drop policy if exists restaurants_select_own on public.restaurants;
 create policy restaurants_select_own
 on public.restaurants

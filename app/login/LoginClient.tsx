@@ -68,9 +68,12 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
         throw new Error("Admin accounts must sign in at /auth/admin/sign-in.");
       }
 
-      // Sign-in successful. Use router.replace() to avoid back button returning to login.
-      // Layout will handle redirect to onboarding if needed.
-      router.replace(redirectTo || Route.DASHBOARD);
+      // Use server action to redirect. This ensures:
+      // 1. Middleware processes the request and syncs cookies to response
+      // 2. Session is available in subsequent server components
+      // 3. No race condition between client-side redirect and server-side session
+      const { redirectAfterLogin } = await import("@/app/actions/auth");
+      await redirectAfterLogin(redirectTo || Route.DASHBOARD);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
     } finally {

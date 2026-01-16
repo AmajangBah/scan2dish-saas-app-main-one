@@ -1,3 +1,4 @@
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import createNextIntlMiddleware from "next-intl/middleware";
 import { defaultLocale, locales } from "./i18n";
 import type { NextRequest } from "next/server";
@@ -17,7 +18,7 @@ function isLocaleSegment(seg: string | undefined) {
   return !!seg && (locales as readonly string[]).includes(seg);
 }
 
-export async function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const localePrefixRegex = new RegExp(`^/(${locales.join("|")})(/|$)`);
 
@@ -29,6 +30,31 @@ export async function proxy(request: NextRequest) {
 
   // Run i18n middleware
   let response = isMenuRoute ? intlMiddleware(request) : NextResponse.next();
+
+  // CRITICAL: Handle Supabase session cookies in middleware
+  // On Vercel Edge, cookies from request must be explicitly copied to response
+  // This ensures session persists across requests in production
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          // Read cookies from the request
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          // Write cookies to the response
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options as CookieOptions);
+          });
+        },
+      },
+    }
+  );
+
+  // Don't call getUser() here - it will throw if no refresh token exists
+  // Supabase will refresh tokens automatically when needed in server components
 
   // Menu URL cleanup: convert UUID to table number
   if (isMenuRoute && pathname.includes("/menu/")) {

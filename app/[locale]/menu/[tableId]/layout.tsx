@@ -106,13 +106,13 @@ export default async function MenuLayout({
     .eq("is_active", true);
 
   const { data: table, error: tableError } = await (uuidRegex.test(tableId)
-    ? tableQuery.eq("id", tableId).single()
+    ? tableQuery.eq("id", tableId).maybeSingle()
     : restaurantIdCookie
     ? tableQuery
         .eq("restaurant_id", restaurantIdCookie)
         .eq("table_number", tableId)
-        .single()
-    : tableQuery.eq("table_number", tableId).single());
+        .maybeSingle()
+    : tableQuery.eq("table_number", tableId).maybeSingle());
 
   // Table not found or inactive
   if (tableError || !table) {

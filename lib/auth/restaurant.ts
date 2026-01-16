@@ -1,7 +1,6 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export type RestaurantRecord = {
   id: string;
@@ -21,40 +20,6 @@ export type RestaurantAuthContext = {
 };
 
 /**
- * Get current authenticated user.
- * Returns null if no valid session.
- */
-async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options as CookieOptions);
-            });
-          } catch {
-            // Ignore errors in server context
-          }
-        },
-      },
-    }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return user ?? null;
-}
-
-/**
  * Get restaurant auth context for current user.
  * Cached per request to avoid repeated DB calls.
  * Returns null if user is not authenticated as a restaurant user.
@@ -62,32 +27,15 @@ async function getCurrentUser() {
 export const getRestaurantAuthContext = cache(
   async (): Promise<RestaurantAuthContext | null> => {
     try {
-      const user = await getCurrentUser();
+      const supabase = await createServerSupabase();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         return null;
       }
-
-      const cookieStore = await cookies();
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return cookieStore.getAll();
-            },
-            setAll(cookiesToSet) {
-              try {
-                cookiesToSet.forEach(({ name, value, options }) => {
-                  cookieStore.set(name, value, options as CookieOptions);
-                });
-              } catch {
-                // Ignore errors in server context
-              }
-            },
-          },
-        }
-      );
 
       // Fetch restaurant record
       const { data: restaurant, error: restaurantError } = await supabase

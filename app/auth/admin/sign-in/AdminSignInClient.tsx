@@ -61,8 +61,12 @@ export default function AdminSignInClient({ redirect }: { redirect?: string }) {
         throw new Error("Not an admin account. Please sign in at /login.");
       }
 
-      // Use router.replace() to redirect to admin dashboard
-      router.replace(redirect || "/admin");
+      // Use server action to redirect. This ensures:
+      // 1. Middleware processes the request and syncs cookies to response
+      // 2. Session is available in subsequent server components
+      // 3. No race condition between client-side redirect and server-side session
+      const { redirectAfterLogin } = await import("@/app/actions/auth");
+      await redirectAfterLogin(redirect || "/admin");
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
     } finally {
