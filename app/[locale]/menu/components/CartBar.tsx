@@ -29,7 +29,18 @@ export default function CartBar() {
     typeof params.locale === "string" ? params.locale : "en"
   ) as Locale;
   const { items, subtotal } = useCart();
-  const { currency, tableSlug } = useMenuRestaurant();
+
+  let currency = "GMD";
+  let tableSlug = null;
+
+  try {
+    const restaurantContext = useMenuRestaurant();
+    currency = restaurantContext.currency;
+    tableSlug = restaurantContext.tableSlug;
+  } catch (err) {
+    // Not wrapped in MenuRestaurantProvider - render nothing
+    return null;
+  }
 
   const itemCount = items.reduce((s, it) => s + it.qty, 0);
   if (!tableSlug || itemCount <= 0) return null;

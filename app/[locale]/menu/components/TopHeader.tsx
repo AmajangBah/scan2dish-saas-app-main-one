@@ -21,7 +21,18 @@ export default function TopHeader({ title }: { title: string }) {
     typeof params.locale === "string" ? params.locale : "en"
   ) as Locale;
   const { items } = useCart();
-  const { tableNumber, tableSlug } = useMenuRestaurant();
+
+  let tableNumber = "";
+  let tableSlug = "";
+
+  try {
+    const ctx = useMenuRestaurant();
+    tableNumber = ctx.tableNumber;
+    tableSlug = ctx.tableSlug;
+  } catch (err) {
+    // Component not wrapped in MenuRestaurantProvider
+  }
+
   const base = `/${locale}`;
 
   return (

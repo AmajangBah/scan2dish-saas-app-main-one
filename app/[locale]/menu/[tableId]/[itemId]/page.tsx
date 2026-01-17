@@ -91,7 +91,20 @@ export default function MenuItemPage() {
     typeof params.locale === "string" ? params.locale : "en"
   ) as Locale;
   const { add } = useCart();
-  const { currency, restaurantId, tableSlug } = useMenuRestaurant();
+
+  let currency = "GMD";
+  let restaurantId = "";
+  let tableSlug = "";
+
+  try {
+    const ctx = useMenuRestaurant();
+    currency = ctx.currency;
+    restaurantId = ctx.restaurantId;
+    tableSlug = ctx.tableSlug;
+  } catch (err) {
+    // Component not wrapped in MenuRestaurantProvider
+  }
+
   const base = locale ? `/${locale}` : "";
 
   const [qty, setQty] = useState(1);

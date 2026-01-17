@@ -100,7 +100,19 @@ export default function MenuItemDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { add } = useCart();
-  const { currency } = useMenuRestaurant();
+
+  let currency = "GMD";
+  let restaurantId: string | null = null;
+
+  try {
+    const ctx = useMenuRestaurant();
+    currency = ctx.currency;
+    restaurantId = ctx.restaurantId;
+  } catch (err) {
+    // Component not wrapped in MenuRestaurantProvider
+    // Will use default values
+  }
+
   const [qty, setQty] = useState(1);
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
   const [addedPulse, setAddedPulse] = useState(false);
@@ -114,7 +126,6 @@ export default function MenuItemDialog({
       ? rawLocale
       : "en"
   ) as Locale;
-  const { restaurantId } = useMenuRestaurant();
 
   const lineTotal = useMemo(() => product.price * qty, [product.price, qty]);
   const imgBroken = Boolean(product.image && brokenUrl === product.image);

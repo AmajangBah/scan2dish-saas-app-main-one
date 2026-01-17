@@ -130,14 +130,26 @@ export default function CheckoutPage() {
   ) as Locale;
   const router = useRouter();
   const { items, subtotal, clear } = useCart();
-  const {
-    currency,
-    restaurantName,
-    tableNumber,
-    restaurantId,
-    tableId,
-    tableSlug,
-  } = useMenuRestaurant();
+
+  let currency = "GMD";
+  let restaurantName = "";
+  let tableNumber = "";
+  let restaurantId = "";
+  let tableId = "";
+  let tableSlug = "";
+
+  try {
+    const ctx = useMenuRestaurant();
+    currency = ctx.currency;
+    restaurantName = ctx.restaurantName;
+    tableNumber = ctx.tableNumber;
+    restaurantId = ctx.restaurantId;
+    tableId = ctx.tableId;
+    tableSlug = ctx.tableSlug;
+  } catch (err) {
+    // Component not wrapped in MenuRestaurantProvider
+  }
+
   const base = locale ? `/${locale}` : "";
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);

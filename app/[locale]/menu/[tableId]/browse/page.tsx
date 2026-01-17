@@ -63,7 +63,14 @@ export default function BrowsePage() {
   const locale = (
     typeof params.locale === "string" ? params.locale : "en"
   ) as Locale;
-  const { restaurantId } = useMenuRestaurant();
+
+  let restaurantId = "";
+  try {
+    const ctx = useMenuRestaurant();
+    restaurantId = ctx.restaurantId;
+  } catch (err) {
+    // Component not wrapped in MenuRestaurantProvider
+  }
 
   const [activeCategory, setActiveCategory] = useState<string | undefined>(
     undefined
