@@ -123,22 +123,21 @@ export default async function MenuLayout({
       error: tableError?.message,
     });
 
-    // For order viewing routes, allow access even without a valid table
-    // The order page will fetch its own data independently
+    // Allow order pages to render even without a valid table
+    // They fetch their own data independently. For other routes, this
+    // will cause component-level errors when they try to use restaurantId
     return (
-      <MenuRestaurantProvider
-        value={{
-          restaurantId: "",
-          restaurantName: "",
-          tableId: String(tableId),
-          tableSlug: String(tableId),
-          tableNumber: "",
-          currency: "GMD",
-          brandColor: "#C84501",
-        }}
+      <div
+        style={
+          {
+            "--primary": "#C84501",
+            "--sidebar-primary": "#C84501",
+            "--menu-brand": "#C84501",
+          } as React.CSSProperties
+        }
       >
         {children}
-      </MenuRestaurantProvider>
+      </div>
     );
   }
 
@@ -171,6 +170,7 @@ export default async function MenuLayout({
   if (!restaurant?.menu_enabled) {
     // Allow viewing existing orders even if menu is disabled
     // (e.g., users checking on previously placed orders)
+    // Use MenuRestaurantProvider since we have valid table & restaurant data
     return (
       <MenuRestaurantProvider
         value={{
