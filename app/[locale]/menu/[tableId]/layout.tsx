@@ -122,7 +122,24 @@ export default async function MenuLayout({
       isUUID: uuidRegex.test(tableId),
       error: tableError?.message,
     });
-    notFound();
+
+    // For order viewing routes, allow access even without a valid table
+    // The order page will fetch its own data independently
+    return (
+      <MenuRestaurantProvider
+        value={{
+          restaurantId: "",
+          restaurantName: "",
+          tableId: String(tableId),
+          tableSlug: String(tableId),
+          tableNumber: "",
+          currency: "GMD",
+          brandColor: "#C84501",
+        }}
+      >
+        {children}
+      </MenuRestaurantProvider>
+    );
   }
 
   // Table exists but is inactive
@@ -150,31 +167,24 @@ export default async function MenuLayout({
     : table.restaurant;
 
   // Critical: Check if restaurant menu is enabled (Commission Enforcement)
+  // But allow order viewing even if menu is disabled
   if (!restaurant?.menu_enabled) {
+    // Allow viewing existing orders even if menu is disabled
+    // (e.g., users checking on previously placed orders)
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-background px-4">
-        <div className="max-w-md w-full bg-card rounded-2xl border shadow-sm p-8 text-center">
-          <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="h-8 w-8 text-primary" />
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight mb-2">
-            Menu currently unavailable
-          </h1>
-          <p className="text-muted-foreground mb-4">
-            We&apos;re unable to show the menu at this time. Please contact
-            staff to place your order.
-          </p>
-          {restaurant?.enforcement_reason && (
-            <div className="text-sm text-muted-foreground italic mt-4 p-3 bg-muted/30 rounded-xl border">
-              {restaurant.enforcement_reason}
-            </div>
-          )}
-          <div className="mt-6 text-sm text-muted-foreground">
-            <p className="font-medium">{restaurant?.name}</p>
-            <p>Table {table.table_number}</p>
-          </div>
-        </div>
-      </div>
+      <MenuRestaurantProvider
+        value={{
+          restaurantId: String(restaurant?.id ?? ""),
+          restaurantName: restaurant?.name ?? "",
+          tableId: String(table.id),
+          tableSlug: String(table.id),
+          tableNumber: String(table.table_number ?? ""),
+          currency: String(restaurant?.currency ?? "GMD"),
+          brandColor: String(restaurant?.brand_color ?? "#C84501"),
+        }}
+      >
+        {children}
+      </MenuRestaurantProvider>
     );
   }
 

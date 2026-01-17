@@ -117,7 +117,7 @@ export default async function OrderTracker({
       items,
       total,
       created_at,
-      restaurant_tables!inner(
+      restaurant_tables(
         table_number,
         id,
         restaurants!restaurant_id(currency)
