@@ -63,14 +63,9 @@ export default function BrowsePage() {
   const locale = (
     typeof params.locale === "string" ? params.locale : "en"
   ) as Locale;
+  const { restaurantId } = useMenuRestaurant();
 
-  let restaurantId = "";
-  try {
-    const ctx = useMenuRestaurant();
-    restaurantId = ctx.restaurantId;
-  } catch (err) {
-    // Component not wrapped in MenuRestaurantProvider
-  }
+  console.log("[Browse Page Render] restaurantId:", restaurantId);
 
   const [activeCategory, setActiveCategory] = useState<string | undefined>(
     undefined
@@ -129,6 +124,8 @@ export default function BrowsePage() {
         setLoading(true);
         setError(null);
 
+        console.log("[Browse] Starting menu load, restaurantId:", restaurantId);
+
         if (!restaurantId) throw new Error("Missing restaurant context");
 
         const supabase = createBrowserSupabase();
@@ -142,6 +139,8 @@ export default function BrowsePage() {
           .eq("restaurant_id", restaurantId)
           .eq("available", true)
           .order("name", { ascending: true });
+
+        console.log("[Browse] Menu fetch result:", { menuRows, menuError });
 
         if (menuError) {
           throw menuError;
@@ -265,11 +264,15 @@ export default function BrowsePage() {
         if (!cancelled) {
           const message =
             e instanceof Error ? e.message : "Failed to load menu";
+          console.error("[Browse] Menu load error:", e);
           setError(message);
           setItems([]);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          console.log("[Browse] Menu load complete");
+        }
       }
     }
 

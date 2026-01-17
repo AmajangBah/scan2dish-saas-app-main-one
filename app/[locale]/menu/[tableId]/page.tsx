@@ -70,26 +70,7 @@ export default function MenuIntroPage() {
   ) as Locale;
   const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const base = `/${locale}`;
-
-  let restaurantName = "";
-  let tableNumber = "";
-  let tableSlug = "";
-
-  try {
-    const ctx = useMenuRestaurant();
-    restaurantName = ctx.restaurantName;
-    tableNumber = ctx.tableNumber;
-    tableSlug = ctx.tableSlug;
-  } catch (err) {
-    // Component not wrapped in MenuRestaurantProvider
-  }
-
-  const browseHref = tableSlug
-    ? `${base}/menu/${tableSlug}/browse`
-    : `${base}/menu`;
-
-  return (
-    <div className="px-4 pt-6 pb-10 bg-linear-to-b from-(--menu-brand)/15 via-background to-background">
+  const { restaurantName, tableNumber, tableSlug } = useMenuRestaurant();
       <div className="max-w-xl mx-auto space-y-4">
         <div className="rounded-3xl border bg-card/80 backdrop-blur shadow-sm overflow-hidden">
           <div className="p-6">
