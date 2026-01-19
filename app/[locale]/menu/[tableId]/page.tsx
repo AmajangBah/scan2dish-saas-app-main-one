@@ -71,6 +71,13 @@ export default function MenuIntroPage() {
   const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const base = `/${locale}`;
   const { restaurantName, tableNumber, tableSlug } = useMenuRestaurant();
+
+  const browseHref = tableSlug
+    ? `${base}/menu/${tableSlug}`
+    : `${base}/menu/${tableId}`;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-20">
       <div className="max-w-xl mx-auto space-y-4">
         <div className="rounded-3xl border bg-card/80 backdrop-blur shadow-sm overflow-hidden">
           <div className="p-6">
@@ -153,7 +160,7 @@ export default function MenuIntroPage() {
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <Button
                 asChild
-                className="rounded-2xl bg(--menu-brand) text-white hover:bg-(--menu-brand)/90"
+                className="rounded-2xl bg-(--menu-brand) text-white hover:bg-(--menu-brand)/90"
               >
                 <Link href={browseHref}>
                   {translations[locale]["customer.letsEat"] || "Let's eat"}{" "}
