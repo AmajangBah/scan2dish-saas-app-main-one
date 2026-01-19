@@ -73,8 +73,8 @@ export default function MenuIntroPage() {
   const { restaurantName, tableNumber, tableSlug } = useMenuRestaurant();
 
   const browseHref = tableSlug
-    ? `${base}/menu/${tableSlug}`
-    : `${base}/menu/${tableId}`;
+    ? `${base}/menu/${tableSlug}/browse`
+    : `${base}/menu/${tableId}/browse`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-20">

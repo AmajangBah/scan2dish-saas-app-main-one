@@ -218,7 +218,7 @@ export default function CheckoutPage() {
         const map: Record<string, string> = {};
         for (const row of data ?? []) {
           const baseName = String(
-            (row as unknown as { name?: unknown }).name ?? ""
+            (row as unknown as { name?: unknown }).name ?? "",
           );
           if (!baseName) continue;
           map[String((row as unknown as { id?: unknown }).id)] =
@@ -282,9 +282,10 @@ export default function CheckoutPage() {
 
       if (result.success && result.orderId) {
         clear();
-        router.push(
-          `${base}/menu/${tableSlug}/order/${result.orderId}?success=1`
-        );
+        const redirectPath = tableSlug
+          ? `${base}/menu/${tableSlug}/order/${result.orderId}?success=1`
+          : `${base}/menu/${tableId}/order/${result.orderId}?success=1`;
+        router.push(redirectPath);
       } else {
         setError(result.error || "Failed to place order");
       }
@@ -448,8 +449,8 @@ export default function CheckoutPage() {
                 </div>
                 <div className="text-xl font-semibold">
                   {formatPrice(
-                    pricingLoading ? subtotal : pricing?.total ?? subtotal,
-                    currency
+                    pricingLoading ? subtotal : (pricing?.total ?? subtotal),
+                    currency,
                   )}
                 </div>
                 {(pricing?.discount ?? 0) > 0 && (

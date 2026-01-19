@@ -24,11 +24,13 @@ export default function TopHeader({ title }: { title: string }) {
 
   let tableNumber = "";
   let tableSlug = "";
+  let tableId = "";
 
   try {
     const ctx = useMenuRestaurant();
     tableNumber = ctx.tableNumber;
     tableSlug = ctx.tableSlug;
+    tableId = ctx.tableId;
   } catch (err) {
     // Component not wrapped in MenuRestaurantProvider
   }
@@ -55,7 +57,11 @@ export default function TopHeader({ title }: { title: string }) {
           <Button asChild variant="ghost" size="icon" className="relative">
             <Link
               href={
-                tableSlug ? `${base}/menu/${tableSlug}/cart` : `${base}/menu`
+                tableSlug
+                  ? `${base}/menu/${tableSlug}/cart`
+                  : tableId
+                    ? `${base}/menu/${tableId}/cart`
+                    : `${base}/menu`
               }
               aria-label={translations[locale]["customer.cart"] || "Cart"}
             >
@@ -65,7 +71,7 @@ export default function TopHeader({ title }: { title: string }) {
                   className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full text-[11px] font-semibold text-white bg-[var(--menu-brand)] flex items-center justify-center"
                   aria-label={`${items.reduce(
                     (s, i) => s + i.qty,
-                    0
+                    0,
                   )} items in cart`}
                 >
                   {items.reduce((s, i) => s + i.qty, 0)}

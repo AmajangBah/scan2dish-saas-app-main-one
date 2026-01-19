@@ -145,7 +145,7 @@ export default function MenuItemPage() {
         const { data, error: e } = await supabase
           .from("menu_items")
           .select(
-            "id, name, description, name_translations, description_translations, price, images, available"
+            "id, name, description, name_translations, description_translations, price, images, available",
           )
           .eq("restaurant_id", restaurantId)
           .eq("id", itemId)
@@ -158,7 +158,7 @@ export default function MenuItemPage() {
           setError(
             e instanceof Error
               ? e.message
-              : translations[locale]["itemNotFound"] || "Failed to load item"
+              : translations[locale]["itemNotFound"] || "Failed to load item",
           );
       } finally {
         if (!cancelled) setLoading(false);
@@ -177,7 +177,9 @@ export default function MenuItemPage() {
         <Button asChild variant="outline" className="rounded-xl">
           <Link
             href={
-              tableSlug ? `${base}/menu/${tableSlug}/browse` : `${base}/menu`
+              tableSlug
+                ? `${base}/menu/${tableSlug}/browse`
+                : `${base}/menu/${tableId || ""}/browse`
             }
           >
             {translations[locale]["backToMenu"] || "Back to menu"}
@@ -255,10 +257,10 @@ export default function MenuItemPage() {
                 onClick={() => {
                   add(
                     { id: item.id, name: displayName, price: item.price },
-                    qty
+                    qty,
                   );
                   toast.success(
-                    translations[locale]["addedToCart"] || "Added to cart"
+                    translations[locale]["addedToCart"] || "Added to cart",
                   );
                 }}
               >

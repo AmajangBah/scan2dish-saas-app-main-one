@@ -32,19 +32,26 @@ export default function CartBar() {
 
   let currency = "GMD";
   let tableSlug = null;
+  let tableId = null;
 
   try {
     const restaurantContext = useMenuRestaurant();
     currency = restaurantContext.currency;
     tableSlug = restaurantContext.tableSlug;
+    tableId = restaurantContext.tableId;
   } catch (err) {
     // Not wrapped in MenuRestaurantProvider - render nothing
     return null;
   }
 
   const itemCount = items.reduce((s, it) => s + it.qty, 0);
-  if (!tableSlug || itemCount <= 0) return null;
   const base = `/${locale}`;
+  const cartPath = tableSlug
+    ? `${base}/menu/${tableSlug}/cart`
+    : tableId
+      ? `${base}/menu/${tableId}/cart`
+      : null;
+  if (!cartPath || itemCount <= 0) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 pb-safe">
@@ -65,7 +72,7 @@ export default function CartBar() {
               asChild
               className="shrink-0 bg-[var(--menu-brand)] text-white hover:bg-[var(--menu-brand)]/90"
             >
-              <Link href={`${base}/menu/${tableSlug}/cart`}>
+              <Link href={cartPath}>
                 {translations[locale]["customer.cart"] || "View Cart"}
               </Link>
             </Button>
