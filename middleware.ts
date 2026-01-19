@@ -18,7 +18,7 @@ function isLocaleSegment(seg: string | undefined) {
   return !!seg && (locales as readonly string[]).includes(seg);
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const localePrefixRegex = new RegExp(`^/(${locales.join("|")})(/|$)`);
 
