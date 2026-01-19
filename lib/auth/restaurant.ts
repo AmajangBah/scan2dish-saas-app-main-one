@@ -31,11 +31,15 @@ export const getRestaurantAuthContext = cache(
 
       const {
         data: { user },
+        error,
       } = await supabase.auth.getUser();
 
       if (!user) {
+        console.log("[Auth] No user found", { error });
         return null;
       }
+
+      console.log("[Auth] User found:", user.id);
 
       // Fetch restaurant record
       const { data: restaurant, error: restaurantError } = await supabase
