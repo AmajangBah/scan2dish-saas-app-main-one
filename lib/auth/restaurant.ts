@@ -29,6 +29,16 @@ export const getRestaurantAuthContext = cache(
     try {
       const supabase = await createServerSupabase();
 
+      // CRITICAL for Vercel: Refresh session before validation
+      // This ensures the JWT token is fresh and prevents session loss on navigation
+      // The refresh will update cookies if needed
+      try {
+        await supabase.auth.refreshSession();
+      } catch {
+        // Refresh might fail if user has no valid refresh token
+        // We'll still try to get the user below
+      }
+
       const {
         data: { user },
         error,

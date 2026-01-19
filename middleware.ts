@@ -53,32 +53,10 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // Validate and refresh session at middleware level
-  // This ensures tokens are fresh before any route handlers run
-  // Prevents stale token issues for restaurant owners
-  try {
-    const { data, error } = await supabase.auth.getUser();
-
-    // If we have a user, attempt to refresh their session to ensure token is fresh
-    if (data?.user && !error) {
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        console.log(
-          "[Middleware] Session refresh failed:",
-          refreshError.message,
-        );
-      }
-    } else if (error) {
-      // If getUser() failed with auth error, try to refresh anyway
-      // This handles cases where token is stale but refresh token is valid
-      await supabase.auth.refreshSession().catch(() => {
-        // Session refresh failed - user will be logged out on next navigation
-      });
-    }
-  } catch (err) {
-    // Log unexpected errors but don't interrupt request
-    console.error("[Middleware] Unexpected error in auth refresh:", err);
-  }
+  // IMPORTANT: Do NOT call getUser() or refreshSession() on Vercel Edge Runtime
+  // The middleware runs in a constrained Edge environment where these calls
+  // can cause cookie synchronization issues and session loss.
+  // Session validation is handled at the route handler/layout level instead.
 
   // Menu URL cleanup: convert UUID to table number
   if (isMenuRoute && pathname.includes("/menu/")) {
