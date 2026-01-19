@@ -87,6 +87,7 @@ type MenuItem = {
 export default function MenuItemPage() {
   const params = useParams();
   const itemId = typeof params.itemId === "string" ? params.itemId : null;
+  const tableId = typeof params.tableId === "string" ? params.tableId : null;
   const locale = (
     typeof params.locale === "string" ? params.locale : "en"
   ) as Locale;
