@@ -107,6 +107,10 @@ export default function CartPage() {
   const router = useRouter();
   const { items, subtotal, clear, add } = useCart();
   const { currency, restaurantId, tableId, tableSlug } = useMenuRestaurant();
+  const [pricing, setPricing] = useState<{
+    subtotal: number;
+    discount: number;
+    total: number;
   } | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
 
@@ -375,6 +379,8 @@ export default function CartPage() {
       cancelled = true;
     };
   }, [restaurantId, items, categoryById, menuTypeById, locale]);
+
+  const base = `/${locale}`;
 
   const goToCheckout = () => {
     if (!tableSlug) return;

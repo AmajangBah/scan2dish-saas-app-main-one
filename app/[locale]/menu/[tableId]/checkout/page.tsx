@@ -138,12 +138,17 @@ export default function CheckoutPage() {
     tableId,
     tableSlug,
   } = useMenuRestaurant();
+  const base = `/${locale}`;
   const [pricing, setPricing] = useState<{
     subtotal: number;
     discount: number;
     total: number;
   } | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const [displayNameById, setDisplayNameById] = useState<
     Record<string, string>

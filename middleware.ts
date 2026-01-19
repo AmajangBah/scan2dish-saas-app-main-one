@@ -53,8 +53,15 @@ export function middleware(request: NextRequest) {
     }
   );
 
-  // Don't call getUser() here - it will throw if no refresh token exists
-  // Supabase will refresh tokens automatically when needed in server components
+  // Validate and refresh session at middleware level
+  // This ensures tokens are fresh before any route handlers run
+  // Prevents stale token issues for restaurant owners
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Silent fail - token validation happens per-route as needed
+    // If getUser() throws, the cookies handlers still sync properly
+  }
 
   // Menu URL cleanup: convert UUID to table number
   if (isMenuRoute && pathname.includes("/menu/")) {

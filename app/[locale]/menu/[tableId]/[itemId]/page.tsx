@@ -92,6 +92,11 @@ export default function MenuItemPage() {
   ) as Locale;
   const { add } = useCart();
   const { currency, restaurantId, tableSlug } = useMenuRestaurant();
+  const base = `/${locale}`;
+  const [item, setItem] = useState<MenuItem | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [qty, setQty] = useState(1);
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
 
   const displayName = useMemo(() => {
