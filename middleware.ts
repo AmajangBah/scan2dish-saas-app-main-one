@@ -50,17 +50,34 @@ export async function middleware(request: NextRequest) {
           });
         },
       },
-    }
+    },
   );
 
   // Validate and refresh session at middleware level
   // This ensures tokens are fresh before any route handlers run
   // Prevents stale token issues for restaurant owners
   try {
-    await supabase.auth.getUser();
-  } catch {
-    // Silent fail - token validation happens per-route as needed
-    // If getUser() throws, the cookies handlers still sync properly
+    const { data, error } = await supabase.auth.getUser();
+
+    // If we have a user, attempt to refresh their session to ensure token is fresh
+    if (data?.user && !error) {
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.log(
+          "[Middleware] Session refresh failed:",
+          refreshError.message,
+        );
+      }
+    } else if (error) {
+      // If getUser() failed with auth error, try to refresh anyway
+      // This handles cases where token is stale but refresh token is valid
+      await supabase.auth.refreshSession().catch(() => {
+        // Session refresh failed - user will be logged out on next navigation
+      });
+    }
+  } catch (err) {
+    // Log unexpected errors but don't interrupt request
+    console.error("[Middleware] Unexpected error in auth refresh:", err);
   }
 
   // Menu URL cleanup: convert UUID to table number
