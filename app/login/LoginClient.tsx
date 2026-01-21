@@ -68,12 +68,13 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
         throw new Error("Admin accounts must sign in at /auth/admin/sign-in.");
       }
 
-      // Use server action to redirect. This ensures:
-      // 1. Middleware processes the request and syncs cookies to response
-      // 2. Session is available in subsequent server components
-      // 3. No race condition between client-side redirect and server-side session
-      const { redirectAfterLogin } = await import("@/app/actions/auth");
-      await redirectAfterLogin(redirectTo || Route.DASHBOARD);
+      // Sync the client session to server cookies so SSR recognizes the user.
+      const { syncSessionOnServer } = await import("@/app/actions/auth");
+      await syncSessionOnServer({
+        access_token: data.session?.access_token ?? null,
+        refresh_token: data.session?.refresh_token ?? null,
+        redirectTo: redirectTo || Route.DASHBOARD,
+      });
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
     } finally {
