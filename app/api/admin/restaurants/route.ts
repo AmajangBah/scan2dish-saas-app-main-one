@@ -5,13 +5,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
 
-    const supabase = await createClient();
+    const supabase = await createServerSupabase();
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get("status"); // 'all', 'active', 'disabled'
     const search = searchParams.get("search");

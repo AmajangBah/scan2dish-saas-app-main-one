@@ -1,4 +1,4 @@
-import { createServerSupabase } from "./supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export async function getRestaurantId() {
   const supabase = await createServerSupabase();

@@ -4,7 +4,7 @@
  */
 
 import { requireAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import {
   Store,
   ShoppingCart,
@@ -22,7 +22,7 @@ export const revalidate = 0;
 export default async function AdminDashboard({
 }) {
   await requireAdmin();
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
 
   // Ensure materialized metrics are up-to-date.
   // This is intentionally best-effort: the dashboard should still render if refresh fails.

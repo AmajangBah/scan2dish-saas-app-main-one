@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, logAdminActivity } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export async function GET(
   request: NextRequest,
@@ -16,7 +16,7 @@ export async function GET(
     await requireAdmin();
     const { id } = await params;
 
-    const supabase = await createClient();
+    const supabase = await createServerSupabase();
 
     // Get restaurant details
     const { data: restaurant, error } = await supabase
@@ -93,7 +93,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const supabase = await createClient();
+    const supabase = await createServerSupabase();
 
     const updateData: {
       menu_enabled?: boolean;

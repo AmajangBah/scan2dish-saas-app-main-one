@@ -4,7 +4,7 @@
  */
 
 import { requireAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import Link from "next/link";
 import { OrdersFilters } from "./OrdersFilters";
 
@@ -15,7 +15,7 @@ export default async function AdminOrders({
 }) {
   await requireAdmin();
   const search = await searchParams;
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
   const basePath = "/admin/orders";
 
   // Build query

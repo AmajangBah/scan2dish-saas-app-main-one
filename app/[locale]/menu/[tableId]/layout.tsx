@@ -3,9 +3,8 @@
  * Checks restaurant status and blocks access if menu is disabled
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import TopHeader from "../components/TopHeader";
 import { MenuRestaurantProvider } from "../context/MenuRestaurantContext";
@@ -21,7 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { tableId } = await params;
   const tableIdOrNumber = tableId;
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
   const cookieStore = await cookies();
   const restaurantIdCookie =
     cookieStore.get("s2d_restaurant_id")?.value ?? null;
@@ -78,7 +77,7 @@ export default async function MenuLayout({
   params: Promise<{ tableId: string }>;
 }) {
   const { tableId } = await params;
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
 
   const cookieStore = await cookies();
   const restaurantIdCookie =
@@ -124,20 +123,21 @@ export default async function MenuLayout({
     });
 
     // Allow order pages to render even without a valid table
-    // They fetch their own data independently. For other routes, this
-    // will cause component-level errors when they try to use restaurantId
+    // They fetch their own data independently. Provide context with fallback values
     return (
-      <div
-        style={
-          {
-            "--primary": "#C84501",
-            "--sidebar-primary": "#C84501",
-            "--menu-brand": "#C84501",
-          } as React.CSSProperties
-        }
+      <MenuRestaurantProvider
+        value={{
+          restaurantId: restaurantIdCookie ?? "",
+          restaurantName: "",
+          tableId: tableId,
+          tableSlug: tableId,
+          tableNumber: "",
+          currency: "GMD",
+          brandColor: "#C84501",
+        }}
       >
         {children}
-      </div>
+      </MenuRestaurantProvider>
     );
   }
 

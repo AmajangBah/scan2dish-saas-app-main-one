@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, logAdminActivity } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = await createServerSupabase();
 
     // Use the database function to record payment
     const { data, error } = await supabase.rpc("record_commission_payment", {
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
 
-    const supabase = await createClient();
+    const supabase = await createServerSupabase();
     const searchParams = request.nextUrl.searchParams;
     const restaurant_id = searchParams.get("restaurant_id");
 

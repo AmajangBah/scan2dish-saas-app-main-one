@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import createNextIntlMiddleware from "next-intl/middleware";
 import { defaultLocale, locales } from "./i18n";
 import type { NextRequest } from "next/server";
@@ -28,35 +28,34 @@ export async function middleware(request: NextRequest) {
     (localePrefixRegex.test(pathname) &&
       pathname.split("/").filter(Boolean)[1] === "menu");
 
-  // Run i18n middleware
-  let response = isMenuRoute ? intlMiddleware(request) : NextResponse.next();
+  // 🔥 ALWAYS start with a base response
+  let response = NextResponse.next();
 
-  // CRITICAL: Handle Supabase session cookies in middleware
-  // On Vercel Edge, cookies from request must be explicitly copied to response
-  // This ensures session persists across requests in production
+  // Then apply i18n if needed
+  if (isMenuRoute) {
+    response = intlMiddleware(request);
+  }
+
+  // Supabase SSR proxy (cookie sync layer)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          // Read cookies from the request
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
-          // Write cookies to the response
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options as CookieOptions);
+        setAll(cookies) {
+          cookies.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
           });
         },
       },
-    },
+    }
   );
 
-  // IMPORTANT: Do NOT call getUser() or refreshSession() on Vercel Edge Runtime
-  // The middleware runs in a constrained Edge environment where these calls
-  // can cause cookie synchronization issues and session loss.
-  // Session validation is handled at the route handler/layout level instead.
+  // 🔥 CRITICAL: refresh session + sync cookies
+  await supabase.auth.getUser();
 
   // Menu URL cleanup: convert UUID to table number
   if (isMenuRoute && pathname.includes("/menu/")) {
@@ -68,7 +67,6 @@ export async function middleware(request: NextRequest) {
       const tableSeg = segments[menuIdx + 1];
 
       if (uuidRegex.test(tableSeg)) {
-        // Set table context cookies for client-side usage
         response.cookies.set("s2d_table_id", tableSeg, {
           path: "/",
           sameSite: "lax",
@@ -77,14 +75,12 @@ export async function middleware(request: NextRequest) {
       }
     }
   }
+  console.log("MIDDLEWARE COOKIES:", request.cookies.getAll());
+
 
   return response;
 }
 
 export const config = {
-  matcher: [
-    // Run on all routes except static files and API
-    "/((?!api|_next|.*\\..*).*)",
-    "/",
-  ],
+  matcher: ["/((?!api|_next|.*\\..*).*)", "/"],
 };

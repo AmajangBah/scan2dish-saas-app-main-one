@@ -5,7 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,7 +14,7 @@ export async function GET() {
   try {
     await requireAdmin();
 
-    const supabase = await createClient();
+    const supabase = await createServerSupabase();
 
     // Best-effort refresh of the materialized view powering metrics.
     try {

@@ -4,7 +4,7 @@
  */
 
 import { requireAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import {
   CheckCircle,
   XCircle,
@@ -16,7 +16,7 @@ import {
 
 export default async function AdminActivity() {
   await requireAdmin();
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
 
   // Get activity logs
   const { data: logs } = await supabase

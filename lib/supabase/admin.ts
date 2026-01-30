@@ -1,9 +1,9 @@
 /**
  * Admin authentication and helper functions
- * Provides server-side utilities for admin operations
+ * Server-side utilities for admin operations
  */
 
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { cache } from "react";
 
 export interface AdminUser {
@@ -19,32 +19,12 @@ export interface AdminUser {
 }
 
 /**
- * Check if the current user is an admin
- * Cached per request to avoid repeated DB calls
+ * Internal: get raw admin record
+ * Cached per request to avoid duplicate queries
  */
-export const isAdmin = cache(async (): Promise<boolean> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+const getRawAdminUser = cache(async (): Promise<AdminUser | null> => {
+  const supabase = await createServerSupabase();
 
-  if (!user) return false;
-
-  const { data, error } = await supabase
-    .from("admin_users")
-    .select("id, is_active")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
-
-  return !error && !!data;
-});
-
-/**
- * Get the current admin user data
- */
-export const getAdminUser = cache(async (): Promise<AdminUser | null> => {
-  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -56,7 +36,7 @@ export const getAdminUser = cache(async (): Promise<AdminUser | null> => {
     .select("*")
     .eq("user_id", user.id)
     .eq("is_active", true)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
 
@@ -64,8 +44,22 @@ export const getAdminUser = cache(async (): Promise<AdminUser | null> => {
 });
 
 /**
- * Require admin access - throws if not admin
- * Use in API routes and server actions
+ * Check if current user is admin
+ */
+export const isAdmin = cache(async (): Promise<boolean> => {
+  const admin = await getRawAdminUser();
+  return !!admin;
+});
+
+/**
+ * Get current admin user
+ */
+export const getAdminUser = cache(async (): Promise<AdminUser | null> => {
+  return await getRawAdminUser();
+});
+
+/**
+ * Require admin access
  */
 export async function requireAdmin(): Promise<AdminUser> {
   const admin = await getAdminUser();
@@ -95,7 +89,7 @@ export async function logAdminActivity(params: {
   order_id?: string;
   details?: Record<string, unknown>;
 }): Promise<void> {
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
   const admin = await getAdminUser();
 
   if (!admin) return;
@@ -111,18 +105,17 @@ export async function logAdminActivity(params: {
 
 /**
  * Check if a restaurant's menu is enabled
- * Used for enforcement in menu/order routes
  */
 export async function isRestaurantMenuEnabled(
   restaurantId: string
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
 
   const { data, error } = await supabase
     .from("restaurants")
     .select("menu_enabled")
     .eq("id", restaurantId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return false;
 
@@ -132,17 +125,19 @@ export async function isRestaurantMenuEnabled(
 /**
  * Get restaurant enforcement status with reason
  */
-export async function getRestaurantEnforcementStatus(restaurantId: string): Promise<{
+export async function getRestaurantEnforcementStatus(
+  restaurantId: string
+): Promise<{
   enabled: boolean;
   reason: string | null;
 }> {
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
 
   const { data, error } = await supabase
     .from("restaurants")
     .select("menu_enabled, enforcement_reason")
     .eq("id", restaurantId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     return { enabled: false, reason: "Restaurant not found" };

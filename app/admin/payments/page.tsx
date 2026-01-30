@@ -4,7 +4,7 @@
  */
 
 import { requireAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { DollarSign } from "lucide-react";
 import RecordPaymentButton from "./RecordPaymentButton";
 
@@ -15,7 +15,7 @@ export default async function AdminPayments({
 }) {
   await requireAdmin();
   const params = await searchParams;
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
 
   // Get payments
   let query = supabase

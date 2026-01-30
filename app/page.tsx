@@ -10,11 +10,11 @@ import TestimonialSection from "./components/marketing/TestimonialSection";
 import ThirdSection from "./components/marketing/ThirdSection";
 import TopSection from "./components/marketing/TopSection";
 import { getAdminUser } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import { getRestaurantAuthContext } from "@/lib/auth/restaurant";
 
 export default async function Home() {
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
   const {
     data: { user },
   } = await supabase.auth.getUser();

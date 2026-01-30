@@ -4,7 +4,7 @@
  */
 
 import { requireAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import Link from "next/link";
 import { CheckCircle, XCircle, Eye, Search } from "lucide-react";
 import RestaurantControls from "./RestaurantControls";
@@ -16,7 +16,7 @@ export default async function AdminRestaurants({
 }) {
   await requireAdmin();
   const search = await searchParams;
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
   const basePath = "/admin/restaurants";
 
   // Build query

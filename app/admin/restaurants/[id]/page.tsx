@@ -4,7 +4,7 @@
  */
 
 import { requireAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createServerSupabase } from "@/lib/supabase/server";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle, XCircle, Store, ShoppingCart, Menu, Table } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -17,7 +17,7 @@ export default async function AdminRestaurantDetail({
 }) {
   await requireAdmin();
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = await createServerSupabase();
 
   // Get restaurant details
   const { data: restaurant, error } = await supabase
