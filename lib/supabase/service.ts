@@ -28,7 +28,7 @@ export function createServiceSupabase() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
-
+//trying to fix my auth
 /**
  * Safe helper when a service key might not be configured.
  */
