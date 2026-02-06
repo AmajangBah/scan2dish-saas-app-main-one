@@ -13,7 +13,7 @@ const UpdateBusinessProfileSchema = z.object({
   name: z.string().min(1, "Restaurant name is required").max(100),
   phone: z
     .string()
-    .min(7, "Phone must be at least 8 digits")
+    .min(8, "Phone must be at least 8 digits")
     .max(20)
     .optional()
     .nullable(),

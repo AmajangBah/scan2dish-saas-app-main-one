@@ -1,8 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import createNextIntlMiddleware from "next-intl/middleware";
-import { defaultLocale, locales } from "./i18n";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { defaultLocale, locales } from "./i18n";
+
+// ✅ Type-safe union from locales array
+type Locale = (typeof locales)[number];
 
 const intlMiddleware = createNextIntlMiddleware({
   locales,
@@ -14,12 +17,13 @@ const intlMiddleware = createNextIntlMiddleware({
 const uuidRegex =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function isLocaleSegment(seg: string | undefined) {
-  return !!seg && (locales as readonly string[]).includes(seg);
+function isLocaleSegment(seg: string | undefined): seg is Locale {
+  return !!seg && locales.includes(seg as Locale);
 }
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
   const localePrefixRegex = new RegExp(`^/(${locales.join("|")})(/|$)`);
 
   const isMenuRoute =
@@ -28,15 +32,15 @@ export async function proxy(request: NextRequest) {
     (localePrefixRegex.test(pathname) &&
       pathname.split("/").filter(Boolean)[1] === "menu");
 
-  // ✅ Always generate ONE response instance
+  // Always generate ONE response instance
   let response = NextResponse.next();
 
-  // ✅ Apply i18n FIRST (before Supabase)
+  // Apply i18n FIRST (before Supabase)
   if (isMenuRoute) {
     response = intlMiddleware(request);
   }
 
-  // ✅ Supabase SSR cookie bridge
+  // Supabase SSR cookie bridge
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -54,7 +58,7 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // ✅ Refresh session & sync cookies
+  // Refresh session & sync cookies
   await supabase.auth.getUser();
 
   // Menu URL cleanup: convert UUID to table number
@@ -79,7 +83,7 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-// ✅ Apply middleware everywhere except static files
+// Apply middleware everywhere except static files
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

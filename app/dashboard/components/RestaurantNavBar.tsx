@@ -4,8 +4,13 @@ import { usePathname } from "next/navigation";
 import { Moon } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
-export default function RestaurantNavBar({ restaurantName }: { restaurantName: string }) {
+export default function RestaurantNavBar({
+  restaurantName,
+}: {
+  restaurantName: string;
+}) {
   const pathname = usePathname();
   const [dark, setDark] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -37,13 +42,15 @@ export default function RestaurantNavBar({ restaurantName }: { restaurantName: s
         <SidebarTrigger />
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold truncate">{pageTitle}</h1>
-          <p className="text-xs text-muted-foreground truncate">{restaurantName}</p>
+          <p className="text-xs text-muted-foreground truncate">
+            {restaurantName}
+          </p>
         </div>
       </div>
 
       {/* Right icons */}
       <div className="flex items-center gap-6">
-        <button
+        <Button
           type="button"
           onClick={() => {
             const next = !dark;
@@ -54,7 +61,7 @@ export default function RestaurantNavBar({ restaurantName }: { restaurantName: s
           aria-label="Toggle theme"
         >
           <Moon className="w-5 h-5 text-muted-foreground" />
-        </button>
+        </Button>
       </div>
     </nav>
   );

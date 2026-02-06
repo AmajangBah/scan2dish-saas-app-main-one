@@ -13,12 +13,10 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Route from "@/app/constants/Route";
-
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import Image from "next/image";
 
@@ -36,10 +34,7 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(LoginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
   async function onSubmit(values: LoginValues) {
@@ -57,20 +52,6 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
       if (error) throw error;
       if (!data.session) throw new Error("Login failed");
 
-      // Optional admin blocking logic remains intact
-      const { data: adminUser } = await supabase
-        .from("admin_users")
-        .select("id")
-        .eq("user_id", data.user?.id)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (adminUser) {
-        await supabase.auth.signOut();
-        throw new Error("Admin accounts must sign in at /auth/admin/sign-in");
-      }
-
-      // ✅ Normal client redirect
       router.replace(redirectTo || Route.DASHBOARD);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
@@ -101,7 +82,6 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
                 <span className="text-[#C84501]">2Dish</span>
               </h1>
             </Link>
-
             <p className="text-gray-600 text-2xl my-4">
               Welcome back, login to continue
             </p>
@@ -136,7 +116,6 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="password"
