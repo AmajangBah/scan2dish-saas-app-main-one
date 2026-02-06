@@ -23,7 +23,7 @@ import { createBrowserSupabase } from "@/lib/supabase/client";
 import Image from "next/image";
 
 const LoginSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -48,33 +48,30 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
 
     try {
       const supabase = createBrowserSupabase();
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
 
       if (error) throw error;
+      if (!data.session) throw new Error("Login failed");
 
-      // Prevent admins from using restaurant sign-in (hard separation).
+      // Optional admin blocking logic remains intact
       const { data: adminUser } = await supabase
         .from("admin_users")
-        .select("id, is_active")
+        .select("id")
         .eq("user_id", data.user?.id)
         .eq("is_active", true)
         .maybeSingle();
 
       if (adminUser) {
         await supabase.auth.signOut();
-        throw new Error("Admin accounts must sign in at /auth/admin/sign-in.");
+        throw new Error("Admin accounts must sign in at /auth/admin/sign-in");
       }
 
-      // Sync the client session to server cookies so SSR recognizes the user.
-      const { syncSessionOnServer } = await import("@/app/actions/auth");
-      await syncSessionOnServer({
-        access_token: data.session?.access_token ?? null,
-        refresh_token: data.session?.refresh_token ?? null,
-        redirectTo: redirectTo || Route.DASHBOARD,
-      });
+      // ✅ Normal client redirect
+      router.replace(redirectTo || Route.DASHBOARD);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -84,7 +81,6 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
 
   return (
     <div className="min-h-screen flex">
-      {/* Image Section - Left side with light pink background */}
       <div className="hidden lg:flex w-1/2 bg-pink-100 items-center justify-center p-8">
         <Image
           src="/soup.png"
@@ -96,10 +92,8 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
         />
       </div>
 
-      {/* Form Section - Right side */}
       <div className="w-full lg:w-1/2 flex items-center justify-center py-10 px-4">
         <div className="w-full max-w-md flex flex-col">
-          {/* HEADER */}
           <div className="text-center space-y-2 mb-6">
             <Link href={Route.HOME}>
               <h1 className="text-5xl font-bold">
@@ -109,13 +103,12 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
             </Link>
 
             <p className="text-gray-600 text-2xl my-4">
-              Welcome back, login to continue to view your orders
+              Welcome back, login to continue
             </p>
           </div>
 
           <h2 className="text-xl font-semibold mb-4">Login</h2>
 
-          {/* ERROR */}
           {errorMsg && (
             <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
               {errorMsg}
@@ -127,7 +120,6 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-4 flex flex-col"
             >
-              {/* Email */}
               <FormField
                 control={form.control}
                 name="email"
@@ -145,7 +137,6 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
                 )}
               />
 
-              {/* Password */}
               <FormField
                 control={form.control}
                 name="password"
@@ -164,7 +155,6 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
                 )}
               />
 
-              {/* Submit */}
               <Button
                 type="submit"
                 className="w-full bg-[#C84501] hover:bg-orange-800 text-white rounded-xl p-5 text-lg"

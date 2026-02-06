@@ -17,13 +17,15 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
+  // REBUILT: Get auth context with full validation
   const ctx = await getRestaurantAuthContext();
 
+  // REBUILT: Require authentication
   if (!ctx) {
     redirect("/login");
   }
 
-  // Enforce onboarding completion
+  // REBUILT: Enforce onboarding completion
   if (!ctx.onboardingCompleted) {
     redirect("/onboarding");
   }

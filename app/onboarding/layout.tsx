@@ -9,17 +9,19 @@ export default async function OnboardingLayout({
 }: {
   children: ReactNode;
 }) {
+  // REBUILT: Require authenticated user
   const ctx = await getRestaurantAuthContext();
 
-  // Require authenticated restaurant user
   if (!ctx) {
+    // Not authenticated - redirect to login
     redirect("/login");
   }
 
-  // If onboarding is already complete, redirect to dashboard
+  // REBUILT: If onboarding is complete, redirect away from this page
   if (ctx.onboardingCompleted) {
     redirect("/dashboard");
   }
 
+  // User is authenticated and onboarding is incomplete - render the page
   return children;
 }

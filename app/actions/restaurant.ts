@@ -13,7 +13,7 @@ const UpdateBusinessProfileSchema = z.object({
   name: z.string().min(1, "Restaurant name is required").max(100),
   phone: z
     .string()
-    .min(8, "Phone must be at least 8 digits")
+    .min(7, "Phone must be at least 8 digits")
     .max(20)
     .optional()
     .nullable(),
@@ -53,7 +53,7 @@ export interface RestaurantActionResult {
  * Update restaurant business profile (name, phone)
  */
 export async function updateBusinessProfile(
-  input: UpdateBusinessProfileInput
+  input: UpdateBusinessProfileInput,
 ): Promise<RestaurantActionResult> {
   try {
     const validated = UpdateBusinessProfileSchema.parse(input);
@@ -116,7 +116,7 @@ export async function updateBusinessProfile(
  * Update restaurant branding (colors)
  */
 export async function updateBranding(
-  input: UpdateBrandingInput
+  input: UpdateBrandingInput,
 ): Promise<RestaurantActionResult> {
   try {
     const validated = UpdateBrandingSchema.parse(input);

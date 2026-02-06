@@ -18,7 +18,7 @@ function isLocaleSegment(seg: string | undefined) {
   return !!seg && (locales as readonly string[]).includes(seg);
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const localePrefixRegex = new RegExp(`^/(${locales.join("|")})(/|$)`);
 
@@ -28,15 +28,15 @@ export async function middleware(request: NextRequest) {
     (localePrefixRegex.test(pathname) &&
       pathname.split("/").filter(Boolean)[1] === "menu");
 
-  // 🔥 ALWAYS start with a base response
+  // ✅ Always generate ONE response instance
   let response = NextResponse.next();
 
-  // Then apply i18n if needed
+  // ✅ Apply i18n FIRST (before Supabase)
   if (isMenuRoute) {
     response = intlMiddleware(request);
   }
 
-  // Supabase SSR proxy (cookie sync layer)
+  // ✅ Supabase SSR cookie bridge
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -51,10 +51,10 @@ export async function middleware(request: NextRequest) {
           });
         },
       },
-    }
+    },
   );
 
-  // 🔥 CRITICAL: refresh session + sync cookies
+  // ✅ Refresh session & sync cookies
   await supabase.auth.getUser();
 
   // Menu URL cleanup: convert UUID to table number
@@ -75,12 +75,11 @@ export async function middleware(request: NextRequest) {
       }
     }
   }
-  console.log("MIDDLEWARE COOKIES:", request.cookies.getAll());
-
 
   return response;
 }
 
+// ✅ Apply middleware everywhere except static files
 export const config = {
-  matcher: ["/((?!api|_next|.*\\..*).*)", "/"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

@@ -17,6 +17,7 @@ const Route = {
   INVENTORY: "/dashboard/inventory",
   SETTINGS: "/dashboard/settings",
   LOGOUT: "/logout",
+  ONBOARDING: "/onboarding",
 };
 
 export default Route;

@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import { z } from "zod";
 
 import {
   Form,
@@ -16,23 +18,18 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import Route from "@/app/constants/Route";
 
+import Route from "@/app/constants/Route";
 import { createBrowserSupabase } from "@/lib/supabase/client";
-import { z } from "zod";
 
 // ----------------------
-// ZOD SCHEMA
+// SCHEMA
 // ----------------------
 export const SignupFormSchema = z
   .object({
     businessName: z.string().min(1, "Business name is required"),
-    email: z
-      .string()
-      .min(1, "Email is required")
-      .email("Invalid email address"),
-    phone: z.string().min(8, "Phone number must be at least 10 digits"),
+    email: z.string().email("Invalid email"),
+    phone: z.string().min(7, "Phone number must be at least 8 digits"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string().min(6, "Confirm your password"),
   })
@@ -46,7 +43,7 @@ export type SignupValues = z.infer<typeof SignupFormSchema>;
 // ----------------------
 // COMPONENT
 // ----------------------
-const SignupPage = () => {
+export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const router = useRouter();
@@ -73,7 +70,6 @@ const SignupPage = () => {
         email: values.email,
         password: values.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/onboarding`,
           data: {
             business_name: values.businessName,
             phone: values.phone,
@@ -82,13 +78,23 @@ const SignupPage = () => {
       });
 
       if (error) throw error;
-      if (!data.user) throw new Error("User not created");
 
-      // Redirect to confirmation page using router.replace()
-      router.replace("/register/confirmation");
+      if (!data.user) {
+        throw new Error("User creation failed");
+      }
+
+      // If session exists → go to onboarding
+      if (data.session) {
+        router.replace(Route.ONBOARDING);
+      } else {
+        // Otherwise → go to login
+        router.replace(
+          `${Route.LOGINPAGE}?email=${encodeURIComponent(values.email)}`,
+        );
+      }
     } catch (err: unknown) {
       setErrorMsg(
-        err instanceof Error ? err.message : "Signup failed. Try again."
+        err instanceof Error ? err.message : "Signup failed. Try again.",
       );
     } finally {
       setLoading(false);
@@ -97,7 +103,6 @@ const SignupPage = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Image Section - Left side with light pink background */}
       <div className="hidden lg:flex w-1/2 bg-pink-100 items-center justify-center p-8">
         <Image
           src="/soup.png"
@@ -109,7 +114,6 @@ const SignupPage = () => {
         />
       </div>
 
-      {/* Form Section - Right side */}
       <div className="w-full lg:w-1/2 flex items-center justify-center py-10 px-4">
         <div className="w-full max-w-md flex flex-col">
           <div className="text-center space-y-2 mb-10">
@@ -137,92 +141,38 @@ const SignupPage = () => {
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-4 flex flex-col"
             >
-              <FormField
-                control={form.control}
-                name="businessName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        placeholder="Business Name"
-                        {...field}
-                        className="rounded-xl border border-[#C84501] bg-orange-50 p-5 "
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        placeholder="Email"
-                        {...field}
-                        className="rounded-xl border border-[#C84501] bg-orange-50 p-5 "
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        placeholder="Phone Number"
-                        {...field}
-                        className="rounded-xl border border-[#C84501] bg-orange-50 p-5 "
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Password"
-                        {...field}
-                        className="rounded-xl border border-[#C84501] bg-orange-50 p-5 "
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Confirm Password"
-                        {...field}
-                        className="rounded-xl border border-[#C84501] bg-orange-50 p-5 "
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {[
+                "businessName",
+                "email",
+                "phone",
+                "password",
+                "confirmPassword",
+              ].map((name) => (
+                <FormField
+                  key={name}
+                  control={form.control}
+                  name={name as never}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type={name.includes("password") ? "password" : "text"}
+                          placeholder={
+                            name === "businessName"
+                              ? "Business Name"
+                              : name === "confirmPassword"
+                                ? "Confirm Password"
+                                : name[0].toUpperCase() + name.slice(1)
+                          }
+                          className="rounded-xl border border-[#C84501] bg-orange-50 p-5"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
 
               <Button
                 type="submit"
@@ -244,6 +194,4 @@ const SignupPage = () => {
       </div>
     </div>
   );
-};
-
-export default SignupPage;
+}

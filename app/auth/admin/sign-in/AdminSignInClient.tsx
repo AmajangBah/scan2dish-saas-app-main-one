@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
 const AdminLoginSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -41,13 +41,14 @@ export default function AdminSignInClient({ redirect }: { redirect?: string }) {
 
     try {
       const supabase = createBrowserSupabase();
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
 
       if (error) throw error;
-      if (!data.user) throw new Error("Login failed");
+      if (!data.session || !data.user) throw new Error("Login failed");
 
       const { data: adminUser } = await supabase
         .from("admin_users")
@@ -61,12 +62,8 @@ export default function AdminSignInClient({ redirect }: { redirect?: string }) {
         throw new Error("Not an admin account. Please sign in at /login.");
       }
 
-      // Use server action to redirect. This ensures:
-      // 1. Middleware processes the request and syncs cookies to response
-      // 2. Session is available in subsequent server components
-      // 3. No race condition between client-side redirect and server-side session
-      const { redirectAfterLogin } = await import("@/app/actions/auth");
-      await redirectAfterLogin(redirect || "/admin");
+      // ✅ Clean client-side redirect
+      router.replace(redirect || "/admin");
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
     } finally {
