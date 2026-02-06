@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Route from "@/app/constants/Route";
 import { createBrowserSupabase } from "@/lib/supabase/client";
+import { syncSessionOnServer } from "@/app/actions/auth";
 import Image from "next/image";
 
 const LoginSchema = z.object({
@@ -52,7 +53,14 @@ export default function LoginClient({ redirectTo }: { redirectTo: string }) {
       if (error) throw error;
       if (!data.session) throw new Error("Login failed");
 
+      // Sync session to server cookies so middleware and server components see the user
+      await syncSessionOnServer({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token ?? "",
+      });
+
       router.replace(redirectTo || Route.DASHBOARD);
+      router.refresh();
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : "Login failed");
     } finally {
