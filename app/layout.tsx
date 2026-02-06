@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import AudioInitializer from "./components/AudioInitializer";
-import SupabaseAuthListener from "./components/SupabaseAuthListener";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +33,7 @@ export default function RootLayout({
       >
         <SpeedInsights />
         <AudioInitializer />
-        <SupabaseAuthListener />
+        {/* <SupabaseAuthListener /> */}
         {children}
         <Toaster
           position="top-right"

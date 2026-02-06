@@ -1,38 +1,39 @@
-"use client";
+// "use client";
 
-import { useEffect } from "react";
-import { createBrowserSupabase } from "@/lib/supabase/client";
-import { syncSessionOnServer, clearSessionOnServer } from "@/app/actions/auth";
+// import { useEffect } from "react";
+// import { createBrowserSupabase } from "@/lib/supabase/client";
+// import { syncSessionOnServer, clearSessionOnServer } from "@/app/actions/auth";
 
-/**
- * Syncs client auth state to server cookies so SSR and Server Actions see the session.
- * Handles token refresh and sign out.
- */
-export default function SupabaseAuthListener() {
-  useEffect(() => {
-    const supabase = createBrowserSupabase();
+// export default function SupabaseAuthListener() {
+//   useEffect(() => {
+//     const supabase = createBrowserSupabase();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
-        if (session?.access_token && session?.refresh_token) {
-          await syncSessionOnServer({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-          });
-        } else {
-          await clearSessionOnServer();
-        }
-      } catch {
-        // best-effort sync; ignore failures
-      }
-    });
+//     const { data } = supabase.auth.onAuthStateChange(
+//       async (_event, session) => {
+//         const access_token = session?.access_token ?? null;
+//         const refresh_token = session?.refresh_token ?? null;
 
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
+//         try {
+//           if (access_token && refresh_token) {
+//             // Sync rotated/updated tokens to server cookies so SSR recognizes session
+//             await syncSessionOnServer({ access_token, refresh_token });
+//           } else {
+//             // Clear server session when client signs out
+//             await clearSessionOnServer();
+//           }
+//         } catch {
+//           // best-effort sync; ignore failures
+//         }
+//       },
+//     );
 
-  return null;
-}
+//     return () => {
+//       // unsubscribe listener if supported
+//       // v2 returns { subscription } inside data
+//       const sub = (data as any)?.subscription ?? (data as any);
+//       if (sub?.unsubscribe) sub.unsubscribe();
+//     };
+//   }, []);
+
+//   return null;
+// }

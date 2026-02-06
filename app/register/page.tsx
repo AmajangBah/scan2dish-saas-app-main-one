@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 
 import Route from "@/app/constants/Route";
 import { createBrowserSupabase } from "@/lib/supabase/client";
-import { syncSessionOnServer } from "@/app/actions/auth";
 
 // ----------------------
 // SCHEMA
@@ -84,14 +83,9 @@ export default function SignupPage() {
         throw new Error("User creation failed");
       }
 
-      // If session exists → sync to server cookies and go to onboarding
+      // If session exists → go to onboarding
       if (data.session) {
-        await syncSessionOnServer({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token ?? "",
-        });
         router.replace(Route.ONBOARDING);
-        router.refresh();
       } else {
         // Otherwise → go to login
         router.replace(

@@ -2,7 +2,6 @@
 
 import { createServerSupabase } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { z } from "zod";
 import { requireRestaurantPage } from "@/lib/auth/restaurant";
 
@@ -191,7 +190,6 @@ export async function getRestaurantProfile(): Promise<RestaurantActionResult> {
       },
     };
   } catch (error) {
-    if (isRedirectError(error)) throw error;
     console.error("Get restaurant profile error:", error);
     return {
       success: false,

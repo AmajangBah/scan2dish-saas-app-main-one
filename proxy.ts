@@ -21,7 +21,7 @@ function isLocaleSegment(seg: string | undefined): seg is Locale {
   return !!seg && locales.includes(seg as Locale);
 }
 
-export default async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const localePrefixRegex = new RegExp(`^/(${locales.join("|")})(/|$)`);
@@ -40,8 +40,7 @@ export default async function middleware(request: NextRequest) {
     response = intlMiddleware(request);
   }
 
-  // Supabase SSR cookie bridge - CRITICAL for session persistence
-  // This ensures cookies are synced on EVERY request, including server actions
+  // Supabase SSR cookie bridge
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -59,8 +58,7 @@ export default async function middleware(request: NextRequest) {
     },
   );
 
-  // Refresh session & sync cookies - CRITICAL: This must run on every request
-  // This ensures the session token is refreshed and cookies are updated
+  // Refresh session & sync cookies
   await supabase.auth.getUser();
 
   // Menu URL cleanup: convert UUID to table number
